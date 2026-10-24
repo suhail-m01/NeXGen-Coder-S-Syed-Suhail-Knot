@@ -1,0 +1,73 @@
+import { AlertCircle, ArrowRight, BarChart3, CalendarDays, Check, CheckCircle2, ClipboardCheck, Download, ExternalLink, FileText, MapPin, Pencil, Plus, RotateCcw, ShieldCheck, Users, XCircle } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, Navigate } from 'react-router-dom';
+import { EmptyState } from '../components/EmptyState';
+import { SampleBadge } from '../components/Badges';
+import { formatEventDate } from '../domain/events';
+import { useApp } from '../state/AppContext';
+
+export function OrganizerDashboardPage() {
+  const { currentUser, data, updateVenue, setEventCancellation, checkInRegistration } = useApp();
+  const [tab, setTab] = useState<'events' | 'registrations' | 'submissions' | 'insights'>('events');
+  const [selectedId, setSelectedId] = useState('');
+  const [venueName, setVenueName] = useState('');
+  const [address, setAddress] = useState('');
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const ownedEvents = useMemo(() => data.events.filter((event) => event.organizerId === currentUser?.id).sort((a, b) => a.startAt.localeCompare(b.startAt)), [data.events, currentUser?.id]);
+  const selected = ownedEvents.find((event) => event.id === selectedId) ?? ownedEvents[0] ?? null;
+
+  useEffect(() => {
+    setVenueName(selected?.venue?.name ?? ''); setAddress(selected?.venue?.address ?? ''); setMessage(''); setError('');
+  }, [selected?.id]);
+
+  if (!currentUser) return <Navigate to="/auth?returnTo=%2Forganizer&action=open%20organizer%20tools" replace />;
+  if (currentUser.ageBand !== '18_plus') return <div className="page-container"><EmptyState title="Organizer tools are adult-only" body="Public event browsing remains available." /></div>;
+
+  const eventIds = new Set(ownedEvents.map((event) => event.id));
+  const registrations = data.registrations.filter((item) => eventIds.has(item.eventId));
+  const nativeRegistrations = registrations.filter((item) => item.kind === 'native');
+  const selectedRegistrations = selected ? nativeRegistrations.filter((item) => item.eventId === selected.id) : [];
+  const submissions = data.submissions.filter((item) => item.submitterId === currentUser.id);
+  const feedback = data.feedback.filter((item) => eventIds.has(item.eventId));
+  const averageRating = feedback.length ? (feedback.reduce((sum, item) => sum + item.rating, 0) / feedback.length).toFixed(1) : null;
+
+  const saveVenue = () => {
+    if (!selected) return;
+    try { updateVenue(selected.id, venueName, address); setMessage('Venue updated. A material-change revision and notifications were created.'); setError(''); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not update the venue.'); }
+  };
+
+  const exportRegistrations = () => {
+    if (!selected) return;
+    const escape = (value: string) => `"${value.replace(/"/g, '""')}"`;
+    const rows = [['Name', 'Email', 'Status', 'Registered at', 'Checked in at'], ...selectedRegistrations.map((registration) => {
+      const user = data.users.find((candidate) => candidate.id === registration.userId);
+      return [user?.name ?? 'Unknown', user?.email ?? '', registration.status, registration.createdAt, registration.checkedInAt ?? ''];
+    })];
+    const blob = new Blob([rows.map((row) => row.map(escape).join(',')).join('\r\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `${selected.slug}-registrations.csv`; anchor.click(); URL.revokeObjectURL(url);
+  };
+
+  return <div className="page-container organizer-page">
+    <div className="page-heading"><div><span className="eyebrow">Organizer workspace</span><h1>Run the event, not just the listing</h1><p>Publish, keep details current, manage native registrations and learn from actual participation records.</p></div><div className="button-row"><Link to="/add" className="button button--secondary"><FileText size={17} /> Instant Add</Link><Link to="/publish" className="button button--primary"><Plus size={17} /> New event</Link></div></div>
+    <div className="organizer-stats"><div><CalendarDays /><span><strong>{ownedEvents.filter((event) => event.status !== 'cancelled').length}</strong>Active events</span></div><div><Users /><span><strong>{nativeRegistrations.filter((item) => !['cancelled', 'rejected'].includes(item.status)).length}</strong>Native registrations</span></div><div><ExternalLink /><span><strong>{registrations.filter((item) => item.status === 'opened_externally').length}</strong>External handoffs <small>not registrations</small></span></div><div><ClipboardCheck /><span><strong>{registrations.filter((item) => item.status === 'attended').length}</strong>Organizer check-ins</span></div></div>
+    <div className="organizer-tabs"><button className={tab === 'events' ? 'active' : ''} onClick={() => setTab('events')}><CalendarDays /> Events</button><button className={tab === 'registrations' ? 'active' : ''} onClick={() => setTab('registrations')}><Users /> Registrations</button><button className={tab === 'submissions' ? 'active' : ''} onClick={() => setTab('submissions')}><FileText /> My submissions <span>{submissions.length}</span></button><button className={tab === 'insights' ? 'active' : ''} onClick={() => setTab('insights')}><BarChart3 /> Insights</button></div>
+
+    {tab === 'events' && (ownedEvents.length ? <div className="organizer-events-layout">
+      <div className="organizer-event-list">{ownedEvents.map((event) => <button key={event.id} className={`organizer-event-row ${selected?.id === event.id ? 'selected' : ''}`} onClick={() => setSelectedId(event.id)}><div><span className={`status-dot status-dot--${event.status}`} /><span>{event.status}</span>{event.isSample && <SampleBadge />}</div><h3>{event.title}</h3><p>{formatEventDate(event.startAt)}</p><span>{nativeRegistrations.filter((item) => item.eventId === event.id).length} native registrations <ArrowRight size={14} /></span></button>)}</div>
+      {selected && <section className="event-management"><div className="event-management__heading"><div><span className="eyebrow">Selected event</span><h2>{selected.title}</h2></div><Link to={`/events/${selected.id}`} className="button button--ghost button--small">View public page <ArrowRight size={15} /></Link></div>
+        <div className="management-facts"><div><span>Registration</span><strong>{selected.registration.kind === 'native' ? 'On Knot' : 'External website'}</strong></div><div><span>Source freshness</span><strong>{selected.listings[0]?.status ?? 'Unknown'}</strong></div><div><span>Revisions</span><strong>{selected.revisions.length}</strong></div></div>
+        <div className="venue-editor"><div><MapPin /><span><strong>Venue & material changes</strong><small>Changing the venue creates a revision and notifies savers and registration-record holders.</small></span></div>{selected.mode !== 'online' ? <><label>Venue name<input value={venueName} onChange={(event) => setVenueName(event.target.value)} /></label><label>Address<input value={address} onChange={(event) => setAddress(event.target.value)} /></label><button className="button button--secondary button--small" disabled={!venueName.trim() || (venueName === selected.venue?.name && address === selected.venue?.address)} onClick={saveVenue}><Pencil size={15} /> Save venue change</button></> : <p>Online event: venue editing is not applicable. Joining-link visibility remains participation-controlled.</p>}</div>
+        {message && <div className="form-success"><CheckCircle2 />{message}</div>}{error && <div className="form-error"><AlertCircle />{error}</div>}
+        <div className="danger-zone"><div><strong>{selected.status === 'cancelled' ? 'Reopen this event' : 'Cancel this event'}</strong><p>{selected.status === 'cancelled' ? 'Return the listing to public discovery and notify affected participants.' : 'Preserve the event and registration records, stop participation, and notify affected participants.'}</p></div><button className={`button button--small ${selected.status === 'cancelled' ? 'button--secondary' : 'button--danger'}`} onClick={() => { if (window.confirm(selected.status === 'cancelled' ? 'Reopen this event?' : 'Cancel this event and notify affected participants?')) { setEventCancellation(selected.id, selected.status !== 'cancelled'); setMessage(selected.status === 'cancelled' ? 'Event reopened.' : 'Event cancelled.'); } }}>{selected.status === 'cancelled' ? <RotateCcw /> : <XCircle />}{selected.status === 'cancelled' ? 'Reopen' : 'Cancel event'}</button></div>
+      </section>}
+    </div> : <EmptyState icon={<CalendarDays />} title="Publish your first event" body="Your organizer workspace will show registrations, revisions, check-in and feedback here." action={<Link className="button button--primary" to="/publish">Create an event <ArrowRight size={16} /></Link>} />)}
+
+    {tab === 'registrations' && <section className="dashboard-section"><div className="section-mini-heading"><div><h2>Native registration operations</h2><p>Contact details are operational organizer data, not a behavioural-analytics feed.</p></div>{selected && <button className="button button--secondary button--small" onClick={exportRegistrations} disabled={!selectedRegistrations.length}><Download size={15} /> Export CSV</button>}</div>{!selected ? <EmptyState title="No event selected" body="Publish an event before managing registrations." /> : <><label className="dashboard-event-select">Event<select value={selected.id} onChange={(event) => setSelectedId(event.target.value)}>{ownedEvents.map((event) => <option value={event.id} key={event.id}>{event.title}</option>)}</select></label>{selectedRegistrations.length ? <div className="table-wrap"><table className="data-table"><thead><tr><th>Participant</th><th>Status</th><th>Registered</th><th>Check-in</th></tr></thead><tbody>{selectedRegistrations.map((registration) => { const user = data.users.find((candidate) => candidate.id === registration.userId); const canCheckIn = ['registered', 'approved'].includes(registration.status) && Date.now() >= new Date(selected.startAt).getTime() - 2 * 3_600_000 && Date.now() <= new Date(selected.endAt ?? selected.startAt).getTime() + 12 * 3_600_000; return <tr key={registration.id}><td><strong>{user?.name ?? 'Unknown participant'}</strong><small>{user?.email}</small></td><td><span className={`registration-status registration-status--${registration.status}`}>{registration.status.replaceAll('_', ' ')}</span></td><td>{new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium' }).format(new Date(registration.createdAt))}</td><td>{registration.status === 'attended' ? <span className="checked-in"><Check /> Checked in</span> : <button className="button button--secondary button--small" disabled={!canCheckIn} title={canCheckIn ? 'Record organizer check-in' : 'Check-in opens two hours before the event'} onClick={() => { try { checkInRegistration(registration.id); setMessage('Organizer check-in recorded.'); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not check in.'); } }}>Check in</button>}</td></tr>; })}</tbody></table></div> : <EmptyState icon={<Users />} title="No native registrations for this event" body="External site openings and self-confirmations never appear here as native registrations." />}</>}</section>}
+
+    {tab === 'submissions' && <section className="dashboard-section"><div className="section-mini-heading"><div><h2>Instant Add submissions</h2><p>Track review state without mistaking a submission for a public listing.</p></div><Link className="button button--secondary button--small" to="/add"><Plus size={15} /> New submission</Link></div>{submissions.length ? <div className="submission-list">{submissions.map((submission) => <article key={submission.id}><FileText /><div><h3>{submission.draft.title.value || 'Untitled event draft'}</h3><p>Submitted {new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium' }).format(new Date(submission.createdAt))}</p><code>{submission.id}</code></div><span className={`submission-status submission-status--${submission.status}`}>{submission.status.replaceAll('_', ' ')}</span></article>)}</div> : <EmptyState icon={<FileText />} title="No Instant Add drafts" body="Paste a forwarded announcement to create a private, reviewable event draft." action={<Link to="/add" className="button button--primary">Try Instant Add</Link>} />}</section>}
+
+    {tab === 'insights' && <section className="dashboard-section"><div className="section-mini-heading"><div><h2>Operational insight, with denominators</h2><p>No external click is counted as a registration. No unknown attendance is counted as verified.</p></div></div><div className="insights-grid"><div><span>Native registration records</span><strong>{nativeRegistrations.length}</strong><small>Across {ownedEvents.length} events</small></div><div><span>External site openings</span><strong>{registrations.filter((item) => item.status === 'opened_externally').length}</strong><small>Handoffs only; conversion unknown</small></div><div><span>Self-confirmed external</span><strong>{registrations.filter((item) => item.status === 'self_confirmed_registered').length}</strong><small>Not independently verified</small></div><div><span>Organizer check-ins</span><strong>{registrations.filter((item) => item.status === 'attended').length}</strong><small>Verified only by organizer operation</small></div><div><span>Average feedback rating</span><strong>{averageRating ?? '—'}</strong><small>{feedback.length ? `${feedback.length} response${feedback.length === 1 ? '' : 's'}` : 'No responses yet'}</small></div><div><span>Feedback with check-in</span><strong>{feedback.filter((item) => item.attendanceBasis === 'organizer_checked_in').length}</strong><small>Separate from registered-not-verified</small></div></div><div className="privacy-callout"><ShieldCheck /><div><strong>Aggregate reporting boundary</strong><p>Organizer insights above are counts of operational records. Knot does not expose guest behavioural profiles or treat external handoffs as successful registrations.</p></div></div></section>}
+  </div>;
+}

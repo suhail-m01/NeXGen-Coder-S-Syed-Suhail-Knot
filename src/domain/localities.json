@@ -1,0 +1,882 @@
+[
+  {
+    "id": "koramangala",
+    "name": "Koramangala",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 12.9357366,
+    "longitude": 77.624081,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 250463906,
+      "displayName": "Koramangala, Sri Lakshmi Devi Ward, Bengaluru South City Corporation, Bengaluru, Bangalore South, Bengaluru Urban, Karnataka, 560095, India",
+      "resultType": "suburb",
+      "boundingBox": [
+        12.9157366,
+        12.9557366,
+        77.604081,
+        77.644081
+      ],
+      "geocodedAt": "2026-10-24T07:03:42.365Z"
+    }
+  },
+  {
+    "id": "indiranagar",
+    "name": "Indiranagar",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 12.9732913,
+    "longitude": 77.6404672,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 252514834,
+      "displayName": "Indiranagar, Jogpalya, Bengaluru Central City Corporation, Bengaluru, Bangalore East, Bengaluru Urban, Karnataka, 560008, India",
+      "resultType": "suburb",
+      "boundingBox": [
+        12.9532913,
+        12.9932913,
+        77.6204672,
+        77.6604672
+      ],
+      "geocodedAt": "2026-10-24T07:03:43.621Z"
+    }
+  },
+  {
+    "id": "hsr-layout",
+    "name": "HSR Layout",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 12.9116225,
+    "longitude": 77.6388622,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 252088523,
+      "displayName": "HSR Layout, Bengaluru South City Corporation, Bengaluru, Bangalore South, Bengaluru Urban, Karnataka, 560102, India",
+      "resultType": "suburb",
+      "boundingBox": [
+        12.901132,
+        12.926266,
+        77.6236224,
+        77.661076
+      ],
+      "geocodedAt": "2026-10-24T07:03:45.213Z"
+    }
+  },
+  {
+    "id": "whitefield",
+    "name": "Whitefield",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 12.9957428,
+    "longitude": 77.7579489,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 253173185,
+      "displayName": "Whitefield (Kadugodi), SH35, Belathur, Bengaluru East City Corporation, Bengaluru, Bangalore East, Bengaluru Urban, Karnataka, 560067, India",
+      "resultType": "station",
+      "boundingBox": [
+        12.9907428,
+        13.0007428,
+        77.7529489,
+        77.7629489
+      ],
+      "geocodedAt": "2026-10-24T07:03:46.835Z"
+    }
+  },
+  {
+    "id": "electronic-city",
+    "name": "Electronic City",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 12.8487599,
+    "longitude": 77.648253,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 252042125,
+      "displayName": "Prime City Apartments, Electronic City, Bengaluru, Bangalore South, Bengaluru Urban, Karnataka, 560100, India",
+      "resultType": "residential",
+      "boundingBox": [
+        12.8482126,
+        12.849377,
+        77.6471775,
+        77.6504105
+      ],
+      "geocodedAt": "2026-10-24T07:03:48.456Z"
+    }
+  },
+  {
+    "id": "jayanagar",
+    "name": "Jayanagar",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 12.9292731,
+    "longitude": 77.5824229,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 253043585,
+      "displayName": "Jayanagar, Tilak Nagara, Bengaluru South City Corporation, Bengaluru, Bangalore South, Bengaluru Urban, Karnataka, 560011, India",
+      "resultType": "suburb",
+      "boundingBox": [
+        12.9092731,
+        12.9492731,
+        77.5624229,
+        77.6024229
+      ],
+      "geocodedAt": "2026-10-24T07:03:49.756Z"
+    }
+  },
+  {
+    "id": "jp-nagar",
+    "name": "JP Nagar",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 12.9096941,
+    "longitude": 77.5866067,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 253753050,
+      "displayName": "JP Nagar, Bengaluru South City Corporation, Bengaluru, Bangalore South, Bengaluru Urban, Karnataka, India",
+      "resultType": "suburb",
+      "boundingBox": [
+        12.8975486,
+        12.9175497,
+        77.5730508,
+        77.6018204
+      ],
+      "geocodedAt": "2026-10-24T07:03:51.487Z"
+    }
+  },
+  {
+    "id": "malleshwaram",
+    "name": "Malleshwaram",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 13.0027353,
+    "longitude": 77.5703253,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 253512796,
+      "displayName": "Malleswaram, Malleshwaram, Bengaluru West City Corporation, Bengaluru, Bangalore North, Bengaluru Urban, Karnataka, 560003, India",
+      "resultType": "suburb",
+      "boundingBox": [
+        12.9827353,
+        13.0227353,
+        77.5503253,
+        77.5903253
+      ],
+      "geocodedAt": "2026-10-24T07:03:53.069Z"
+    }
+  },
+  {
+    "id": "hebbal",
+    "name": "Hebbal",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 13.0382184,
+    "longitude": 77.5919,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 254053520,
+      "displayName": "Hebbal, Bengaluru North City Corporation, Bengaluru, Bangalore North, Bengaluru Urban, Karnataka, India",
+      "resultType": "administrative",
+      "boundingBox": [
+        13.028086,
+        13.0416335,
+        77.586182,
+        77.5982606
+      ],
+      "geocodedAt": "2026-10-24T07:03:54.688Z"
+    }
+  },
+  {
+    "id": "marathahalli",
+    "name": "Marathahalli",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 12.9552572,
+    "longitude": 77.6984163,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 252896456,
+      "displayName": "Marathahalli, Bengaluru East City Corporation, Bengaluru, Bangalore East, Bengaluru Urban, Karnataka, India",
+      "resultType": "administrative",
+      "boundingBox": [
+        12.9456404,
+        12.9570756,
+        77.6896353,
+        77.7050279
+      ],
+      "geocodedAt": "2026-10-24T07:03:55.916Z"
+    }
+  },
+  {
+    "id": "btm-layout",
+    "name": "BTM Layout",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 12.9140008,
+    "longitude": 77.6102821,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 252811171,
+      "displayName": "BTM Layout, Viswamanava Kuvempu Ward, Bengaluru South City Corporation, Bengaluru, Bangalore South, Bengaluru Urban, Karnataka, 560076, India",
+      "resultType": "suburb",
+      "boundingBox": [
+        12.8940008,
+        12.9340008,
+        77.5902821,
+        77.6302821
+      ],
+      "geocodedAt": "2026-10-24T07:03:57.314Z"
+    }
+  },
+  {
+    "id": "banashankari",
+    "name": "Banashankari",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 12.9278196,
+    "longitude": 77.556621,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 252480787,
+      "displayName": "Banashankari, Kathriguppe, Bengaluru West City Corporation, Bengaluru, Bangalore South, Bengaluru Urban, Karnataka, 560085, India",
+      "resultType": "suburb",
+      "boundingBox": [
+        12.9078196,
+        12.9478196,
+        77.536621,
+        77.576621
+      ],
+      "geocodedAt": "2026-10-24T07:03:58.496Z"
+    }
+  },
+  {
+    "id": "rajajinagar",
+    "name": "Rajajinagar",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 13.0005232,
+    "longitude": 77.5496166,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 262110174,
+      "displayName": "Rajajinagar, Chord Road, Nagapura, Mahalakshmipuram, Nagapura, Bengaluru West City Corporation, Bengaluru, Bangalore North, Bengaluru Urban, Karnataka, 560086, India",
+      "resultType": "stop",
+      "boundingBox": [
+        13.0004732,
+        13.0005732,
+        77.5495666,
+        77.5496666
+      ],
+      "geocodedAt": "2026-10-24T07:04:00.081Z"
+    }
+  },
+  {
+    "id": "mg-road",
+    "name": "MG Road",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 12.9755264,
+    "longitude": 77.6067902,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 249231925,
+      "displayName": "Mahatma Gandhi Road, Shanthala Nagar, Ashokanagar, Bengaluru Central City Corporation, Bengaluru, Bangalore North, Bengaluru Urban, Karnataka, 560001, India",
+      "resultType": "station",
+      "boundingBox": [
+        12.9705264,
+        12.9805264,
+        77.6017902,
+        77.6117902
+      ],
+      "geocodedAt": "2026-10-24T07:04:02.267Z"
+    }
+  },
+  {
+    "id": "yelahanka",
+    "name": "Yelahanka",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 13.1006982,
+    "longitude": 77.5963454,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 252454063,
+      "displayName": "Yelahanka, Yelahanka Old Town, Bengaluru North City Corporation, Bengaluru, Yelahanka taluku, Bengaluru Urban, Karnataka, 560064, India",
+      "resultType": "suburb",
+      "boundingBox": [
+        13.0806982,
+        13.1206982,
+        77.5763454,
+        77.6163454
+      ],
+      "geocodedAt": "2026-10-24T07:04:03.869Z"
+    }
+  },
+  {
+    "id": "bellandur",
+    "name": "Bellandur",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 12.9320495,
+    "longitude": 77.6842915,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 252050056,
+      "displayName": "Bellandur, Bengaluru East City Corporation, Bengaluru, Bangalore East, Bengaluru Urban, Karnataka, India",
+      "resultType": "administrative",
+      "boundingBox": [
+        12.9225853,
+        12.9414258,
+        77.6677817,
+        77.690475
+      ],
+      "geocodedAt": "2026-10-24T07:04:05.453Z"
+    }
+  },
+  {
+    "id": "sarjapur-road",
+    "name": "Sarjapur Road",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 12.9246491,
+    "longitude": 77.6382779,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 252045223,
+      "displayName": "Sarjapur Road, SHBCS Layout, Kormangala East, Bengaluru South City Corporation, Bengaluru, Bangalore South, Bengaluru Urban, Karnataka, 560034, India",
+      "resultType": "primary",
+      "boundingBox": [
+        12.9242078,
+        12.925166,
+        77.6373952,
+        77.6391957
+      ],
+      "geocodedAt": "2026-10-24T07:04:07.035Z"
+    }
+  },
+  {
+    "id": "domlur",
+    "name": "Domlur",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 12.9624669,
+    "longitude": 77.6381958,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 251884917,
+      "displayName": "Domlur, Domluru, Bengaluru Central City Corporation, Bengaluru, Bangalore North, Bengaluru Urban, Karnataka, 560071, India",
+      "resultType": "quarter",
+      "boundingBox": [
+        12.9524669,
+        12.9724669,
+        77.6281958,
+        77.6481958
+      ],
+      "geocodedAt": "2026-10-24T07:04:08.589Z"
+    }
+  },
+  {
+    "id": "ulsoor",
+    "name": "Ulsoor",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 12.9778793,
+    "longitude": 77.6246697,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 252828865,
+      "displayName": "Halasuru, Bengaluru Central City Corporation, Bengaluru, Bangalore North, Bengaluru Urban, Karnataka, India",
+      "resultType": "administrative",
+      "boundingBox": [
+        12.9726683,
+        12.9818917,
+        77.6200385,
+        77.6284956
+      ],
+      "geocodedAt": "2026-10-24T07:04:09.819Z"
+    }
+  },
+  {
+    "id": "frazer-town",
+    "name": "Frazer Town",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 12.9975851,
+    "longitude": 77.6136744,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 249730079,
+      "displayName": "Frazer Town, Pulakeshi Nagar, Bengaluru North City Corporation, Bengaluru, Bangalore North, Bengaluru Urban, Karnataka, 560005, India",
+      "resultType": "suburb",
+      "boundingBox": [
+        12.9775851,
+        13.0175851,
+        77.5936744,
+        77.6336744
+      ],
+      "geocodedAt": "2026-10-24T07:04:10.998Z"
+    }
+  },
+  {
+    "id": "rt-nagar",
+    "name": "RT Nagar",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 13.0227204,
+    "longitude": 77.595715,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 254147109,
+      "displayName": "RT Nagar, Dinnur, Bengaluru North City Corporation, Bengaluru, Bangalore North, Bengaluru Urban, Karnataka, 560032, India",
+      "resultType": "suburb",
+      "boundingBox": [
+        13.0027204,
+        13.0427204,
+        77.575715,
+        77.615715
+      ],
+      "geocodedAt": "2026-10-24T07:04:12.464Z"
+    }
+  },
+  {
+    "id": "vijayanagar",
+    "name": "Vijayanagar",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 12.9709537,
+    "longitude": 77.5373851,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 251863299,
+      "displayName": "Vijayanagar, Chord Road, M C Layout, Dr. Vishnuvardhan Ward, Bengaluru West City Corporation, Bengaluru, Bangalore North, Bengaluru Urban, Karnataka, 560040, India",
+      "resultType": "stop",
+      "boundingBox": [
+        12.9709037,
+        12.9710037,
+        77.5373351,
+        77.5374351
+      ],
+      "geocodedAt": "2026-10-24T07:04:14.034Z"
+    }
+  },
+  {
+    "id": "basavanagudi",
+    "name": "Basavanagudi",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 12.9417261,
+    "longitude": 77.5755021,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 252983610,
+      "displayName": "Basavanagudi, Sunkenahalli, Bengaluru Central City Corporation, Bengaluru, Bangalore North, Bengaluru Urban, Karnataka, 560004, India",
+      "resultType": "suburb",
+      "boundingBox": [
+        12.9217261,
+        12.9617261,
+        77.5555021,
+        77.5955021
+      ],
+      "geocodedAt": "2026-10-24T07:04:15.346Z"
+    }
+  },
+  {
+    "id": "richmond-town",
+    "name": "Richmond Town",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 12.963555,
+    "longitude": 77.6015856,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 252528833,
+      "displayName": "Richmond Town, Shanthinagar, Bengaluru Central City Corporation, Bengaluru, Bangalore North, Bengaluru Urban, Karnataka, 560025, India",
+      "resultType": "suburb",
+      "boundingBox": [
+        12.943555,
+        12.983555,
+        77.5815856,
+        77.6215856
+      ],
+      "geocodedAt": "2026-10-24T07:04:16.830Z"
+    }
+  },
+  {
+    "id": "cox-town",
+    "name": "Cox Town",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 12.9934858,
+    "longitude": 77.6251081,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 252760538,
+      "displayName": "Cox Town, Bengaluru Central City Corporation, Bengaluru, Bangalore North, Bengaluru Urban, Karnataka, 560005, India",
+      "resultType": "administrative",
+      "boundingBox": [
+        12.9872026,
+        12.9999647,
+        77.6167804,
+        77.6317857
+      ],
+      "geocodedAt": "2026-10-24T07:04:18.486Z"
+    }
+  },
+  {
+    "id": "kalyan-nagar",
+    "name": "Kalyan Nagar",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 13.0221416,
+    "longitude": 77.6403368,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 253545969,
+      "displayName": "Kalyan Nagar, Kalyanagar, Bengaluru North City Corporation, Bengaluru, Bangalore North, Bengaluru Urban, Karnataka, 560043, India",
+      "resultType": "suburb",
+      "boundingBox": [
+        13.0021416,
+        13.0421416,
+        77.6203368,
+        77.6603368
+      ],
+      "geocodedAt": "2026-10-24T07:04:20.079Z"
+    }
+  },
+  {
+    "id": "hennur",
+    "name": "Hennur",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 13.037077,
+    "longitude": 77.6413572,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 254244558,
+      "displayName": "Hennur, HBR Layout, Bengaluru North City Corporation, Bengaluru, Bangalore North, Bengaluru Urban, Karnataka, 560043, India",
+      "resultType": "suburb",
+      "boundingBox": [
+        13.017077,
+        13.057077,
+        77.6213572,
+        77.6613572
+      ],
+      "geocodedAt": "2026-10-24T07:04:21.667Z"
+    }
+  },
+  {
+    "id": "thanisandra",
+    "name": "Thanisandra",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 13.0522499,
+    "longitude": 77.6316152,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 252734850,
+      "displayName": "Thanisandra, Bengaluru North City Corporation, Bengaluru, Bangalore East, Bengaluru Urban, Karnataka, India",
+      "resultType": "administrative",
+      "boundingBox": [
+        13.040718,
+        13.0637276,
+        77.623988,
+        77.6384281
+      ],
+      "geocodedAt": "2026-10-24T07:04:22.841Z"
+    }
+  },
+  {
+    "id": "mahadevapura",
+    "name": "Mahadevapura",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 12.9965445,
+    "longitude": 77.6927176,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 251668032,
+      "displayName": "Singayyanapalya, Whitefield Road, Devasandra, Bengaluru East City Corporation, Bengaluru, Bangalore East, Bengaluru Urban, Karnataka, 560048, India",
+      "resultType": "station",
+      "boundingBox": [
+        12.9915445,
+        13.0015445,
+        77.6877176,
+        77.6977176
+      ],
+      "geocodedAt": "2026-10-24T07:04:24.022Z"
+    }
+  },
+  {
+    "id": "brookefield",
+    "name": "Brookefield",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 12.9652094,
+    "longitude": 77.717936,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 251898146,
+      "displayName": "Brookefield, Priyadarshini Ward, Bengaluru East City Corporation, Bengaluru, Bangalore East, Bengaluru Urban, Karnataka, 560037, India",
+      "resultType": "quarter",
+      "boundingBox": [
+        12.9552094,
+        12.9752094,
+        77.707936,
+        77.727936
+      ],
+      "geocodedAt": "2026-10-24T07:04:25.587Z"
+    }
+  },
+  {
+    "id": "hoodi",
+    "name": "Hoodi",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 12.9959233,
+    "longitude": 77.7192796,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 252353831,
+      "displayName": "Hoodi, Kumbena Agrahara Main Road, Hoody Garden, Hoodi, Bengaluru East City Corporation, Bengaluru, Bangalore East, Bengaluru Urban, Karnataka, 560048, India",
+      "resultType": "halt",
+      "boundingBox": [
+        12.9958733,
+        12.9959733,
+        77.7192296,
+        77.7193296
+      ],
+      "geocodedAt": "2026-10-24T07:04:26.749Z"
+    }
+  },
+  {
+    "id": "kr-puram",
+    "name": "KR Puram",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 13.007516,
+    "longitude": 77.695935,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 252604432,
+      "displayName": "KR Puram, K.R Pura, Bengaluru East City Corporation, Bengaluru, Bangalore East, Bengaluru Urban, Karnataka, 560036, India",
+      "resultType": "suburb",
+      "boundingBox": [
+        12.987516,
+        13.027516,
+        77.675935,
+        77.715935
+      ],
+      "geocodedAt": "2026-10-24T07:04:28.009Z"
+    }
+  },
+  {
+    "id": "banaswadi",
+    "name": "Banaswadi",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 13.0141618,
+    "longitude": 77.6518539,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 255191191,
+      "displayName": "Banaswadi, Bengaluru North City Corporation, Bengaluru, Bangalore East, Bengaluru Urban, Karnataka, India",
+      "resultType": "administrative",
+      "boundingBox": [
+        13.0058152,
+        13.0234719,
+        77.6448369,
+        77.6623278
+      ],
+      "geocodedAt": "2026-10-24T07:04:29.620Z"
+    }
+  },
+  {
+    "id": "kammanahalli",
+    "name": "Kammanahalli",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 13.0148544,
+    "longitude": 77.6382029,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 252786177,
+      "displayName": "Kammanahalli, HRBR Layout, Bengaluru North City Corporation, Bengaluru, Bangalore North, Bengaluru Urban, Karnataka, 560043, India",
+      "resultType": "suburb",
+      "boundingBox": [
+        12.9948544,
+        13.0348544,
+        77.6182029,
+        77.6582029
+      ],
+      "geocodedAt": "2026-10-24T07:04:31.170Z"
+    }
+  },
+  {
+    "id": "sahakara-nagar",
+    "name": "Sahakara Nagar",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 13.0621474,
+    "longitude": 77.5800614,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 252154005,
+      "displayName": "Sahakara Nagar CQAL Kids Park, Kodigehalli, Byatarayanapura, Bengaluru North City Corporation, Bengaluru, Yelahanka taluku, Bengaluru Urban, Karnataka, 560092, India",
+      "resultType": "park",
+      "boundingBox": [
+        13.061487,
+        13.0628952,
+        77.5797154,
+        77.5808768
+      ],
+      "geocodedAt": "2026-10-24T07:04:32.759Z"
+    }
+  },
+  {
+    "id": "sanjaynagar",
+    "name": "Sanjaynagar",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 13.0240193,
+    "longitude": 77.5833226,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 252065905,
+      "displayName": "Sanjaynagar Main Road, Ramakrishna Layout, Bhoopasandra, Bengaluru North City Corporation, Bengaluru, Bangalore North, Bengaluru Urban, Karnataka, 560024, India",
+      "resultType": "tertiary",
+      "boundingBox": [
+        13.0232384,
+        13.0247771,
+        77.582475,
+        77.5841518
+      ],
+      "geocodedAt": "2026-10-24T07:04:34.036Z"
+    }
+  },
+  {
+    "id": "peenya",
+    "name": "Peenya",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 13.0330515,
+    "longitude": 77.5332233,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 252722595,
+      "displayName": "Peenya, Tumkur Road, Peenya Industrial Area, Goragunte Palya, Peenya, Bengaluru West City Corporation, Bengaluru, Bangalore North, Bengaluru Urban, Karnataka, 560058, India",
+      "resultType": "stop",
+      "boundingBox": [
+        13.0330015,
+        13.0331015,
+        77.5331733,
+        77.5332733
+      ],
+      "geocodedAt": "2026-10-24T07:04:35.261Z"
+    }
+  },
+  {
+    "id": "nagarbhavi",
+    "name": "Nagarbhavi",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 12.9512353,
+    "longitude": 77.519054,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 253198544,
+      "displayName": "Nagarbhavi, Bengaluru West City Corporation, Bengaluru, Bangalore North, Bengaluru Urban, Karnataka, India",
+      "resultType": "administrative",
+      "boundingBox": [
+        12.9357882,
+        12.966693,
+        77.5110418,
+        77.5270371
+      ],
+      "geocodedAt": "2026-10-24T07:04:36.824Z"
+    }
+  },
+  {
+    "id": "kengeri",
+    "name": "Kengeri",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 12.9176571,
+    "longitude": 77.4837568,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 251914325,
+      "displayName": "Kengeri, Kengeri Main Road, Kengeri, Bengaluru West City Corporation, Bengaluru, Bangalore South, Bengaluru Urban, Karnataka, 560060, India",
+      "resultType": "station",
+      "boundingBox": [
+        12.9126571,
+        12.9226571,
+        77.4787568,
+        77.4887568
+      ],
+      "geocodedAt": "2026-10-24T07:04:38.413Z"
+    }
+  },
+  {
+    "id": "devanahalli",
+    "name": "Devanahalli",
+    "aliases": [],
+    "city": "Bengaluru",
+    "country": "IN",
+    "latitude": 13.2483502,
+    "longitude": 77.7134377,
+    "geocode": {
+      "source": "OpenStreetMap Nominatim",
+      "osmPlaceId": 253509194,
+      "displayName": "Devanahalli, Devanahalli taluku, Bengaluru North, Karnataka, 562110, India",
+      "resultType": "town",
+      "boundingBox": [
+        13.2083502,
+        13.2883502,
+        77.6734377,
+        77.7534377
+      ],
+      "geocodedAt": "2026-10-24T07:04:39.997Z"
+    }
+  }
+]
