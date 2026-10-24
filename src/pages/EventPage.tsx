@@ -1,6 +1,6 @@
 import { AlertTriangle, ArrowLeft, ArrowUpRight, Bookmark, CalendarDays, Check, CheckCircle2, Clock3, Download, ExternalLink, Flag, Info, Link2, MapPin, Share2, ShieldCheck, Users, Video } from 'lucide-react';
-import { lazy, Suspense, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { AgeBadge, FitBadge, SampleBadge } from '../components/Badges';
 import { EventCard } from '../components/EventCard';
 import { LocalityMap } from '../components/LocalityMap';
@@ -10,20 +10,49 @@ import { eventDistance, eventModeLabel, eventToICS, eventTypeLabel, formatEventD
 import { localityById } from '../domain/localities';
 import { waitlistPosition } from '../domain/registration';
 import { canManageEvent, registrationAnswerErrors } from '../domain/operations';
-import type { RegistrationStatus } from '../domain/types';
+import type { KnotEvent, RegistrationStatus } from '../domain/types';
 import { useApp } from '../state/AppContext';
+import { isCloudProvider } from '../data/supabase/client';
+import { cloudGetEvent } from '../data/supabase/repository';
 
 const EventEngagement = lazy(() => import('../components/EventEngagement').then((module) => ({ default: module.EventEngagement })));
 
 export function EventPage() {
   const { eventId } = useParams();
-  const { data, currentUser, filters, toggleSave, participate, selfConfirmExternal, toggleFollow, cancelRegistration } = useApp();
-  const event = data.events.find((candidate) => candidate.id === eventId || candidate.slug === eventId);
+  const { data, currentUser, filters, toggleSave, participate, selfConfirmExternal, toggleFollow, cancelRegistration, recordReferralVisit, recordInterestSignal } = useApp();
+  const [searchParams] = useSearchParams();
+  const referralToken = searchParams.get('ref');
+  const snapshotEvent = data.events.find((candidate) => candidate.id === eventId || candidate.slug === eventId);
+  const [directEvent, setDirectEvent] = useState<KnotEvent | null>(null);
+  const [directLoading, setDirectLoading] = useState(false);
+  const [directError, setDirectError] = useState('');
+  const event = snapshotEvent ?? directEvent;
   const [selfDeclared, setSelfDeclared] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [answerErrors, setAnswerErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('');
-  if (!event) return <div className="page-container"><div className="empty-state"><h1>Event not found</h1><p>It may have been removed or the link may be incorrect.</p><Link className="button button--primary" to="/search">Back to discovery</Link></div></div>;
+  const [participationPending, setParticipationPending] = useState(false);
+  useEffect(() => {
+    if (!isCloudProvider || snapshotEvent || !eventId) { setDirectEvent(null); setDirectLoading(false); setDirectError(''); return; }
+    let active = true;
+    setDirectLoading(true); setDirectError('');
+    cloudGetEvent(eventId).then((loaded) => { if (active) { setDirectEvent(loaded); setDirectLoading(false); } })
+      .catch((reason: unknown) => { if (active) { setDirectEvent(null); setDirectLoading(false); setDirectError(reason instanceof Error ? reason.message : 'Event could not be loaded.'); } });
+    return () => { active = false; };
+  }, [eventId, snapshotEvent, data.session?.userId]);
+  useEffect(() => {
+    if (event && referralToken) recordReferralVisit(referralToken);
+  // A valid campaign is session-deduplicated in the repository action.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event?.id, referralToken]);
+  useEffect(() => {
+    if (!event || !currentUser?.personalizationConsent || currentUser.ageBand !== '18_plus') return;
+    const timer = window.setTimeout(() => recordInterestSignal(event.id, 'view', 5), 5000);
+    return () => window.clearTimeout(timer);
+  // One deduplicated interest-level signal after a real five-second dwell.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event?.id, currentUser?.id, currentUser?.personalizationConsent]);
+  if (!event) return <div className="page-container"><div className="empty-state">{directLoading ? <><h1>Loading event…</h1><p>Fetching the public detail and any authorized participant data.</p></> : <><h1>Event not found</h1><p>{directError || 'It may have been removed or the link may be incorrect.'}</p><Link className="button button--primary" to="/search">Back to discovery</Link></>}</div></div>;
   if (event.visibility === 'private' && !canManageEvent(currentUser, event)) return <div className="page-container"><div className="empty-state"><ShieldCheck size={30} /><h1>Private event</h1><p>Only authorized event managers can open this private operations listing.</p><Link className="button button--primary" to="/search">Back to discovery</Link></div></div>;
 
   const origin = localityById(filters.localityId);
@@ -41,28 +70,56 @@ export function EventPage() {
   const nativeCopy = registration?.kind === 'native' ? nativeRegistrationCopy(registration.status, position) : null;
   const canCancel = registration?.kind === 'native' && ['registered', 'approved', 'pending', 'waitlisted'].includes(registration.status);
 
-  const register = () => {
+  const register = async () => {
+    if (participationPending) return;
     const nextAnswerErrors = event.registration.kind === 'native' ? registrationAnswerErrors(event.registration.questions ?? [], answers) : {};
     setAnswerErrors(nextAnswerErrors);
     if (Object.keys(nextAnswerErrors).length) { setMessage('Complete the required registration answers before continuing.'); return; }
-    const result = participate(event, selfDeclared, answers);
-    const messages: Record<string, string> = {
-      answers_required: 'Complete the required registration answers before continuing.',
-      opened_externally: `Opened ${externalHost}. Knot has recorded a handoff, not a completed registration.`,
-      open_blocked: 'Your browser blocked the registration tab. Allow pop-ups or use the original-listing link below; no handoff was recorded.',
-      registered: 'You are registered. It has been added to My Plan.',
-      pending: 'Your registration is pending organizer review.',
-      waitlisted: 'You joined the waitlist. This is not a confirmed registration.',
-      duplicate: 'You already have a participation record for this event.',
-      check_rule: 'Confirm that you meet the stated age rule before continuing.',
-      cannot_join: 'Your self-declared age band is outside this event’s rule.',
-      needs_consent: 'Guardian consent must be completed before participation.',
-      not_open_yet: event.registrationOpensAt && new Date(event.registrationOpensAt).getTime() > Date.now()
-        ? `Registration opens ${formatEventDate(event.registrationOpensAt, true)}.`
-        : 'Native minor participation is not open until the organizer safety gate is complete.',
-      closed: 'Registration is closed for this event.',
-    };
-    setMessage(messages[result] ?? '');
+    setParticipationPending(true);
+    setMessage(event.registration.kind === 'external' ? 'Checking the external handoff with Knot…' : 'Submitting registration to Knot…');
+    try {
+      const result = await participate(event, selfDeclared, answers);
+      const messages: Record<string, string> = {
+        answers_required: 'Complete the required registration answers before continuing.',
+        opened_externally: `Opened ${externalHost}. Knot has recorded a handoff, not a completed registration.`,
+        open_blocked: 'Your browser blocked the registration tab. Allow pop-ups or use the original-listing link below; no handoff was recorded.',
+        registered: 'You are registered. It has been added to My Plan.',
+        pending: 'Your registration is pending organizer review.',
+        waitlisted: 'You joined the waitlist. This is not a confirmed registration.',
+        duplicate: 'You already have a participation record for this event.',
+        check_rule: 'Confirm that you meet the stated age rule before continuing.',
+        cannot_join: 'Your self-declared age band is outside this event’s rule.',
+        needs_consent: 'Guardian consent must be completed before participation.',
+        not_open_yet: event.registrationOpensAt && new Date(event.registrationOpensAt).getTime() > Date.now()
+          ? `Registration opens ${formatEventDate(event.registrationOpensAt, true)}.`
+          : 'Native minor participation is not open until the organizer safety gate is complete.',
+        closed: 'Registration is closed for this event.',
+      };
+      setMessage(messages[result] ?? '');
+    } catch (reason) {
+      setMessage(reason instanceof Error ? reason.message : 'Participation failed. No new registration state is claimed.');
+    } finally { setParticipationPending(false); }
+  };
+
+  const cancel = async () => {
+    if (!registration || participationPending) return;
+    if (!window.confirm(registration.status === 'waitlisted' ? 'Leave this waitlist?' : 'Cancel this native participation record?')) return;
+    setParticipationPending(true);
+    try {
+      await cancelRegistration(registration.id);
+      setMessage(registration.status === 'waitlisted' ? 'You left the waitlist.' : 'Your native participation record was cancelled. Any available confirmed spot was handled by the waitlist rules.');
+    } catch (reason) { setMessage(reason instanceof Error ? reason.message : 'Could not cancel this registration.'); }
+    finally { setParticipationPending(false); }
+  };
+
+  const confirmExternal = async () => {
+    if (participationPending) return;
+    setParticipationPending(true);
+    try {
+      await selfConfirmExternal(event.id);
+      setMessage('Marked as self-confirmed by you. Knot cannot verify the external registration.');
+    } catch (reason) { setMessage(reason instanceof Error ? reason.message : 'Could not save this self-confirmation.'); }
+    finally { setParticipationPending(false); }
   };
 
   const downloadCalendar = () => {
@@ -81,6 +138,7 @@ export function EventPage() {
     try {
       if (navigator.share) await navigator.share(shareData);
       else { await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`); setMessage('Share text and event link copied.'); }
+      recordInterestSignal(event.id, 'share');
     } catch { /* A dismissed share sheet needs no error state. */ }
   };
 
@@ -148,10 +206,10 @@ export function EventPage() {
           {decision === 'check_rule' && currentUser && <label className="check-rule"><input type="checkbox" checked={selfDeclared} onChange={(input) => setSelfDeclared(input.target.checked)} /><span>I confirm that I meet the age rule: <strong>{ageRuleLabel(event.ageRule)}</strong>. This is self-declared.</span></label>}
           {!registration && event.registration.kind === 'native' && (event.registration.questions?.length ?? 0) > 0 && <div className="registration-questions"><h3>Registration questions</h3><p>Your answers are private operational data for this event’s organizer, not public profile or behavioural analytics.</p>{event.registration.questions!.map((question) => <label key={question.id}>{question.label}{question.required && <em>Required</em>}{question.kind === 'long_text' ? <textarea rows={3} value={answers[question.id] ?? ''} onChange={(input) => setAnswers({ ...answers, [question.id]: input.target.value })} /> : question.kind === 'single_choice' ? <select value={answers[question.id] ?? ''} onChange={(input) => setAnswers({ ...answers, [question.id]: input.target.value })}><option value="">Choose an answer</option>{question.options.map((option) => <option key={option} value={option}>{option}</option>)}</select> : <input value={answers[question.id] ?? ''} onChange={(input) => setAnswers({ ...answers, [question.id]: input.target.value })} />}{answerErrors[question.id] && <small className="field-error">{answerErrors[question.id]}</small>}</label>)}</div>}
           {registration ? <div className="registration-state">{['pending', 'waitlisted'].includes(registration.status) ? <Clock3 /> : <CheckCircle2 />}<div><strong>{registration.status === 'opened_externally' ? 'Registration page opened' : registration.status === 'self_confirmed_registered' ? 'Registration self-confirmed' : registration.status === 'registered' ? 'You’re registered' : nativeCopy?.title ?? registration.status}</strong><p>{registration.kind === 'external' ? 'External registration is completed on the original platform.' : nativeCopy?.body ?? 'Your native participation record is in My Plan.'}</p></div></div> : <>
-            {decision === 'cannot_join' || decision === 'needs_consent' || decision === 'not_open_yet' || decision === 'closed' ? <div className="eligibility-notice"><AlertTriangle size={18} /><span>{decision === 'cannot_join' ? 'This event’s age rule does not include your age band. You can still read its public details.' : decision === 'needs_consent' ? 'Guardian consent is required before participation.' : decision === 'not_open_yet' ? (event.registrationOpensAt && new Date(event.registrationOpensAt).getTime() > Date.now() ? `Registration opens ${formatEventDate(event.registrationOpensAt, true)}.` : 'Native minor participation is not open yet.') : 'Registration is currently closed.'}</span></div> : <button className="button button--primary button--full button--large" onClick={register}>{decision === 'auth_required' ? 'Sign in to register' : event.registration.kind === 'external' ? `Register on ${externalHost}` : decision === 'check_rule' ? 'Confirm & register' : 'Register on Knot'}<ArrowUpRight size={18} /></button>}
+            {decision === 'cannot_join' || decision === 'needs_consent' || decision === 'not_open_yet' || decision === 'closed' ? <div className="eligibility-notice"><AlertTriangle size={18} /><span>{decision === 'cannot_join' ? 'This event’s age rule does not include your age band. You can still read its public details.' : decision === 'needs_consent' ? 'Guardian consent is required before participation.' : decision === 'not_open_yet' ? (event.registrationOpensAt && new Date(event.registrationOpensAt).getTime() > Date.now() ? `Registration opens ${formatEventDate(event.registrationOpensAt, true)}.` : 'Native minor participation is not open yet.') : 'Registration is currently closed.'}</span></div> : <button className="button button--primary button--full button--large" onClick={() => void register()} disabled={participationPending} aria-busy={participationPending}>{decision === 'auth_required' ? 'Sign in to register' : event.registration.kind === 'external' ? `Register on ${externalHost}` : decision === 'check_rule' ? 'Confirm & register' : 'Register on Knot'}<ArrowUpRight size={18} /></button>}
           </>}
-          {canCancel && registration && <button className="button button--ghost button--full" onClick={() => { if (window.confirm(registration.status === 'waitlisted' ? 'Leave this waitlist?' : 'Cancel this native participation record?')) { cancelRegistration(registration.id); setMessage(registration.status === 'waitlisted' ? 'You left the waitlist.' : 'Your native participation record was cancelled. Any available confirmed spot was handled by the waitlist rules.'); } }}>Cancel {registration.status === 'waitlisted' ? 'waitlist entry' : registration.status === 'pending' ? 'registration request' : 'registration'}</button>}
-          {registration?.kind === 'external' && registration.status === 'opened_externally' && <button className="button button--secondary button--full" onClick={() => { selfConfirmExternal(event.id); setMessage('Marked as self-confirmed by you. Knot cannot verify the external registration.'); }}>I completed external registration</button>}
+          {canCancel && registration && <button className="button button--ghost button--full" disabled={participationPending} onClick={() => void cancel()}>Cancel {registration.status === 'waitlisted' ? 'waitlist entry' : registration.status === 'pending' ? 'registration request' : 'registration'}</button>}
+          {registration?.kind === 'external' && registration.status === 'opened_externally' && <button className="button button--secondary button--full" disabled={participationPending} onClick={() => void confirmExternal()}>I completed external registration</button>}
           {registration?.kind === 'native' && ['registered', 'approved', 'checked_in', 'attended'].includes(registration.status) && event.onlineJoinUrl && <a className="button button--accent button--full" href={event.onlineJoinUrl} target="_blank" rel="noreferrer">Open joining link <ExternalLink size={16} /></a>}
           {registration?.kind === 'native' && ['registered', 'approved'].includes(registration.status) && <ParticipantCheckInPass event={event} registration={registration} />}
           <div className="participation-actions"><button className={saved ? 'is-saved' : ''} onClick={() => toggleSave(event.id)}><Bookmark fill={saved ? 'currentColor' : 'none'} />{saved ? 'Saved' : 'Save'}</button><button onClick={downloadCalendar}><Download /> Calendar</button><button onClick={share}><Share2 /> Share</button></div>

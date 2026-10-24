@@ -149,7 +149,7 @@ try {
     await page.locator('.own-project h3').waitFor();
   });
 
-  await section(7, 17, 'Organizers close the loop', 'Answer questions, score projects and send targeted in-app updates—with an honest delivery ledger.', async () => {
+  await section(7, 17, 'Organizers close the loop', 'Answer questions, score projects, share referral links and send honest in-app updates.', async () => {
     await signOut();
     await signIn('organizer@example.com', studioPath);
     await page.getByRole('button', { name: /Q&A/ }).click();
@@ -168,6 +168,11 @@ try {
     await page.getByLabel(/Message/).fill('Your participant guide and project resources are ready.');
     await page.getByRole('button', { name: 'Send in-app announcement' }).click();
     await page.getByText(/In-app announcement sent to/).waitFor();
+    await page.getByRole('button', { name: 'Growth', exact: true }).click();
+    await page.getByLabel('New channel label').fill('Demo community newsletter');
+    await page.getByRole('button', { name: 'Create channel' }).click();
+    await page.locator('.referral-qr').waitFor();
+    await page.locator('.referral-qr').scrollIntoViewIfNeeded();
   });
 
   await section(8, 10, 'Participants return to one honest plan', 'Answers, organizer updates, registration state, deadlines and attendance history stay connected.', async () => {
@@ -179,9 +184,10 @@ try {
     await goto('/plan');
   });
 
-  await section(9, 8, 'Discovery → participation → community', '46 domain tests • 135 Chromium checks • local-first, source-aware and honest about every state.', async () => {
+  await section(9, 8, 'Discovery → participation → community', '53 domain tests • 165 Chromium checks • referrals, media, series, teams and privacy-safe return cohorts.', async () => {
     await signOut();
-    await goto('/');
+    await goto('/search?view=map');
+    await page.getByRole('button', { name: 'Search this area', exact: true }).click();
   });
 } catch (error) {
   await page.screenshot({ path: 'artifacts/demo-failure.png', fullPage: true }).catch(() => {});

@@ -33,6 +33,13 @@ export const createInitialData = (): AppData => ({
   certificates: [],
   auditRecords: [],
   series: [],
+  seriesRuns: [],
+  teamInvitations: [],
+  teamContinuity: [],
+  referralCampaigns: [],
+  referralVisits: [],
+  mediaAssets: [],
+  personalizationSignals: [],
 });
 
 export function loadData(): AppData {
@@ -53,6 +60,7 @@ export function loadData(): AppData {
         : false,
       accountStatus: user.accountStatus ?? (user.guardianConsent === 'withdrawn' ? 'restricted' : 'active'),
       personalizationConsent: user.personalizationConsent ?? false,
+      returnAnalyticsConsent: user.returnAnalyticsConsent ?? false,
       learnedInterests: user.learnedInterests ?? [],
       guardianEmail: user.guardianEmail ?? null,
     }));
@@ -99,6 +107,13 @@ export function loadData(): AppData {
       certificates: Array.isArray(parsed.certificates) ? parsed.certificates : [],
       auditRecords: Array.isArray(parsed.auditRecords) ? parsed.auditRecords : [],
       series: Array.isArray(parsed.series) ? parsed.series : [],
+      seriesRuns: Array.isArray(parsed.seriesRuns) ? parsed.seriesRuns : [],
+      teamInvitations: Array.isArray(parsed.teamInvitations) ? parsed.teamInvitations : [],
+      teamContinuity: Array.isArray(parsed.teamContinuity) ? parsed.teamContinuity : [],
+      referralCampaigns: Array.isArray(parsed.referralCampaigns) ? parsed.referralCampaigns : [],
+      referralVisits: Array.isArray(parsed.referralVisits) ? parsed.referralVisits : [],
+      mediaAssets: Array.isArray(parsed.mediaAssets) ? parsed.mediaAssets : [],
+      personalizationSignals: Array.isArray(parsed.personalizationSignals) ? parsed.personalizationSignals : [],
     };
   } catch {
     return createInitialData();

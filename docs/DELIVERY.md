@@ -1,7 +1,7 @@
 # Delivery guide
 
-**Date:** 24 October 2026  
-**Target repository:** `https://github.com/suhail-m01/knot.git`  
+**Date:** 24 October 2026
+**Target repository:** `https://github.com/suhail-m01/NeXGen-Coder-S-Syed-Suhail-Knot.git`
 **Application directory:** `/home/user/knot-product`
 
 ## Deliverables
@@ -12,7 +12,7 @@
 | Product PDF | `deliverables/Knot_Product.pdf` | Exactly **5 pages**, 16:9 (960×540 pt) |
 | Product demo | `deliverables/Knot_Demo.mp4` | Exactly **120.000 seconds**, H.264, 1280×720, 30 fps; decode check passed |
 | Demo accessibility script | `docs/DEMO_SCRIPT.md` | Timestamped captions and reproduction commands |
-| Verification report | `docs/VERIFICATION.md` | 46 domain + 135 Chromium checks, limits and commands |
+| Verification report | `docs/VERIFICATION.md` | 53 domain + 165 Chromium checks, limits and commands |
 | Product boundary | `docs/PRODUCT_STATUS.md` | Working local features separated from production/scale gaps |
 | Artifact manifest | `deliverables/MANIFEST.json` | SHA-256 hashes and artifact properties |
 
@@ -55,7 +55,7 @@ git status
 git push origin <current-branch>:<intended-branch>
 ```
 
-If the remote still contains an unrelated README-only history, reconcile it through a reviewed unrelated-histories merge before pushing. Do not overwrite remote commit `0644ba0`.
+Preserve the repository’s existing history. The current local branch already contains a non-destructive merge of the new repository foundation; do not force-push.
 
 ## Archive validation
 

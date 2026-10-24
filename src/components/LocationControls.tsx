@@ -1,7 +1,7 @@
 import { LocateFixed, MapPin } from 'lucide-react';
 import { useState } from 'react';
 import { haversineKm } from '../domain/geo';
-import { localities, localityById } from '../domain/localities';
+import { localities, localityById, localityOptionLabel } from '../domain/localities';
 import { useApp } from '../state/AppContext';
 
 export function LocationControls({ light = false }: { light?: boolean }) {
@@ -34,7 +34,7 @@ export function LocationControls({ light = false }: { light?: boolean }) {
       <div className="locality-select">
         <MapPin size={17} />
         <select value={selected?.id ?? ''} onChange={(event) => chooseLocality(event.target.value)} aria-label="Choose your locality">
-          {localities.map((locality) => <option key={locality.id} value={locality.id}>{locality.name}</option>)}
+          {localities.map((locality) => <option key={locality.id} value={locality.id}>{localityOptionLabel(locality)}</option>)}
         </select>
       </div>
       <button className="near-me" onClick={nearMe}><LocateFixed size={17} /> Near me</button>

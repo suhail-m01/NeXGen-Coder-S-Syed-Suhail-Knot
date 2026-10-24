@@ -20,7 +20,7 @@ Open the Vite URL on port **5174**. `npm install` also prepares local OCR worker
 ## Verify
 
 ```bash
-npm test                 # 46 domain regressions
+npm test                 # 57 domain/cloud-mapping regressions
 npm run build            # TypeScript + optimized production bundle
 npm run dev              # required in another terminal for browser tests
 
@@ -29,16 +29,17 @@ npx playwright install-deps chromium  # only if Linux libraries are missing
 npm run test:e2e         # 84 core multi-account checks
 npm run test:e2e:expansion # 42 organizer/minor/trust/federation checks
 npm run test:e2e:adapters  # 9 real public-URL and local-OCR checks
-npm run test:e2e:all       # all 135 Chromium checks
+npm run test:e2e:final     # 30 referral/team/media/series/cohort/map checks
+npm run test:e2e:all       # all 165 Chromium checks
 ```
 
 Set `E2E_BASE_URL` to target another running deployment.
 
 ## Current verification
 
-- **46/46 domain tests passing**
-- **135/135 Chromium checks passing** across three fresh-state suites
-- **Clean TypeScript and production build**: 2,113 modules, route-level lazy chunks, no chunk-size warning
+- **57/57 domain and cloud-mapping tests passing**
+- **165/165 Chromium checks passing** across four fresh-state suites
+- **Clean TypeScript and production build**: 2,122 modules, route-level lazy chunks, no chunk-size warning
 - Real QR-image decoding and real local poster OCR are exercised; neither is mocked
 - Desktop and 390 px mobile flows checked; tested expanded views have no horizontal page overflow
 - Zero captured browser runtime/console errors in the final suites
@@ -52,7 +53,8 @@ See [`docs/VERIFICATION.md`](docs/VERIFICATION.md) for exact coverage and [`docs
 
 - Guest home, search, map, event and community browsing without an account.
 - Locality/radius, custom dates, event type/mode, interest, skill, price, age, team, source and estimated-travel filters; shareable filter URLs and saved searches.
-- Forty Bengaluru localities with stored Nominatim geocode provenance.
+- Forty Bengaluru localities with stored Nominatim geocode provenance plus thirteen explicitly approximate Indian city-centre anchors.
+- Pan/zoom map viewports, bounded grid clustering, Search this area and accessible loaded-event list parity.
 - Canonical events with multiple listings, confidence, freshness, revisions, merges and conflict-preserving source records.
 - Instant Add from pasted text, user-given public HTML/text pages and local English poster/screenshot OCR. URL imports reject private-network targets, use no credentials, have time/size limits and do not bypass CORS.
 - Structured title/ISO-date/registration extraction, conservative price/age reading, duplicate prompts, private original evidence and mandatory human review before publication.
@@ -72,7 +74,10 @@ See [`docs/VERIFICATION.md`](docs/VERIFICATION.md) for exact coverage and [`docs
 
 - Quick Post plus the full event studio at `/organizer/events/:eventId`.
 - Description, eligibility, experience, interests/skills, team rules, price/prizes, visibility, accessibility/conduct and adult collaborator roles.
-- FAQs, public/participant resources, series, rounds, agendas/speakers, text recaps and consented project showcases.
+- FAQs, public/participant resources, rounds, agendas/speakers, recaps and consented project showcases.
+- Weekly/monthly series automation creates bounded private drafts on workspace open; joining links, safety declarations and participant outcomes reset before human publication.
+- Persistent IndexedDB event/recap/sponsor images with WebP normalization, alt text, consent-basis records, draft/publication/takedown and sponsor linking.
+- Referral channels with share URLs, QR/share-card downloads and aggregate session-open/native-conversion reporting.
 - Attendee search and CSV export, custom registration answers, minor-safety controls and volunteer-limited check-in.
 - Random-token participant QR passes; camera/image/manual organizer scanning with event/time/eligibility checks and duplicate protection.
 - Structured attendee question inbox, organizer answers, reusable FAQ conversion and asker-notification loop without public minor identity.
@@ -84,6 +89,8 @@ See [`docs/VERIFICATION.md`](docs/VERIFICATION.md) for exact coverage and [`docs
 ### Communities, trust and data controls
 
 - Community pages, event series, next-event modules and adult team posts/requests/acceptance with post-acceptance contact handoff.
+- Adult in-app team invitations with expiry, shared request/invitation capacity, complementary-skill readiness and explicit team-continuity opt-in.
+- Adult-only, explicit-opt-in 60-day return cohorts using verified native attendance, mature windows and suppressed small-group counts.
 - Guest problem/minor-safety reports with local rate limits; privileged report resolution, organizer claims and sensitive-action audit history.
 - Aggregate operational/reach reporting with small-group suppression; unknown attendance, external clicks and organizer claims never become favourable proof.
 - JSON data export without password hashes, account deletion with organizer-offboarding protection and full workspace reset.
@@ -92,14 +99,14 @@ See [`docs/VERIFICATION.md`](docs/VERIFICATION.md) for exact coverage and [`docs
 
 **This is a browser-local product implementation, not a production cloud deployment or proof of internet-scale coverage.**
 
-- Data persists in `localStorage` under `knot.product.data.v1`. Supabase is not connected; there is no multi-device sync or production server authorization.
+- Structured data persists in `localStorage` under `knot.product.data.v1`; optimized media blobs use IndexedDB. Supabase is not connected; there is no multi-device sync or production server authorization.
 - The first eligible adult local account bootstraps workspace review access. This is local tooling, not a production admin model.
 - Source Records do not themselves activate APIs, scraping or crawling. Unstop, Devfolio, Devpost and open-web records start disabled; the included federation path accepts reviewed JSON only after permission activation.
 - Guardian attestation is an honest local workflow, not production-verifiable parental consent. Production minor activation requires verified consent, safeguarding, retention and legal review.
 - “Sent” means local in-app records were written. No email/SMS/WhatsApp delivery or proof of reading is claimed. Critical material-change notices bypass optional quiet hours.
 - Local capacity/waitlist transitions are deterministic, not concurrent server transactions.
 - QR tests decode real generated images; physical camera/hardware permission testing remains separate.
-- Rich media/photo storage, referral attribution, automated series cloning, 60-day behavioural cohort reporting and internet-scale open-web discovery are not represented as complete.
+- Local media, referral, series and cohort features do not become cloud storage, external campaign attribution, server schedulers or validated real-world pilot outcomes. Internet-scale open-web discovery and automated external email remain unactivated.
 - Paid ticketing, live video hosting, WhatsApp automation and guardian-managed dependent profiles remain separately gated.
 - No unknown value becomes favourable evidence; no self-report becomes verified attendance; no organizer/source claim becomes safety verification.
 
@@ -108,7 +115,7 @@ See [`docs/VERIFICATION.md`](docs/VERIFICATION.md) for exact coverage and [`docs
 ```text
 src/
 ├── components/       Shell, cards, filters, maps, QR and participant engagement
-├── data/             Versioned local repository and PBKDF2 browser auth
+├── data/             Versioned local repository, IndexedDB media and PBKDF2 auth
 ├── domain/           Types, age, geo, discovery, parsing/OCR adapters,
 │                     registration, federation, operations and trust rules
 ├── pages/            Public, account, planner, organizer studio and admin routes
@@ -120,7 +127,8 @@ tests/
 ├── domain.test.ts
 ├── e2e.mjs
 ├── expansion-e2e.mjs
-└── input-adapters-e2e.mjs
+├── input-adapters-e2e.mjs
+└── final-expansion-e2e.mjs
 
 scripts/
 ├── geocode-localities.ts

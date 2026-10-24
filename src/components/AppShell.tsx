@@ -6,7 +6,7 @@ import { Logo } from './Logo';
 import { canReviewSubmissions } from '../domain/permissions';
 
 export function AppShell() {
-  const { currentUser, data, markNotificationsRead, signOut } = useApp();
+  const { currentUser, data, markNotificationsRead, signOut, cloudStatus, cloudError, cloudMutationError } = useApp();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -21,13 +21,22 @@ export function AppShell() {
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
+    document.getElementById('main-content')?.focus({ preventScroll: true });
     setMenuOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!notificationsOpen && !menuOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') { setNotificationsOpen(false); setMenuOpen(false); } };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [notificationsOpen, menuOpen]);
 
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main-content">Skip to content</a>
-      <div className="workspace-notice"><Info size={14} /><span><strong>Local product workspace.</strong> Sample events are labelled. Your changes stay in this browser until cloud activation.</span></div>
+      <div className={`workspace-notice ${cloudStatus === 'error' ? 'workspace-notice--error' : ''}`}><Info size={14} /><span>{cloudStatus === 'local' ? <><strong>Local product workspace.</strong> Sample events are labelled. Your changes stay in this browser.</> : cloudStatus === 'loading' ? <><strong>Loading Supabase workspace.</strong> Public and authorized private data are being reconciled.</> : cloudStatus === 'ready' ? <><strong>Supabase cloud workspace.</strong> Sample events stay labelled; private state is authorized per account.</> : <><strong>Cloud workspace unavailable.</strong> {cloudError || 'No local fallback is substituted.'}</>}</span></div>
+      {cloudMutationError && <div className="workspace-notice workspace-notice--error" role="alert"><Info size={14} /><span>{cloudMutationError}</span></div>}
       <header className="site-header">
         <div className="site-header__inner">
           <Logo />
@@ -41,15 +50,15 @@ export function AppShell() {
           <div className="header-actions">
             <Link to="/publish" className="button button--primary button--small header-publish"><Plus size={16} /> Publish event</Link>
             {currentUser ? <>
-              <button className="icon-button notification-button" onClick={() => setNotificationsOpen(!notificationsOpen)} aria-label={`${unreadCount} unread notifications`}>
+              <button className="icon-button notification-button" onClick={() => setNotificationsOpen(!notificationsOpen)} aria-label={`${unreadCount} unread notifications`} aria-expanded={notificationsOpen}>
                 <Bell size={20} />{unreadCount > 0 && <span>{unreadCount}</span>}
               </button>
               <Link to="/profile" className="avatar" aria-label="Open your profile">{currentUser.name.slice(0, 1).toUpperCase()}</Link>
             </> : <Link to="/auth" className="account-link"><CircleUserRound size={19} /> <span>Sign in</span></Link>}
-            <button className="icon-button mobile-menu-button" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle navigation">{menuOpen ? <X /> : <Menu />}</button>
+            <button className="icon-button mobile-menu-button" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle navigation" aria-expanded={menuOpen} aria-controls="mobile-navigation">{menuOpen ? <X /> : <Menu />}</button>
           </div>
         </div>
-        {menuOpen && <nav className="mobile-menu" aria-label="Mobile navigation">
+        {menuOpen && <nav id="mobile-navigation" className="mobile-menu" aria-label="Mobile navigation">
           <NavLink to="/search"><Search size={18} /> Discover events</NavLink>
           <NavLink to="/search?view=map"><Map size={18} /> Map view</NavLink>
           <NavLink to="/add"><Plus size={18} /> Instant Add</NavLink>
@@ -60,14 +69,14 @@ export function AppShell() {
         </nav>}
       </header>
 
-      <main id="main-content"><Outlet /></main>
+      <main id="main-content" tabIndex={-1}><Outlet /></main>
 
       <footer className="site-footer">
         <div className="site-footer__top">
           <div><Logo inverse /><p>Find your people. Find your next event.<br />Participation with context, not just another event list.</p></div>
           <div className="footer-links"><div><strong>Discover</strong><Link to="/search">All events</Link><Link to="/search?view=map">Map</Link><Link to="/add">Add an event</Link></div><div><strong>Participate</strong><Link to="/plan">My plan</Link><Link to="/publish">Publish or host</Link><Link to="/profile">Preferences</Link></div></div>
         </div>
-        <div className="site-footer__bottom"><span>40 geocoded Bengaluru localities · Source-aware catalog</span><span>Local repository v1 · Cloud not connected</span></div>
+        <div className="site-footer__bottom"><span>40 geocoded Bengaluru localities + 13 labelled India city anchors</span><span>{cloudStatus === 'local' ? 'Local repository v1' : `Supabase provider · ${cloudStatus}`}</span></div>
       </footer>
 
       <nav className="mobile-bottom-nav" aria-label="Quick navigation">
@@ -79,8 +88,8 @@ export function AppShell() {
       </nav>
 
       {notificationsOpen && <div className="drawer-backdrop" onClick={() => setNotificationsOpen(false)}>
-        <aside className="notification-drawer" onClick={(event) => event.stopPropagation()} aria-label="Notifications">
-          <div className="drawer-header"><div><span className="eyebrow">Your updates</span><h2>Notifications</h2></div><button className="icon-button" onClick={() => setNotificationsOpen(false)}><X /></button></div>
+        <aside className="notification-drawer" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-label="Notifications">
+          <div className="drawer-header"><div><span className="eyebrow">Your updates</span><h2>Notifications</h2></div><button className="icon-button" aria-label="Close notifications" onClick={() => setNotificationsOpen(false)}><X /></button></div>
           {notifications.length === 0 ? <div className="drawer-empty"><Bell size={28} /><h3>All quiet for now</h3><p>Registration updates and material event changes will appear here.</p></div> : <>
             <button className="text-button" onClick={markNotificationsRead}>Mark all as read</button>
             <div className="notification-list">{notifications.map((notification) => <Link to={notification.eventId ? `/events/${notification.eventId}` : '/plan'} key={notification.id} onClick={() => setNotificationsOpen(false)} className={`notification-item ${!notification.readAt ? 'notification-item--unread' : ''}`}>

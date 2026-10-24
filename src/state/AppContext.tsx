@@ -12,16 +12,27 @@ import { approvalRegistrationStatus, initialNativeRegistrationStatus, isConfirme
 import { createCheckInToken, parseCheckInPayload, type CheckInScanResult } from '../domain/checkin';
 import { deliveryTimeForUser, resolveAnnouncementAudience, validateAnnouncement } from '../domain/announcements';
 import { canCheckInEvent, canJudgeEvent, canManageEvent, certificateEligible, materialEventChangeFields, registrationAnswerErrors, safetyChecklistComplete, validateProjectSubmission, validateRegistrationQuestions } from '../domain/operations';
+import { acceptedTeamMemberIds, effectiveInvitationStatus } from '../domain/growth';
+import { automationDue, cloneEventForSeries, nextSeriesDate } from '../domain/series';
+import { appendPersonalizationSignal, deriveLearnedInterests, newPersonalizationSignal } from '../domain/personalization';
 import { applySubmissionEdits, eventFromReviewedSubmission, reviewedSubmissionListing, validateSubmissionEdits, type SubmissionReviewEdits } from '../domain/review';
 import type { QuickPostInput } from '../domain/validation';
 import { validWebUrl, validateQuickPost } from '../domain/validation';
 import type {
   Announcement, AnnouncementInput, AppData, AttendeeQuestion, EventFilters, EventOperationsPatch,
-  EventSeries, KnotEvent, ParticipationCertificate, ProjectScore, ProjectSubmission,
-  Registration, RegistrationStatus, SourceRecord, Submission, TrustReport, UserAccount,
+  EventSeries, KnotEvent, MediaAsset, ParticipationCertificate, PersonalizationAction, ProjectScore, ProjectSubmission,
+  ReferralCampaign, Registration, RegistrationStatus, SourceRecord, Submission, TeamInvitation, TrustReport, UserAccount,
 } from '../domain/types';
 import { createSalt, hashPassword, verifyPassword } from '../data/auth';
 import { createInitialData, loadData, makeId, saveData } from '../data/repository';
+import { clearMediaBlobs, deleteMediaBlob } from '../data/mediaStore';
+import { isCloudProvider, getSupabase } from '../data/supabase/client';
+import { cloudSignIn, cloudSignOut, cloudSignUp } from '../data/supabase/auth';
+import {
+  cloudCancelRegistration, cloudCreateEvent, cloudRecordExternalHandoff, cloudRecordInterestSignal,
+  cloudRegisterNative, cloudSelfConfirmExternal, cloudSetFollow, cloudSetSaved, cloudUpdateProfile, loadCloudSnapshot,
+} from '../data/supabase/repository';
+import { subscribeCloudCatalog, subscribeCloudPrivateState } from '../data/supabase/realtime';
 
 export interface SignUpInput {
   name: string;
@@ -34,8 +45,13 @@ export interface SignUpInput {
   guardianEmail?: string;
 }
 
+type MaybePromise<T> = T | Promise<T>;
+
 interface AppContextValue {
   data: AppData;
+  cloudStatus: 'local' | 'loading' | 'ready' | 'error';
+  cloudError: string;
+  cloudMutationError: string;
   currentUser: UserAccount | null;
   filters: EventFilters;
   setFilters: (filters: EventFilters) => void;
@@ -45,12 +61,13 @@ interface AppContextValue {
   signIn: (email: string, password: string) => Promise<UserAccount>;
   signOut: () => void;
   deleteAccount: () => void;
-  updateProfile: (patch: Partial<Pick<UserAccount, 'name' | 'areaLocalityId' | 'radiusKm' | 'interests' | 'skills' | 'learningGoals' | 'announcementOptOut' | 'personalizationConsent' | 'learnedInterests' | 'experienceLevel' | 'education' | 'availability' | 'maxPriceInr' | 'teamStatus' | 'quietHoursStart' | 'quietHoursEnd'>>) => void;
+  updateProfile: (patch: Partial<Pick<UserAccount, 'name' | 'areaLocalityId' | 'radiusKm' | 'interests' | 'skills' | 'learningGoals' | 'announcementOptOut' | 'personalizationConsent' | 'returnAnalyticsConsent' | 'learnedInterests' | 'experienceLevel' | 'education' | 'availability' | 'maxPriceInr' | 'teamStatus' | 'quietHoursStart' | 'quietHoursEnd'>>) => Promise<void>;
   toggleSave: (eventId: string) => boolean;
+  recordInterestSignal: (eventId: string, action: PersonalizationAction, dwellSeconds?: number) => void;
   toggleFollow: (communityId: string) => boolean;
-  participate: (event: KnotEvent, selfDeclaredAgeRuleMet?: boolean, answers?: Record<string, string>) => 'auth_required' | 'opened_externally' | 'open_blocked' | 'registered' | 'pending' | 'waitlisted' | 'duplicate' | 'check_rule' | 'cannot_join' | 'needs_consent' | 'not_open_yet' | 'closed' | 'answers_required';
-  selfConfirmExternal: (eventId: string) => void;
-  publishQuickEvent: (input: QuickPostInput) => KnotEvent;
+  participate: (event: KnotEvent, selfDeclaredAgeRuleMet?: boolean, answers?: Record<string, string>) => MaybePromise<'auth_required' | 'opened_externally' | 'open_blocked' | 'registered' | 'pending' | 'waitlisted' | 'duplicate' | 'check_rule' | 'cannot_join' | 'needs_consent' | 'not_open_yet' | 'closed' | 'answers_required'>;
+  selfConfirmExternal: (eventId: string) => MaybePromise<void>;
+  publishQuickEvent: (input: QuickPostInput) => MaybePromise<KnotEvent>;
   createSubmission: (rawText: string, inputType?: 'text' | 'url') => Submission;
   importFederatedEvents: (sourceId: string, rawJson: string) => number;
   submitSubmission: (submissionId: string, review: { title: string; startAt: string | null; venueName: string | null; registrationUrl: string | null }) => void;
@@ -61,7 +78,7 @@ interface AppContextValue {
   updateVenue: (eventId: string, name: string, address: string) => void;
   setEventCancellation: (eventId: string, cancelled: boolean) => void;
   reviewRegistration: (registrationId: string, decision: 'approve' | 'reject') => Extract<RegistrationStatus, 'approved' | 'waitlisted' | 'rejected'>;
-  cancelRegistration: (registrationId: string) => void;
+  cancelRegistration: (registrationId: string) => MaybePromise<void>;
   scanCheckIn: (eventId: string, payload: string) => CheckInScanResult;
   checkInRegistration: (registrationId: string) => void;
   sendAnnouncement: (eventId: string, input: AnnouncementInput) => Announcement;
@@ -69,8 +86,19 @@ interface AppContextValue {
   createTeamPost: (eventId: string, role: string, skills: string[], lookingFor: string, note: string) => void;
   requestTeam: (postId: string, note: string) => void;
   respondTeamRequest: (requestId: string, status: 'accepted' | 'declined') => void;
+  inviteTeamMember: (postId: string, inviteeEmail: string, role: string, note: string) => TeamInvitation;
+  respondTeamInvitation: (invitationId: string, status: 'accepted' | 'declined') => void;
+  setTeamContinuity: (postId: string, enabled: boolean) => void;
   updateEventOperations: (eventId: string, patch: EventOperationsPatch, summary?: string, materialConfirmed?: boolean) => void;
   createSeries: (title: string) => EventSeries;
+  configureSeriesAutomation: (seriesId: string, templateEventId: string, frequency: 'weekly' | 'monthly', nextAt: string, occurrences: number) => void;
+  stopSeriesAutomation: (seriesId: string) => void;
+  publishSeriesDraft: (eventId: string) => void;
+  createReferralCampaign: (eventId: string, label: string) => ReferralCampaign;
+  recordReferralVisit: (token: string) => void;
+  registerMediaAsset: (eventId: string, input: Pick<MediaAsset, 'kind' | 'title' | 'altText' | 'mimeType' | 'sizeBytes' | 'width' | 'height' | 'consentBasis'>) => MediaAsset;
+  setMediaStatus: (assetId: string, status: 'draft' | 'published') => void;
+  removeMediaAsset: (assetId: string) => void;
   saveSearch: (name: string) => void;
   deleteSearch: (searchId: string) => void;
   checkSavedSearch: (searchId: string) => number;
@@ -96,17 +124,81 @@ interface AppContextValue {
 const AppContext = createContext<AppContextValue | null>(null);
 const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
+function withInterestSignal(previous: AppData, user: UserAccount, event: KnotEvent, action: PersonalizationAction): AppData {
+  const candidate = newPersonalizationSignal(user, event, action, makeId('interest-signal'));
+  if (!candidate) return previous;
+  const appended = appendPersonalizationSignal(previous.personalizationSignals, candidate);
+  const signals = appended.signals.filter((signal) => signal.userId !== user.id).concat(appended.signals.filter((signal) => signal.userId === user.id).slice(-500));
+  return {
+    ...previous,
+    personalizationSignals: signals,
+    users: previous.users.map((account) => account.id === user.id ? { ...account, learnedInterests: deriveLearnedInterests(signals, user.id) } : account),
+  };
+}
+
+const emptyCloudData = (): AppData => ({ ...createInitialData(), events: [], sources: [] });
+
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<AppData>(loadData);
+  const [data, setData] = useState<AppData>(() => isCloudProvider ? emptyCloudData() : loadData());
   const [filters, setFilters] = useState<EventFilters>(defaultFilters);
+  const [cloudStatus, setCloudStatus] = useState<AppContextValue['cloudStatus']>(isCloudProvider ? 'loading' : 'local');
+  const [cloudError, setCloudError] = useState('');
+  const [cloudMutationError, setCloudMutationError] = useState('');
+  const [cloudRevision, setCloudRevision] = useState(0);
+  const cloudLoadSequence = useRef(0);
   const navigate = useNavigate();
   const location = useLocation();
   const currentUser = data.users.find((user) => user.id === data.session?.userId) ?? null;
 
-  useEffect(() => saveData(data), [data]);
+  useEffect(() => { if (!isCloudProvider) saveData(data); }, [data]);
+
+  useEffect(() => {
+    if (!isCloudProvider) return;
+    let active = true;
+    const sequence = ++cloudLoadSequence.current;
+    loadCloudSnapshot().then((snapshot) => {
+      if (!active || sequence !== cloudLoadSequence.current) return;
+      setData(snapshot);
+      setCloudStatus('ready');
+      setCloudError('');
+    }).catch((reason: unknown) => {
+      if (!active || sequence !== cloudLoadSequence.current) return;
+      setCloudStatus('error');
+      setCloudError(reason instanceof Error ? reason.message : 'Could not load the cloud workspace.');
+    });
+    return () => { active = false; };
+  }, [cloudRevision]);
+
+  useEffect(() => {
+    if (!isCloudProvider) return;
+    const { data: listener } = getSupabase().auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+        setCloudRevision((value) => value + 1);
+      }
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!isCloudProvider) return;
+    let timer = 0;
+    const invalidate = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setCloudRevision((value) => value + 1), 500);
+    };
+    const unsubscribeCatalog = subscribeCloudCatalog(invalidate);
+    const unsubscribePrivate = data.session?.userId ? subscribeCloudPrivateState(data.session.userId, invalidate) : () => undefined;
+    return () => { window.clearTimeout(timer); unsubscribeCatalog(); unsubscribePrivate(); };
+  }, [data.session?.userId]);
+
+  const reportCloudMutationError = (reason: unknown) => {
+    setCloudMutationError(reason instanceof Error ? reason.message : 'Cloud operation failed. No durable success is claimed.');
+  };
+
   const dataRef = useRef(data);
   useEffect(() => { dataRef.current = data; }, [data]);
   useEffect(() => {
+    if (isCloudProvider) return;
     const processScheduledAnnouncements = () => {
       const snapshot = dataRef.current;
       const dueIds = new Set(snapshot.announcements.filter((announcement) => announcement.status === 'scheduled' && announcement.scheduledFor && new Date(announcement.scheduledFor).getTime() <= Date.now()).map((announcement) => announcement.id));
@@ -136,12 +228,68 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => window.clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    if (isCloudProvider) return;
+    const processSeriesAutomation = () => {
+      if (!dataRef.current.series.some((item) => automationDue(item))) return;
+      setData((previous) => {
+        const nowDate = new Date();
+        const now = nowDate.toISOString();
+        let changed = false;
+        const events = [...previous.events];
+        const seriesRuns = [...previous.seriesRuns];
+        const notifications = [...previous.notifications];
+        const auditRecords = [...previous.auditRecords];
+        const series = previous.series.map((original) => {
+          if (!original.automation) return original;
+          const item = { ...original, automation: { ...original.automation } };
+          let catchUp = 0;
+          while (item.automation.active && new Date(item.automation.nextAt).getTime() <= nowDate.getTime() && catchUp < 3) {
+            changed = true;
+            const current = item.automation;
+            const scheduledFor = current.nextAt;
+            const template = events.find((event) => event.id === current.templateEventId);
+            const owner = previous.users.find((user) => user.id === item.organizerId);
+            if (!template || !owner || !canManageEvent(owner, template) || template.organizerId !== item.organizerId) {
+              item.automation = { ...current, active: false };
+              auditRecords.push({ id: makeId('audit'), actorId: item.organizerId, action: 'series_automation_stopped', targetType: 'series', targetId: item.id, details: 'Template or active adult owner unavailable; no clone created.', createdAt: now });
+              changed = true;
+              break;
+            }
+            if (!seriesRuns.some((run) => run.seriesId === item.id && run.scheduledFor === scheduledFor)) {
+              const cloneId = makeId('event');
+              const clone = cloneEventForSeries(template, scheduledFor, cloneId, now, makeId);
+              events.unshift(clone);
+              seriesRuns.push({ id: makeId('series-run'), seriesId: item.id, templateEventId: template.id, clonedEventId: cloneId, scheduledFor, createdAt: now });
+              notifications.push({ id: makeId('notification'), userId: item.organizerId, eventId: cloneId, type: 'event', title: `Series draft ready: ${clone.title}`, body: `Review the draft scheduled for ${scheduledFor}. Participant records and safety declarations were not copied.`, dedupeKey: `${item.id}-${scheduledFor}-${item.organizerId}`, readAt: null, createdAt: now });
+              auditRecords.push({ id: makeId('audit'), actorId: item.organizerId, action: 'series_draft_cloned', targetType: 'event', targetId: cloneId, details: `Local on-open automation from ${template.id}; private draft only.`, createdAt: now });
+              changed = true;
+            }
+            const occurrencesRemaining = Math.max(0, current.occurrencesRemaining - 1);
+            item.automation = { ...current, nextAt: nextSeriesDate(scheduledFor, current.frequency), occurrencesRemaining, active: occurrencesRemaining > 0 };
+            catchUp += 1;
+          }
+          return item;
+        });
+        return changed ? { ...previous, series, events, seriesRuns, notifications, auditRecords } : previous;
+      });
+    };
+    processSeriesAutomation();
+    const timer = window.setInterval(processSeriesAutomation, 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const requireAuth = (returnTo: string, action: string) => {
     const params = new URLSearchParams({ returnTo, action });
     navigate(`/auth?${params.toString()}`, { state: { from: location.pathname } });
   };
 
   const signUp = async (input: SignUpInput) => {
+    if (isCloudProvider) {
+      if (input.name.trim().length < 2) throw new Error('Enter your name.');
+      if (!/^\S+@\S+\.\S+$/.test(input.email)) throw new Error('Enter a valid email address.');
+      return cloudSignUp(input);
+    }
     if (input.ageBand === 'under_13') throw new Error('UNDER_13_ACCOUNTS_NOT_AVAILABLE');
     if (input.name.trim().length < 2) throw new Error('Enter your name.');
     if (!/^\S+@\S+\.\S+$/.test(input.email)) throw new Error('Enter a valid email address.');
@@ -161,7 +309,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ageBand: input.ageBand, ageBandConfirmedOn: now,
       guardianConsent: minor ? 'pending' : 'not_required',
       accountStatus: minor ? 'restricted' : 'active', guardianEmail: minor ? input.guardianEmail!.toLowerCase() : null,
-      personalizationConsent: false, learnedInterests: [],
+      personalizationConsent: false, returnAnalyticsConsent: false, learnedInterests: [],
       areaLocalityId: input.areaLocalityId, radiusKm: 10,
       interests: input.interests, skills: [], learningGoals: [], createdAt: now,
     };
@@ -178,6 +326,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
+    if (isCloudProvider) {
+      const user = await cloudSignIn(email, password);
+      setData((previous) => ({ ...previous, users: [user], session: { userId: user.id, createdAt: new Date().toISOString() } }));
+      return user;
+    }
     const user = data.users.find((candidate) => candidate.email.toLowerCase() === email.toLowerCase());
     if (!user || !(await verifyPassword(password, user.passwordSalt, user.passwordHash))) throw new Error('Email or password is incorrect.');
     if (user.accountStatus === 'closed') throw new Error('This account is closed. Public browsing remains available.');
@@ -186,6 +339,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = () => {
+    if (isCloudProvider) {
+      void cloudSignOut().then(() => window.location.replace('/')).catch(reportCloudMutationError);
+      return;
+    }
     const next = { ...data, session: null };
     saveData(next);
     setData(next);
@@ -193,12 +350,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteAccount = () => {
+    if (isCloudProvider) throw new Error('Cloud account deletion requires the server offboarding workflow; no local-only deletion is claimed.');
     if (!currentUser) throw new Error('Sign in required.');
     const ownedEventIds = new Set(data.events.filter((event) => event.organizerId === currentUser.id).map((event) => event.id));
     if (data.registrations.some((registration) => ownedEventIds.has(registration.eventId) && registration.userId !== currentUser.id)) {
       throw new Error('Your events still have other participants’ operational registration records. Export those records and complete the offboarding process before deleting this organizer account.');
     }
     const ownedPostIds = new Set(data.teamPosts.filter((post) => post.ownerId === currentUser.id || ownedEventIds.has(post.eventId)).map((post) => post.id));
+    const ownedSeriesIds = new Set(data.series.filter((item) => item.organizerId === currentUser.id).map((item) => item.id));
     const deletedSubmissionIds = new Set(data.projectSubmissions.filter((item) => item.userId === currentUser.id || ownedEventIds.has(item.eventId)).map((item) => item.id));
     const next: AppData = {
       ...data,
@@ -225,18 +384,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
       certificates: data.certificates.filter((item) => item.userId !== currentUser.id && !ownedEventIds.has(item.eventId)),
       announcements: data.announcements.filter((item) => !ownedEventIds.has(item.eventId)),
       series: data.series.filter((item) => item.organizerId !== currentUser.id),
+      seriesRuns: data.seriesRuns.filter((item) => !ownedSeriesIds.has(item.seriesId) && !ownedEventIds.has(item.templateEventId) && !ownedEventIds.has(item.clonedEventId)),
+      teamInvitations: data.teamInvitations.filter((item) => item.inviteeId !== currentUser.id && !ownedPostIds.has(item.postId)),
+      teamContinuity: data.teamContinuity.filter((item) => item.userId !== currentUser.id && !ownedPostIds.has(item.postId)),
+      referralCampaigns: data.referralCampaigns.filter((item) => !ownedEventIds.has(item.eventId)),
+      referralVisits: data.referralVisits.filter((item) => !ownedEventIds.has(item.eventId)),
+      mediaAssets: data.mediaAssets.filter((item) => item.uploaderId !== currentUser.id && !ownedEventIds.has(item.eventId)),
+      personalizationSignals: data.personalizationSignals.filter((item) => item.userId !== currentUser.id && !ownedEventIds.has(item.eventId)),
     };
+    for (const asset of data.mediaAssets.filter((item) => item.uploaderId === currentUser.id || ownedEventIds.has(item.eventId))) void deleteMediaBlob(asset.id);
     saveData(next);
     setData(next);
     window.location.replace('/');
   };
 
-  const updateProfile: AppContextValue['updateProfile'] = (patch) => {
+  const updateProfile: AppContextValue['updateProfile'] = async (patch) => {
     if (!currentUser) return;
     const safePatch = currentUser.ageBand === '18_plus'
       ? patch
-      : { ...patch, personalizationConsent: false, learnedInterests: [] };
-    setData((previous) => ({ ...previous, users: previous.users.map((user) => user.id === currentUser.id ? { ...user, ...safePatch } : user) }));
+      : { ...patch, personalizationConsent: false, returnAnalyticsConsent: false, learnedInterests: [] };
+    if (isCloudProvider) {
+      await cloudUpdateProfile(currentUser.id, safePatch);
+      setCloudMutationError('');
+    }
+    setData((previous) => ({
+      ...previous,
+      users: previous.users.map((user) => user.id === currentUser.id ? { ...user, ...safePatch } : user),
+      personalizationSignals: safePatch.personalizationConsent === false
+        ? previous.personalizationSignals.filter((signal) => signal.userId !== currentUser.id) : previous.personalizationSignals,
+    }));
   };
 
   const toggleSave = (eventId: string) => {
@@ -245,11 +421,46 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return false;
     }
     const exists = data.saves.some((save) => save.userId === currentUser.id && save.eventId === eventId);
-    setData((previous) => ({
-      ...previous,
-      saves: exists ? previous.saves.filter((save) => !(save.userId === currentUser.id && save.eventId === eventId)) : [...previous.saves, { userId: currentUser.id, eventId, createdAt: new Date().toISOString() }],
-    }));
+    if (isCloudProvider) {
+      const userId = currentUser.id;
+      void cloudSetSaved(userId, eventId, !exists).then(() => {
+        setData((previous) => ({
+          ...previous,
+          saves: exists ? previous.saves.filter((save) => !(save.userId === userId && save.eventId === eventId))
+            : [...previous.saves.filter((save) => !(save.userId === userId && save.eventId === eventId)), { userId, eventId, createdAt: new Date().toISOString() }],
+        }));
+        setCloudMutationError('');
+        if (!exists) void cloudRecordInterestSignal(eventId, 'save').then((result) => {
+          if (result.recorded) setData((previous) => ({ ...previous, users: previous.users.map((user) => user.id === userId ? { ...user, learnedInterests: result.learnedInterests } : user) }));
+        }).catch((reason) => setCloudMutationError(`Save succeeded, but the interest signal was not recorded: ${reason instanceof Error ? reason.message : 'unknown error'}`));
+      }).catch(reportCloudMutationError);
+      return !exists;
+    }
+    setData((previous) => {
+      const next = {
+        ...previous,
+        saves: exists ? previous.saves.filter((save) => !(save.userId === currentUser.id && save.eventId === eventId)) : [...previous.saves, { userId: currentUser.id, eventId, createdAt: new Date().toISOString() }],
+      };
+      const event = previous.events.find((candidate) => candidate.id === eventId);
+      return !exists && event ? withInterestSignal(next, currentUser, event, 'save') : next;
+    });
     return !exists;
+  };
+
+  const recordInterestSignal = (eventId: string, action: PersonalizationAction, dwellSeconds?: number) => {
+    if (!currentUser) return;
+    if (isCloudProvider) {
+      const userId = currentUser.id;
+      void cloudRecordInterestSignal(eventId, action, dwellSeconds).then((result) => {
+        if (result.recorded) setData((previous) => ({ ...previous, users: previous.users.map((user) => user.id === userId ? { ...user, learnedInterests: result.learnedInterests } : user) }));
+      }).catch(reportCloudMutationError);
+      return;
+    }
+    setData((previous) => {
+      const user = previous.users.find((candidate) => candidate.id === currentUser.id);
+      const event = previous.events.find((candidate) => candidate.id === eventId);
+      return user && event ? withInterestSignal(previous, user, event, action) : previous;
+    });
   };
 
   const toggleFollow = (communityId: string) => {
@@ -258,6 +469,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return false;
     }
     const exists = data.follows.some((follow) => follow.userId === currentUser.id && follow.communityId === communityId);
+    if (isCloudProvider) {
+      const userId = currentUser.id;
+      void cloudSetFollow(userId, communityId, !exists).then(() => {
+        setData((previous) => ({
+          ...previous,
+          follows: exists ? previous.follows.filter((follow) => !(follow.userId === userId && follow.communityId === communityId))
+            : [...previous.follows.filter((follow) => !(follow.userId === userId && follow.communityId === communityId)), { userId, communityId, createdAt: new Date().toISOString() }],
+        }));
+        setCloudMutationError('');
+      }).catch(reportCloudMutationError);
+      return !exists;
+    }
     setData((previous) => ({
       ...previous,
       follows: exists ? previous.follows.filter((follow) => !(follow.userId === currentUser.id && follow.communityId === communityId)) : [...previous.follows, { userId: currentUser.id, communityId, createdAt: new Date().toISOString() }],
@@ -279,6 +502,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const existing = data.registrations.find((registration) => registration.eventId === event.id && registration.userId === currentUser.id);
     if (existing && !['cancelled', 'rejected'].includes(existing.status)) return 'duplicate';
     const now = new Date().toISOString();
+    const referralId = window.sessionStorage.getItem(`knot.referral.${event.id}`);
+    const referralCampaignId = referralId && data.referralCampaigns.some((campaign) => campaign.id === referralId && campaign.eventId === event.id && campaign.active) ? referralId : null;
+    if (isCloudProvider) {
+      if (event.registration.kind === 'external') {
+        const target = event.registration.externalUrl ?? event.listings.find((listing) => listing.isPrimary)?.registrationUrl;
+        if (!target) return 'closed';
+        const opened = window.open('about:blank', '_blank');
+        if (!opened) return 'open_blocked';
+        opened.opener = null;
+        return (async () => {
+          try {
+            const registration = await cloudRecordExternalHandoff(event.id, selfDeclaredAgeRuleMet, referralCampaignId);
+            setData((previous) => ({ ...previous, registrations: [...previous.registrations, registration] }));
+            setCloudMutationError('');
+            opened.location.href = target;
+            return 'opened_externally' as const;
+          } catch (reason) {
+            opened.close();
+            throw reason;
+          }
+        })();
+      }
+      return (async () => {
+        const registration = await cloudRegisterNative(event.id, answers, selfDeclaredAgeRuleMet, referralCampaignId);
+        setData((previous) => ({ ...previous, registrations: [...previous.registrations, registration] }));
+        setCloudMutationError('');
+        if (['registered', 'approved'].includes(registration.status)) {
+          void cloudRecordInterestSignal(event.id, 'participation').catch((reason) => setCloudMutationError(`Registration succeeded, but the interest signal was not recorded: ${reason instanceof Error ? reason.message : 'unknown error'}`));
+        }
+        return registration.status === 'pending' ? 'pending' as const : registration.status === 'waitlisted' ? 'waitlisted' as const : 'registered' as const;
+      })();
+    }
     if (event.registration.kind === 'external') {
       const target = event.registration.externalUrl ?? event.listings.find((listing) => listing.isPrimary)?.registrationUrl;
       if (!target) return 'closed';
@@ -288,7 +543,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       opened.location.href = target;
       const registration: Registration = {
         id: makeId('registration'), eventId: event.id, userId: currentUser.id, kind: 'external',
-        status: 'opened_externally', selfDeclaredAgeRuleMet, createdAt: now, updatedAt: now,
+        status: 'opened_externally', selfDeclaredAgeRuleMet, createdAt: now, updatedAt: now, referralCampaignId,
       };
       setData((previous) => ({ ...previous, registrations: [...previous.registrations, registration] }));
       return 'opened_externally';
@@ -299,7 +554,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const registration: Registration = {
       id: makeId('registration'), eventId: event.id, userId: currentUser.id, kind: 'native', status,
       selfDeclaredAgeRuleMet, createdAt: now, updatedAt: now, checkInToken: createCheckInToken(),
-      answers: Object.fromEntries((event.registration.questions ?? []).map((question) => [question.id, (answers[question.id] ?? '').trim()])),
+      answers: Object.fromEntries((event.registration.questions ?? []).map((question) => [question.id, (answers[question.id] ?? '').trim()])), referralCampaignId,
     };
     const position = status === 'waitlisted' ? waitlistPosition([...data.registrations, registration], registration.id) : null;
     const title = status === 'registered' ? 'Registration confirmed' : status === 'pending' ? 'Registration submitted' : 'Waitlist joined';
@@ -308,19 +563,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
       : status === 'pending'
         ? `The organizer will review your registration for ${event.title}. This is not confirmed yet.`
         : `You are waitlisted for ${event.title}${position ? ` at position ${position}` : ''}. This is not a confirmed registration.`;
-    setData((previous) => ({
-      ...previous,
-      registrations: [...previous.registrations, registration],
-      notifications: [...previous.notifications, {
-        id: makeId('notification'), userId: currentUser.id, eventId: event.id, type: 'event',
-        title, body, dedupeKey: `${event.id}-registration-${currentUser.id}`, readAt: null, createdAt: now,
-      }],
-    }));
+    setData((previous) => {
+      const next = {
+        ...previous,
+        registrations: [...previous.registrations, registration],
+        notifications: [...previous.notifications, {
+          id: makeId('notification'), userId: currentUser.id, eventId: event.id, type: 'event' as const,
+          title, body, dedupeKey: `${event.id}-registration-${currentUser.id}`, readAt: null, createdAt: now,
+        }],
+      };
+      return status === 'registered' ? withInterestSignal(next, currentUser, event, 'participation') : next;
+    });
     return status;
   };
 
   const selfConfirmExternal = (eventId: string) => {
     if (!currentUser) return;
+    if (isCloudProvider) {
+      return cloudSelfConfirmExternal(eventId).then((updated) => {
+        setData((previous) => ({ ...previous, registrations: previous.registrations.map((registration) => registration.id === updated.id ? updated : registration) }));
+        setCloudMutationError('');
+      });
+    }
     setData((previous) => ({
       ...previous,
       registrations: previous.registrations.map((registration) => registration.eventId === eventId && registration.userId === currentUser.id && registration.kind === 'external'
@@ -352,9 +616,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       registrationOpensAt: null, registrationDeadline: input.registrationDeadline ? new Date(input.registrationDeadline).toISOString() : null,
       submissionDeadline: null, status: 'published',
       venue: input.mode === 'online' ? null : {
-        id: makeId('venue'), name: input.venueName.trim(), address: input.address.trim() || `${locality?.name ?? 'Bengaluru'}, Bengaluru`,
-        localityId: input.localityId, city: 'Bengaluru', latitude: locality?.latitude ?? null, longitude: locality?.longitude ?? null,
-        locationPrecision: 'locality', confirmedBy: 'organizer',
+        id: makeId('venue'), name: input.venueName.trim(), address: input.address.trim() || (locality ? `${locality.name}, ${locality.city}` : 'Location not stated'),
+        localityId: input.localityId, city: locality?.city ?? 'Not stated',
+        latitude: input.geocode?.latitude ?? locality?.latitude ?? null, longitude: input.geocode?.longitude ?? locality?.longitude ?? null,
+        locationPrecision: input.geocode?.precision ?? (locality?.geocode.resultType === 'city' ? 'city' : 'locality'), confirmedBy: 'organizer',
+        geocode: input.geocode ? {
+          source: 'Nominatim / OpenStreetMap', displayName: input.geocode.displayName, resultType: input.geocode.resultType,
+          osmType: input.geocode.osmType, osmId: input.geocode.osmId, boundingBox: input.geocode.boundingBox, geocodedAt: input.geocode.geocodedAt,
+        } : undefined,
       },
       onlineJoinUrl: input.onlineJoinUrl || null,
       registration: {
@@ -374,6 +643,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }],
       revisions: [],
     };
+    if (isCloudProvider) {
+      return cloudCreateEvent(event, currentUser.id).then((created) => {
+        setData((previous) => ({ ...previous, events: [created, ...previous.events.filter((candidate) => candidate.id !== created.id)] }));
+        setCloudMutationError('');
+        return created;
+      });
+    }
     setData((previous) => ({ ...previous, events: [event, ...previous.events] }));
     return event;
   };
@@ -613,14 +889,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       : next === 'waitlisted'
         ? `Your registration for ${event.title} was reviewed and added to the waitlist. It is not confirmed.`
         : `Your ${registration.status === 'waitlisted' ? 'waitlist entry' : 'registration request'} for ${event.title} was not accepted by the organizer.`;
-    setData((previous) => ({
-      ...previous,
-      registrations: previous.registrations.map((candidate) => candidate.id === registrationId ? { ...candidate, status: next, updatedAt: now } : candidate),
-      notifications: [...previous.notifications, {
-        id: makeId('notification'), userId: registration.userId, eventId: event.id, type: 'event' as const,
-        title, body, dedupeKey: `${registrationId}-${next}-${now}`, readAt: null, createdAt: now,
-      }],
-    }));
+    setData((previous) => {
+      const updated = {
+        ...previous,
+        registrations: previous.registrations.map((candidate) => candidate.id === registrationId ? { ...candidate, status: next, updatedAt: now } : candidate),
+        notifications: [...previous.notifications, {
+          id: makeId('notification'), userId: registration.userId, eventId: event.id, type: 'event' as const,
+          title, body, dedupeKey: `${registrationId}-${next}-${now}`, readAt: null, createdAt: now,
+        }],
+      };
+      const participant = previous.users.find((candidate) => candidate.id === registration.userId);
+      return next === 'approved' && participant ? withInterestSignal(updated, participant, event, 'participation') : updated;
+    });
     return next;
   };
 
@@ -630,6 +910,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const event = registration ? data.events.find((candidate) => candidate.id === registration.eventId) : null;
     if (!registration || !event || registration.userId !== currentUser.id || registration.kind !== 'native') throw new Error('Native registration not found for this account.');
     if (!['registered', 'approved', 'pending', 'waitlisted'].includes(registration.status)) throw new Error('This participation record cannot be cancelled.');
+    if (isCloudProvider) {
+      return cloudCancelRegistration(registrationId).then((updated) => {
+        setData((previous) => ({ ...previous, registrations: previous.registrations.map((candidate) => candidate.id === updated.id ? updated : candidate) }));
+        setCloudMutationError('');
+        setCloudRevision((value) => value + 1);
+      });
+    }
     const freesConfirmedSpot = ['registered', 'approved'].includes(registration.status);
     const canPromote = event.status !== 'cancelled' && new Date(event.endAt ?? event.startAt).getTime() > Date.now();
     const now = new Date().toISOString();
@@ -775,6 +1062,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const post = data.teamPosts.find((candidate) => candidate.id === postId);
     if (!post || post.status !== 'open') throw new Error('This team post is not open.');
     if (post.ownerId === currentUser.id) throw new Error('This is your own team post.');
+    if (acceptedTeamMemberIds(post, data.teamRequests, data.teamInvitations).includes(currentUser.id)) throw new Error('You are already a member of this team.');
     if (data.teamRequests.some((request) => request.postId === postId && request.requesterId === currentUser.id && request.status !== 'declined')) throw new Error('You already sent a request to this team.');
     setData((previous) => ({
       ...previous,
@@ -793,12 +1081,78 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!request || !post || !event || post.ownerId !== currentUser.id) throw new Error('Only the team post owner can respond.');
     if (request.status !== 'pending') throw new Error('This request has already been answered.');
     if (status === 'accepted') {
-      const accepted = data.teamRequests.filter((candidate) => candidate.postId === post.id && candidate.status === 'accepted').length;
+      const accepted = acceptedTeamMemberIds(post, data.teamRequests, data.teamInvitations).length - 1;
       if (event.team.maxSize && accepted + 2 > event.team.maxSize) throw new Error(`This event allows teams of at most ${event.team.maxSize} people.`);
     }
     setData((previous) => ({
       ...previous,
       teamRequests: previous.teamRequests.map((candidate) => candidate.id === requestId ? { ...candidate, status } : candidate),
+    }));
+  };
+
+  const inviteTeamMember = (postId: string, inviteeEmail: string, role: string, note: string) => {
+    if (!currentUser || currentUser.ageBand !== '18_plus' || currentUser.accountStatus !== 'active') throw new Error('An active adult account is required.');
+    const post = data.teamPosts.find((candidate) => candidate.id === postId && candidate.ownerId === currentUser.id);
+    const event = post ? data.events.find((candidate) => candidate.id === post.eventId) : null;
+    if (!post || !event || post.status !== 'open') throw new Error('Only the owner of an open team post can send invitations.');
+    if (event.team.formationDeadline && new Date(event.team.formationDeadline).getTime() <= Date.now()) throw new Error('The team-formation deadline has passed.');
+    const invitee = data.users.find((candidate) => candidate.email.toLowerCase() === inviteeEmail.trim().toLowerCase());
+    if (!invitee || invitee.ageBand !== '18_plus' || invitee.accountStatus !== 'active') throw new Error('Invitations require an existing active adult account.');
+    if (invitee.id === currentUser.id) throw new Error('The team owner is already a member.');
+    if (acceptedTeamMemberIds(post, data.teamRequests, data.teamInvitations).includes(invitee.id)) throw new Error('That person is already on this team.');
+    if (data.teamInvitations.some((item) => item.postId === postId && item.inviteeId === invitee.id && effectiveInvitationStatus(item) === 'pending')) throw new Error('A pending invitation already exists for this account.');
+    if (event.team.maxSize && acceptedTeamMemberIds(post, data.teamRequests, data.teamInvitations).length >= event.team.maxSize) throw new Error('This team is already at the event maximum.');
+    if (data.teamInvitations.filter((item) => item.postId === postId).length >= 50) throw new Error('This team has reached the local invitation history limit.');
+    if (role.trim().length < 2 || role.trim().length > 100) throw new Error('Add a short team role.');
+    const now = new Date();
+    const defaultExpiry = now.getTime() + 7 * 86_400_000;
+    const formationDeadline = event.team.formationDeadline ? new Date(event.team.formationDeadline).getTime() : Number.POSITIVE_INFINITY;
+    const invitation: TeamInvitation = {
+      id: makeId('team-invitation'), postId, inviteeId: invitee.id, role: role.trim(), note: note.trim(),
+      status: 'pending', createdAt: now.toISOString(), respondedAt: null,
+      expiresAt: new Date(Math.min(defaultExpiry, formationDeadline)).toISOString(),
+    };
+    setData((previous) => ({
+      ...previous,
+      teamInvitations: [...previous.teamInvitations, invitation],
+      notifications: [...previous.notifications, {
+        id: makeId('notification'), userId: invitee.id, eventId: event.id, type: 'event' as const,
+        title: `Team invitation: ${event.title}`, body: `${currentUser.name} invited you as ${invitation.role}. Accepting does not register you for the event.`,
+        dedupeKey: `${invitation.id}-${invitee.id}`, readAt: null, createdAt: invitation.createdAt,
+      }],
+    }));
+    return invitation;
+  };
+
+  const respondTeamInvitation = (invitationId: string, status: 'accepted' | 'declined') => {
+    if (!currentUser || currentUser.ageBand !== '18_plus' || currentUser.accountStatus !== 'active') throw new Error('An active adult account is required.');
+    const invitation = data.teamInvitations.find((candidate) => candidate.id === invitationId && candidate.inviteeId === currentUser.id);
+    const post = invitation ? data.teamPosts.find((candidate) => candidate.id === invitation.postId) : null;
+    const event = post ? data.events.find((candidate) => candidate.id === post.eventId) : null;
+    if (!invitation || !post || !event) throw new Error('Team invitation not found.');
+    if (invitation.status !== 'pending') throw new Error('This invitation has already been answered.');
+    if (effectiveInvitationStatus(invitation) === 'expired') throw new Error('This invitation has expired. Ask the team owner for a new one.');
+    if (status === 'accepted' && event.team.maxSize && acceptedTeamMemberIds(post, data.teamRequests, data.teamInvitations).length >= event.team.maxSize) throw new Error('This team reached its event maximum before the invitation could be accepted.');
+    const now = new Date().toISOString();
+    setData((previous) => ({
+      ...previous,
+      teamInvitations: previous.teamInvitations.map((item) => item.id === invitationId ? { ...item, status, respondedAt: now } : item),
+      notifications: [...previous.notifications, {
+        id: makeId('notification'), userId: post.ownerId, eventId: event.id, type: 'event' as const,
+        title: `Team invitation ${status}`, body: `${currentUser.name} ${status} the invitation for ${event.title}.`,
+        dedupeKey: `${invitation.id}-response-${post.ownerId}`, readAt: null, createdAt: now,
+      }],
+    }));
+  };
+
+  const setTeamContinuity = (postId: string, enabled: boolean) => {
+    if (!currentUser || currentUser.ageBand !== '18_plus' || currentUser.accountStatus !== 'active') throw new Error('An active adult account is required.');
+    const post = data.teamPosts.find((candidate) => candidate.id === postId);
+    if (!post || !acceptedTeamMemberIds(post, data.teamRequests, data.teamInvitations).includes(currentUser.id)) throw new Error('Team continuity is available to accepted team members.');
+    const now = new Date().toISOString();
+    setData((previous) => ({
+      ...previous,
+      teamContinuity: [...previous.teamContinuity.filter((item) => !(item.postId === postId && item.userId === currentUser.id)), { postId, userId: currentUser.id, enabled, updatedAt: now }],
     }));
   };
 
@@ -810,6 +1164,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const error = validateRegistrationQuestions(patch.registrationQuestions);
       if (error) throw new Error(error);
     }
+    if (patch.sponsors?.some((sponsor) => {
+      const invalidLogo = Boolean(sponsor.logoAssetId) && !data.mediaAssets.some((asset) => asset.id === sponsor.logoAssetId && asset.eventId === eventId && asset.kind === 'sponsor_logo' && asset.status !== 'removed');
+      return sponsor.name.trim().length < 2 || !validWebUrl(sponsor.url) || invalidLogo;
+    })) throw new Error('Every sponsor needs a name, valid HTTP/HTTPS URL and a logo from this event library.');
+    if ((patch.sponsors?.length ?? 0) > 20) throw new Error('Use no more than 20 sponsors per event.');
     if (patch.resources?.some((resource) => resource.title.trim().length < 2 || !validWebUrl(resource.url))) throw new Error('Every resource needs a title and a valid HTTP or HTTPS URL.');
     if (patch.rounds?.some((round) => !round.title.trim() || !Number.isFinite(new Date(round.startAt).getTime()) || !Number.isFinite(new Date(round.endAt).getTime()) || new Date(round.startAt).getTime() >= new Date(round.endAt).getTime() || (round.submissionDeadline && !Number.isFinite(new Date(round.submissionDeadline).getTime())))) throw new Error('Every round needs a title and valid start/end times, with the end after its start.');
     if (patch.sessions?.some((session) => !session.title.trim() || !Number.isFinite(new Date(session.startAt).getTime()) || !Number.isFinite(new Date(session.endAt).getTime()) || new Date(session.startAt).getTime() >= new Date(session.endAt).getTime())) throw new Error('Every session needs a title and valid start/end times, with the end after its start.');
@@ -853,6 +1212,122 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const series: EventSeries = { id: makeId('series'), organizerId: currentUser.id, title: title.trim(), createdAt: new Date().toISOString() };
     setData((previous) => ({ ...previous, series: [...previous.series, series] }));
     return series;
+  };
+
+  const configureSeriesAutomation = (seriesId: string, templateEventId: string, frequency: 'weekly' | 'monthly', nextAt: string, occurrences: number) => {
+    if (!currentUser) throw new Error('Sign in required.');
+    const series = data.series.find((item) => item.id === seriesId && item.organizerId === currentUser.id);
+    const template = data.events.find((item) => item.id === templateEventId);
+    if (!series || !template || !canManageEvent(currentUser, template) || template.organizerId !== currentUser.id) throw new Error('Only the series owner can automate their own event template.');
+    if (template.registration.kind !== 'native') throw new Error('Series automation currently requires a Knot-native registration template.');
+    if (!Number.isFinite(new Date(nextAt).getTime()) || new Date(nextAt).getTime() <= Date.now()) throw new Error('Choose a future first occurrence.');
+    if (!Number.isInteger(occurrences) || occurrences < 1 || occurrences > 24) throw new Error('Schedule between 1 and 24 occurrences.');
+    const now = new Date().toISOString();
+    setData((previous) => ({
+      ...previous,
+      series: previous.series.map((item) => item.id === seriesId ? { ...item, automation: { templateEventId, frequency, nextAt: new Date(nextAt).toISOString(), occurrencesRemaining: occurrences, active: true } } : item),
+      events: previous.events.map((item) => item.id === templateEventId ? { ...item, seriesId, updatedAt: now } : item),
+      auditRecords: [...previous.auditRecords, { id: makeId('audit'), actorId: currentUser.id, action: 'series_automation_configured', targetType: 'series', targetId: seriesId, details: `${frequency}; ${occurrences} occurrences; local on-open processing.`, createdAt: now }],
+    }));
+  };
+
+  const stopSeriesAutomation = (seriesId: string) => {
+    if (!currentUser) throw new Error('Sign in required.');
+    const series = data.series.find((item) => item.id === seriesId && item.organizerId === currentUser.id);
+    if (!series) throw new Error('Series not found or not owned by this organizer.');
+    setData((previous) => ({
+      ...previous,
+      series: previous.series.map((item) => item.id === seriesId && item.automation ? { ...item, automation: { ...item.automation, active: false } } : item),
+      auditRecords: [...previous.auditRecords, { id: makeId('audit'), actorId: currentUser.id, action: 'series_automation_stopped', targetType: 'series', targetId: seriesId, details: 'No further local drafts will be generated.', createdAt: new Date().toISOString() }],
+    }));
+  };
+
+  const publishSeriesDraft = (eventId: string) => {
+    if (!currentUser) throw new Error('Sign in required.');
+    const event = data.events.find((item) => item.id === eventId);
+    if (!event || event.status !== 'draft' || !canManageEvent(currentUser, event) || !data.seriesRuns.some((run) => run.clonedEventId === eventId)) throw new Error('Only an authorized series-generated draft can use this publication action.');
+    const now = new Date().toISOString();
+    setData((previous) => ({
+      ...previous,
+      events: previous.events.map((item) => item.id === eventId ? { ...item, status: 'published', visibility: 'public', updatedAt: now, revisions: [...item.revisions, { id: makeId('revision'), at: now, changedBy: currentUser.id, fields: ['status', 'visibility'], summary: 'Series draft reviewed and published.' }] } : item),
+      auditRecords: [...previous.auditRecords, { id: makeId('audit'), actorId: currentUser.id, action: 'series_draft_published', targetType: 'event', targetId: eventId, details: 'Human publication action after local series cloning.', createdAt: now }],
+    }));
+  };
+
+  const createReferralCampaign = (eventId: string, label: string) => {
+    if (!currentUser) throw new Error('Sign in required.');
+    const event = data.events.find((item) => item.id === eventId);
+    if (!event || !canManageEvent(currentUser, event)) throw new Error('Only an authorized event manager can create referral channels.');
+    if (label.trim().length < 2 || label.trim().length > 60) throw new Error('Use a channel label between 2 and 60 characters.');
+    if (data.referralCampaigns.filter((item) => item.eventId === eventId).length >= 12) throw new Error('Use no more than 12 referral channels per event.');
+    const campaign: ReferralCampaign = { id: makeId('referral'), eventId, label: label.trim(), token: createCheckInToken(), active: true, createdById: currentUser.id, createdAt: new Date().toISOString() };
+    setData((previous) => ({ ...previous, referralCampaigns: [...previous.referralCampaigns, campaign] }));
+    return campaign;
+  };
+
+  const recordReferralVisit = (token: string) => {
+    const campaign = data.referralCampaigns.find((item) => item.token === token && item.active);
+    const event = campaign ? data.events.find((item) => item.id === campaign.eventId && item.status !== 'cancelled' && (item.visibility ?? 'public') === 'public') : null;
+    if (!campaign || !event) return;
+    let sessionKey = window.sessionStorage.getItem('knot.referral.session');
+    if (!sessionKey) { sessionKey = createCheckInToken(); window.sessionStorage.setItem('knot.referral.session', sessionKey); }
+    window.sessionStorage.setItem(`knot.referral.${event.id}`, campaign.id);
+    setData((previous) => {
+      // Effects may run twice before rerender; dedupe against the latest atomic snapshot.
+      if (previous.referralVisits.some((visit) => visit.campaignId === campaign.id && visit.sessionKey === sessionKey)) return previous;
+      const visit = { id: makeId('referral-visit'), campaignId: campaign.id, eventId: event.id, sessionKey, visitedAt: new Date().toISOString() };
+      return { ...previous, referralVisits: [...previous.referralVisits, visit].slice(-5000) };
+    });
+  };
+
+  const registerMediaAsset: AppContextValue['registerMediaAsset'] = (eventId, input) => {
+    if (!currentUser) throw new Error('Sign in required.');
+    const event = data.events.find((item) => item.id === eventId);
+    if (!event || !canManageEvent(currentUser, event)) throw new Error('Only an authorized event manager can add media.');
+    if (data.mediaAssets.filter((item) => item.eventId === eventId && item.status !== 'removed').length >= 40) throw new Error('Use no more than 40 active media assets per event.');
+    if (data.mediaAssets.length >= 400) throw new Error('This browser workspace reached its media metadata limit. Take down unused assets before continuing.');
+    if (input.title.trim().length < 2 || input.title.trim().length > 140) throw new Error('Use a media title between 2 and 140 characters.');
+    if (input.altText.trim().length < 3 || input.altText.trim().length > 240) throw new Error('Describe the image in 3–240 characters for alternative text.');
+    if (!['image/webp', 'image/png', 'image/jpeg'].includes(input.mimeType) || input.sizeBytes < 1 || input.sizeBytes > 1_500_000) throw new Error('The optimized image must be a supported image under 1.5 MB.');
+    if (!Number.isInteger(input.width) || !Number.isInteger(input.height) || input.width < 1 || input.height < 1 || input.width > 1600 || input.height > 1600) throw new Error('Image dimensions are invalid or exceed the 1600 px optimization boundary.');
+    if (input.kind === 'sponsor_logo' && input.consentBasis !== 'not_applicable') throw new Error('Sponsor logos use the not-applicable consent basis.');
+    if (input.kind !== 'sponsor_logo' && !['not_applicable', 'adult_only_declared', 'guardian_consent_declared'].includes(input.consentBasis)) throw new Error('Choose an explicit photo consent basis.');
+    const now = new Date().toISOString();
+    const asset: MediaAsset = { ...input, id: makeId('media'), eventId, uploaderId: currentUser.id, title: input.title.trim(), altText: input.altText.trim(), status: 'draft', createdAt: now, updatedAt: now };
+    setData((previous) => ({
+      ...previous,
+      mediaAssets: [...previous.mediaAssets, asset],
+      auditRecords: [...previous.auditRecords, { id: makeId('audit'), actorId: currentUser.id, action: 'media_asset_added', targetType: 'media', targetId: asset.id, details: `${asset.kind}; ${asset.consentBasis}; draft only; organizer declaration is not independent consent verification.`, createdAt: now }],
+    }));
+    return asset;
+  };
+
+  const setMediaStatus = (assetId: string, status: 'draft' | 'published') => {
+    if (!currentUser) throw new Error('Sign in required.');
+    const asset = data.mediaAssets.find((item) => item.id === assetId && item.status !== 'removed');
+    const event = asset ? data.events.find((item) => item.id === asset.eventId) : null;
+    if (!asset || !event || !canManageEvent(currentUser, event)) throw new Error('Media not found or manager access required.');
+    if (status === 'published' && asset.kind !== 'sponsor_logo' && !asset.consentBasis) throw new Error('A consent basis is required before publication.');
+    const now = new Date().toISOString();
+    setData((previous) => ({
+      ...previous,
+      mediaAssets: previous.mediaAssets.map((item) => item.id === assetId ? { ...item, status, updatedAt: now } : item),
+      auditRecords: [...previous.auditRecords, { id: makeId('audit'), actorId: currentUser.id, action: status === 'published' ? 'media_published' : 'media_unpublished', targetType: 'media', targetId: assetId, details: `${asset.kind}; consent basis ${asset.consentBasis}; declarations are not independently verified.`, createdAt: now }],
+    }));
+  };
+
+  const removeMediaAsset = (assetId: string) => {
+    if (!currentUser) throw new Error('Sign in required.');
+    const asset = data.mediaAssets.find((item) => item.id === assetId && item.status !== 'removed');
+    const event = asset ? data.events.find((item) => item.id === asset.eventId) : null;
+    if (!asset || !event || !canManageEvent(currentUser, event)) throw new Error('Media not found or manager access required.');
+    const now = new Date().toISOString();
+    setData((previous) => ({
+      ...previous,
+      mediaAssets: previous.mediaAssets.map((item) => item.id === assetId ? { ...item, status: 'removed', updatedAt: now } : item),
+      events: previous.events.map((item) => item.id === asset.eventId ? { ...item, sponsors: (item.sponsors ?? []).map((sponsor) => sponsor.logoAssetId === assetId ? { ...sponsor, logoAssetId: null } : sponsor) } : item),
+      auditRecords: [...previous.auditRecords, { id: makeId('audit'), actorId: currentUser.id, action: 'media_taken_down', targetType: 'media', targetId: assetId, details: 'Public display disabled and sponsor logo detached; local blob deletion requested.', createdAt: now }],
+    }));
   };
 
   const saveSearch = (name: string) => {
@@ -1039,6 +1514,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setData((previous) => ({
       ...previous,
       users: previous.users.map((user) => user.id === currentUser.id ? { ...user, guardianConsent: 'withdrawn', accountStatus: 'restricted', personalizationConsent: false, learnedInterests: [] } : user),
+      personalizationSignals: previous.personalizationSignals.filter((signal) => signal.userId !== currentUser.id),
       registrations: previous.registrations.map((registration) => registration.userId === currentUser.id && registration.kind === 'native' && !['cancelled', 'rejected', 'attended'].includes(registration.status) ? { ...registration, status: 'cancelled', updatedAt: now } : registration),
       consentRecords: previous.consentRecords.map((record) => record.userId === currentUser.id ? { ...record, status: 'withdrawn', updatedAt: now } : record),
       auditRecords: [...previous.auditRecords, { id: makeId('audit'), actorId: currentUser.id, action: 'guardian_consent_withdrawn', targetType: 'user', targetId: currentUser.id, details: 'Account restricted; active native participation cancelled.', createdAt: now }],
@@ -1092,27 +1568,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const resetWorkspace = () => {
+    if (isCloudProvider) throw new Error('A cloud workspace cannot be reset from the browser.');
     const next = createInitialData();
     saveData(next);
     setData(next);
     setFilters(defaultFilters());
+    void clearMediaBlobs();
     window.location.replace('/');
   };
 
   const value = useMemo<AppContextValue>(() => ({
-    data, currentUser, filters, setFilters,
+    data, currentUser, filters, setFilters, cloudStatus, cloudError, cloudMutationError,
     unreadCount: currentUser ? data.notifications.filter((notification) => notification.userId === currentUser.id && !notification.readAt && (!notification.deliverAt || new Date(notification.deliverAt).getTime() <= Date.now())).length : 0,
-    requireAuth, signUp, signIn, signOut, deleteAccount, updateProfile, toggleSave, toggleFollow, participate,
+    requireAuth, signUp, signIn, signOut, deleteAccount, updateProfile, toggleSave, recordInterestSignal, toggleFollow, participate,
     selfConfirmExternal, publishQuickEvent, createSubmission, importFederatedEvents, submitSubmission,
     approveSubmission, moderateSubmission, mergeSubmission, updateSourceRecord, updateVenue, setEventCancellation,
     reviewRegistration, cancelRegistration, scanCheckIn, checkInRegistration, sendAnnouncement, submitFeedback, createTeamPost, requestTeam, respondTeamRequest,
-    updateEventOperations, createSeries, saveSearch, deleteSearch, checkSavedSearch, toggleTopicFollow, toggleGoing,
+    inviteTeamMember, respondTeamInvitation, setTeamContinuity,
+    updateEventOperations, createSeries, configureSeriesAutomation, stopSeriesAutomation, publishSeriesDraft,
+    createReferralCampaign, recordReferralVisit, registerMediaAsset, setMediaStatus, removeMediaAsset,
+    saveSearch, deleteSearch, checkSavedSearch, toggleTopicFollow, toggleGoing,
     askQuestion, answerQuestion, submitProject, updateProjectStatus, scoreProject, submitReport, reviewReport,
     submitClaim, reviewClaim, completeGuardianConsent, withdrawGuardianConsent, reconfirmAgeBand, issueCertificate,
     markNotificationsRead, resetWorkspace,
   // Context functions intentionally close over the latest data snapshot.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [data, currentUser, filters]);
+  }), [data, currentUser, filters, cloudStatus, cloudError, cloudMutationError]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

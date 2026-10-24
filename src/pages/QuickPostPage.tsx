@@ -6,7 +6,10 @@ import { organizerAgeRule } from '../domain/defaults';
 import { ageRuleLabel } from '../domain/age';
 import { eventTypeLabel } from '../domain/events';
 import { INTERESTS, SKILLS } from '../domain/interests';
-import { localities } from '../domain/localities';
+import { localities, localityOptionLabel } from '../domain/localities';
+import { haversineKm } from '../domain/geo';
+import { geocodeAddress, type GeocodeCandidate } from '../data/supabase/geocode';
+import { isCloudProvider } from '../data/supabase/client';
 import type { AgeRule, EventMode, EventType } from '../domain/types';
 import type { QuickPostInput } from '../domain/validation';
 import { validateQuickPost } from '../domain/validation';
@@ -30,6 +33,10 @@ export function QuickPostPage() {
   const [venueName, setVenueName] = useState('');
   const [localityId, setLocalityId] = useState('koramangala');
   const [address, setAddress] = useState('');
+  const [geocodeCandidate, setGeocodeCandidate] = useState<GeocodeCandidate | null>(null);
+  const [appliedGeocode, setAppliedGeocode] = useState<GeocodeCandidate | null>(null);
+  const [geocodeMessage, setGeocodeMessage] = useState('');
+  const [geocoding, setGeocoding] = useState(false);
   const [registrationKind, setRegistrationKind] = useState<'external' | 'native'>('native');
   const [capacity, setCapacity] = useState('');
   const [approval, setApproval] = useState<'none' | 'manual'>('none');
@@ -62,8 +69,9 @@ export function QuickPostPage() {
   if (!currentUser) return <Navigate to="/auth?returnTo=%2Fpublish&action=publish%20or%20host%20an%20event" replace />;
   if (currentUser.ageBand !== '18_plus') return <div className="page-container"><div className="empty-state"><ShieldCheck size={30} /><h1>Publishing is an adult-only action</h1><p>You can continue to browse public events and communities.</p></div></div>;
 
+  const selectedLocality = localities.find((locality) => locality.id === localityId) ?? null;
   const input: QuickPostInput = {
-    title, eventType, startAt, endAt, mode, venueName, localityId, address, registrationKind,
+    title, eventType, startAt, endAt, mode, venueName, localityId, address, geocode: appliedGeocode, registrationKind,
     capacity: capacity ? Number(capacity) : null, approval, waitlistEnabled: Boolean(capacity) && waitlistEnabled,
     registrationUrl, onlineJoinUrl, ageRule, description, eligibilityText, interests, skills,
     priceKind, priceAmount: priceAmount ? Number(priceAmount) : null, registrationDeadline,
@@ -76,6 +84,25 @@ export function QuickPostPage() {
     mode === 'online' && registrationKind === 'external' && registrationUrl && !onlineJoinUrl ? 'The joining link can be added later for eligible participants.' : null,
   ].filter((warning): warning is string => Boolean(warning)).slice(0, 5);
 
+  const clearGeocode = () => { setGeocodeCandidate(null); setAppliedGeocode(null); setGeocodeMessage(''); };
+  const candidateDistance = geocodeCandidate && selectedLocality
+    ? haversineKm(selectedLocality.latitude, selectedLocality.longitude, geocodeCandidate.latitude, geocodeCandidate.longitude) : null;
+  const candidateDistanceLimit = selectedLocality?.geocode.resultType === 'city' ? 75 : 30;
+
+  const lookupAddress = async () => {
+    if (!isCloudProvider || address.trim().length < 3 || geocoding) return;
+    setGeocoding(true); setGeocodeCandidate(null); setAppliedGeocode(null); setGeocodeMessage('');
+    try {
+      const parts = [address.trim(), selectedLocality?.name, selectedLocality?.city, 'India'].filter((part): part is string => Boolean(part));
+      const query = parts.filter((part, index) => parts.findIndex((candidate) => candidate.toLowerCase() === part.toLowerCase()) === index).join(', ');
+      const result = await geocodeAddress(query);
+      setGeocodeCandidate(result.candidate);
+      setGeocodeMessage(result.candidate ? 'Review the match and its precision before applying it.' : 'No suitable address match was found. The locality-area marker will be used.');
+    } catch (reason) {
+      setGeocodeMessage(`Address lookup is unavailable; the locality-area marker is still safe to use. ${reason instanceof Error ? reason.message : ''}`.trim());
+    } finally { setGeocoding(false); }
+  };
+
   const publish = async (event: FormEvent) => {
     event.preventDefault();
     const nextErrors = validateQuickPost(input);
@@ -86,7 +113,7 @@ export function QuickPostPage() {
     }
     setLoading(true);
     try {
-      const created = publishQuickEvent(input);
+      const created = await publishQuickEvent(input);
       navigate(`/events/${created.id}`, { replace: true });
     } catch (reason) {
       setErrors({ form: reason instanceof Error ? reason.message : 'Could not publish this event.' });
@@ -116,8 +143,12 @@ export function QuickPostPage() {
             <div className="form-section__heading"><span>02</span><div><h2>Where people participate</h2><p>Venue area or an online participation route.</p></div></div>
             {mode !== 'online' ? <div className="form-grid">
               <label>Venue name <em>Required</em><input value={venueName} onChange={(event) => setVenueName(event.target.value)} placeholder="e.g. Community Innovation Hall" />{errors.venueName && <small className="field-error">{errors.venueName}</small>}</label>
-              <label>Locality <em>Required</em><select value={localityId} onChange={(event) => setLocalityId(event.target.value)}>{localities.map((locality) => <option key={locality.id} value={locality.id}>{locality.name}</option>)}</select></label>
-              <label className="field-span-2">Address <span>Optional</span><input value={address} onChange={(event) => setAddress(event.target.value)} placeholder="Street address or a helpful landmark" /><small>The first version publishes a locality-area marker, not a false exact pin.</small></label>
+              <label>Locality <em>Required</em><select value={localityId} onChange={(event) => { setLocalityId(event.target.value); clearGeocode(); }}>{localities.map((locality) => <option key={locality.id} value={locality.id}>{localityOptionLabel(locality)}</option>)}</select></label>
+              <label className="field-span-2">Address <span>Optional</span><input value={address} onChange={(event) => { setAddress(event.target.value); clearGeocode(); }} placeholder="Public venue street address or a helpful landmark" maxLength={400} />{errors.address && <small className="field-error">{errors.address}</small>}<small>Enter a public venue address, not a private residence. Without a reviewed match, Knot keeps the locality-area marker.</small></label>
+              {isCloudProvider && <div className="field-span-2 geocode-review"><LoadingButton type="button" loading={geocoding} className="button button--secondary button--small" disabled={address.trim().length < 3} onClick={() => void lookupAddress()}><MapPin size={15} /> Check address on map</LoadingButton>{geocodeMessage && <p role="status">{geocodeMessage}</p>}
+                {appliedGeocode ? <div className="geocode-candidate"><strong>Reviewed {appliedGeocode.precision} pin applied</strong><span>{appliedGeocode.displayName}</span><small>OpenStreetMap/Nominatim estimate · not venue or safety verification.</small><button type="button" className="button button--ghost button--small" onClick={() => { setAppliedGeocode(null); setGeocodeMessage('Reviewed pin removed. The locality-area marker will be used.'); }}>Remove reviewed pin</button></div>
+                  : geocodeCandidate && <div className="geocode-candidate"><strong>{geocodeCandidate.precision} location estimate</strong><span>{geocodeCandidate.displayName}</span><small>{geocodeCandidate.resultType} · © OpenStreetMap contributors · not venue or safety verification.</small>{candidateDistance !== null && candidateDistance > candidateDistanceLimit ? <p className="field-error">This match is about {candidateDistance.toFixed(0)} km from the selected locality. Choose the correct locality or keep the area marker.</p> : <button type="button" className="button button--secondary button--small" onClick={() => { setAppliedGeocode(geocodeCandidate); setGeocodeMessage('Reviewed pin applied. You can still remove it before publishing.'); }}>Apply this reviewed pin</button>}</div>}
+              </div>}
             </div> : <div className="online-callout"><Globe2 /><div><strong>Online event</strong><p>Use external registration below, or choose Knot registration and add a joining link. With an external registration link, joining details may follow for eligible participants.</p></div></div>}
             <label className="field-full">Online joining link {mode === 'online' && registrationKind === 'native' ? <em>Required for native online registration</em> : <span>Optional · controlled visibility</span>}<input type="url" value={onlineJoinUrl} onChange={(event) => setOnlineJoinUrl(event.target.value)} placeholder="https://meet.example.com/your-event" />{errors.onlineJoinUrl && <small className="field-error">{errors.onlineJoinUrl}</small>}</label>
           </section>

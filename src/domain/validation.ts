@@ -1,4 +1,4 @@
-import type { AgeRule, EventMode, EventType } from './types';
+import type { AgeRule, EventMode, EventType, GeocodedLocation } from './types';
 
 export interface QuickPostInput {
   title: string;
@@ -9,6 +9,7 @@ export interface QuickPostInput {
   venueName: string;
   localityId: string;
   address: string;
+  geocode?: GeocodedLocation | null;
   registrationKind: 'external' | 'native';
   capacity: number | null;
   approval: 'none' | 'manual';
@@ -42,6 +43,7 @@ export function validateQuickPost(input: QuickPostInput, now = new Date()) {
   if (input.registrationDeadline && new Date(input.registrationDeadline).getTime() > new Date(input.startAt).getTime()) errors.registrationDeadline = 'Registration deadline must be before the event starts.';
   if (input.mode !== 'online' && !input.venueName.trim()) errors.venueName = 'Add a venue for an in-person or hybrid event.';
   if (input.mode !== 'online' && !input.localityId) errors.localityId = 'Choose a locality.';
+  if (input.geocode && (!Number.isFinite(input.geocode.latitude) || !Number.isFinite(input.geocode.longitude) || Math.abs(input.geocode.latitude) > 90 || Math.abs(input.geocode.longitude) > 180 || !input.geocode.displayName.trim())) errors.address = 'The reviewed map candidate is invalid. Look it up again or use the locality-area marker.';
   if (input.registrationKind === 'native' && input.capacity !== null && (!Number.isInteger(input.capacity) || input.capacity < 1 || input.capacity > 100_000)) errors.capacity = 'Use a whole-number capacity from 1 to 100,000, or leave it blank for unlimited.';
   if (input.registrationUrl && !validWebUrl(input.registrationUrl)) errors.registrationUrl = 'Add a valid external registration link.';
   if (input.registrationKind === 'external' && input.mode !== 'online' && !validWebUrl(input.registrationUrl)) errors.registrationUrl = 'Add a valid external registration link.';

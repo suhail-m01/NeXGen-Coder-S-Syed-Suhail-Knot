@@ -10,6 +10,9 @@ import { duplicateCandidates, hasListing, normalizeTitle, normalizeUrl } from '.
 import { defaultFilters, organizerAgeRule } from '../src/domain/defaults';
 import { eventToICS, filterEvents, participationFit } from '../src/domain/events';
 import { haversineKm } from '../src/domain/geo';
+import { acceptedTeamMemberIds, buildReturnCohorts, effectiveInvitationStatus, referralChannelStats, teamReadiness } from '../src/domain/growth';
+import { clusterByGrid, pointInViewport } from '../src/domain/map';
+import { cloneEventForSeries, nextSeriesDate } from '../src/domain/series';
 import { localityById } from '../src/domain/localities';
 import { assertPublicEventUrl } from '../src/domain/inputAdapters';
 import { parseInstantText } from '../src/domain/parser';
@@ -18,7 +21,7 @@ import { canReviewSubmissions, isWorkspaceAdmin } from '../src/domain/permission
 import { approvalRegistrationStatus, confirmedNativeRegistrations, hasNativeCapacity, initialNativeRegistrationStatus, isConfirmedNative, nextWaitlistCandidate, waitlistPosition } from '../src/domain/registration';
 import { applySubmissionEdits, editsFromSubmission, eventFromReviewedSubmission, validateSubmissionEdits } from '../src/domain/review';
 import { buildInitialSources, sourceCanIngest } from '../src/domain/sources';
-import type { AgeBand, KnotEvent, Registration, RegistrationStatus, Submission, UserAccount } from '../src/domain/types';
+import type { AgeBand, KnotEvent, ReferralCampaign, ReferralVisit, Registration, RegistrationStatus, Submission, TeamInvitation, TeamPost, UserAccount } from '../src/domain/types';
 import { validWebUrl, validateQuickPost, type QuickPostInput } from '../src/domain/validation';
 
 const now = new Date('2026-10-24T06:00:00.000Z');
@@ -123,6 +126,13 @@ test('Participation Fit explains matches and never treats unknown eligibility as
 
 test('Quick Post accepts a valid native in-person event', () => {
   assert.deepEqual(validateQuickPost(quickPost(), now), {});
+});
+
+test('Quick Post accepts bounded reviewed geocodes and rejects invalid coordinates', () => {
+  const geocode = { latitude: 12.9352, longitude: 77.6245, displayName: 'Koramangala, Bengaluru', precision: 'approximate' as const, resultType: 'suburb', osmType: 'relation', osmId: 123, boundingBox: [12.9, 13, 77.6, 77.7], geocodedAt: new Date().toISOString() };
+  assert.deepEqual(validateQuickPost(quickPost({ geocode }), now), {});
+  assert.ok(validateQuickPost(quickPost({ geocode: { ...geocode, latitude: 91 } }), now).address);
+  assert.ok(validateQuickPost(quickPost({ geocode: { ...geocode, displayName: '' } }), now).address);
 });
 
 test('Quick Post enforces core timing, age, venue and price rules', () => {
@@ -517,4 +527,105 @@ test('Instant Add uses structured title, ISO dates and registration evidence wit
   assert.equal(parsed.endDatetime.value, new Date('2026-12-14T20:00:00+05:30').toISOString());
   assert.equal(parsed.registrationUrl.value, 'https://example.com/register');
   assert.equal(parsed.ageRule.value.mode, 'not_stated');
+});
+
+
+test('team invitations expire without becoming accepted membership', () => {
+  const invitation: TeamInvitation = { id: 'invite', postId: 'post', inviteeId: 'person', role: 'Designer', note: '', status: 'pending', expiresAt: '2026-10-23T00:00:00.000Z', createdAt: now.toISOString(), respondedAt: null };
+  assert.equal(effectiveInvitationStatus(invitation, now), 'expired');
+  assert.equal(effectiveInvitationStatus({ ...invitation, status: 'accepted' }, now), 'accepted');
+});
+
+test('team readiness unions requests and invitations and suggests complementary skills', () => {
+  const event = eventById(samples(), 'sample-ai-builders');
+  const post: TeamPost = { id: 'post', eventId: event.id, communityId: event.communityId, ownerId: 'owner', displayName: 'Owner', role: 'Backend', skills: ['Python'], lookingFor: 'Frontend', note: '', status: 'open', createdAt: now.toISOString() };
+  const requests = [{ id: 'request', postId: post.id, requesterId: 'frontend', displayName: 'Frontend', note: '', status: 'accepted' as const, createdAt: now.toISOString() }];
+  const invitations: TeamInvitation[] = [{ id: 'invite', postId: post.id, inviteeId: 'designer', role: 'Design', note: '', status: 'accepted', expiresAt: '2026-11-01T00:00:00.000Z', createdAt: now.toISOString(), respondedAt: now.toISOString() }];
+  assert.deepEqual(acceptedTeamMemberIds(post, requests, invitations), ['owner', 'frontend', 'designer']);
+  const users = ['owner', 'frontend', 'designer'].map((id) => ({ ...user('18_plus'), id, skills: id === 'frontend' ? ['React'] : [] }));
+  const readiness = teamReadiness(post, event, requests, invitations, users, now);
+  assert.equal(readiness.memberCount, 3);
+  assert.equal(readiness.status, 'ready');
+  assert.deepEqual(readiness.missingSkills, []);
+});
+
+test('referral analytics deduplicates sessions and separates native conversion from handoffs', () => {
+  const campaign: ReferralCampaign = { id: 'campaign', eventId: 'event', label: 'Newsletter', token: 'token', active: true, createdById: 'owner', createdAt: now.toISOString() };
+  const visits: ReferralVisit[] = [
+    { id: 'v1', campaignId: campaign.id, eventId: 'event', sessionKey: 'one', visitedAt: now.toISOString() },
+    { id: 'v2', campaignId: campaign.id, eventId: 'event', sessionKey: 'one', visitedAt: now.toISOString() },
+    { id: 'v3', campaignId: campaign.id, eventId: 'event', sessionKey: 'two', visitedAt: now.toISOString() },
+  ];
+  const base: Registration = { id: 'r', eventId: 'event', userId: 'person', kind: 'native', status: 'registered', selfDeclaredAgeRuleMet: true, referralCampaignId: campaign.id, createdAt: now.toISOString(), updatedAt: now.toISOString() };
+  const stats = referralChannelStats('event', [campaign], visits, [base, { ...base, id: 'external', kind: 'external', status: 'opened_externally' }, { ...base, id: 'cancelled', status: 'cancelled' }]);
+  assert.equal(stats[0]!.visits, 2);
+  assert.equal(stats[0]!.nativeRegistrations, 1);
+  assert.equal(stats[0]!.externalHandoffs, 1);
+  assert.equal(stats[0]!.nativeConversionRate, 50);
+});
+
+function returnFixture(userCount = 5, firstStart = '2026-01-01T10:00:00.000Z') {
+  const template = samples()[0]!;
+  const first = { ...template, id: 'first', organizerId: 'organizer', startAt: firstStart, endAt: new Date(new Date(firstStart).getTime() + 86_400_000).toISOString() };
+  const second = { ...template, id: 'second', organizerId: 'organizer', startAt: '2026-02-01T10:00:00.000Z', endAt: '2026-02-02T10:00:00.000Z' };
+  const users = Array.from({ length: userCount }, (_, index) => ({ ...user('18_plus'), id: `adult-${index}`, returnAnalyticsConsent: true }));
+  const registrations: Registration[] = users.flatMap((account, index) => [
+    { id: `first-${index}`, eventId: first.id, userId: account.id, kind: 'native', status: 'attended', selfDeclaredAgeRuleMet: true, createdAt: firstStart, updatedAt: firstStart },
+    ...(index < 2 && second.startAt > firstStart ? [{ id: `second-${index}`, eventId: second.id, userId: account.id, kind: 'native' as const, status: 'attended' as const, selfDeclaredAgeRuleMet: true, createdAt: second.startAt, updatedAt: second.startAt }] : []),
+  ]);
+  return { events: [first, second], users, registrations };
+}
+
+test('60-day cohorts report only mature opted-in adult verified-attendance groups', () => {
+  const fixture = returnFixture();
+  const rows = buildReturnCohorts(fixture.events, fixture.registrations, fixture.users, 'organizer', now);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0]!.eligibleAdults, 5);
+  assert.equal(rows[0]!.returnedAdults, 2);
+  assert.equal(rows[0]!.returnRate, 40);
+  const noConsent = fixture.users.map((account) => ({ ...account, returnAnalyticsConsent: false }));
+  assert.deepEqual(buildReturnCohorts(fixture.events, fixture.registrations, noConsent, 'organizer', now), []);
+  const minors = fixture.users.map((account) => ({ ...account, ageBand: '16_17' as const }));
+  assert.deepEqual(buildReturnCohorts(fixture.events, fixture.registrations, minors, 'organizer', now), []);
+});
+
+test('60-day cohorts suppress small groups and do not rate immature windows', () => {
+  const small = returnFixture(4);
+  const suppressed = buildReturnCohorts(small.events, small.registrations, small.users, 'organizer', now)[0]!;
+  assert.equal(suppressed.status, 'suppressed');
+  assert.equal(suppressed.eligibleAdults, null);
+  assert.equal(suppressed.returnedAdults, null);
+  const pending = returnFixture(5, '2026-10-15T10:00:00.000Z');
+  const row = buildReturnCohorts(pending.events, pending.registrations, pending.users, 'organizer', now)[0]!;
+  assert.equal(row.status, 'pending');
+  assert.equal(row.returnRate, null);
+});
+
+test('series recurrence handles month lengths and clones only safe operational content', () => {
+  assert.equal(nextSeriesDate('2026-01-31T10:00:00.000Z', 'monthly'), '2026-02-28T10:00:00.000Z');
+  assert.equal(nextSeriesDate('2026-10-24T10:00:00.000Z', 'weekly'), '2026-10-31T10:00:00.000Z');
+  const template = { ...eventById(samples(), 'sample-design-systems'), onlineJoinUrl: 'https://example.com/private-join', nativeSafetyChecklistComplete: true, recap: 'Old outcome', showcaseEnabled: true };
+  const scheduledFor = '2026-12-01T10:00:00.000Z';
+  const offset = new Date(scheduledFor).getTime() - new Date(template.startAt).getTime();
+  const clone = cloneEventForSeries(template, scheduledFor, 'clone-id', now.toISOString(), (prefix) => `${prefix}-new`);
+  assert.equal(clone.status, 'draft');
+  assert.equal(clone.visibility, 'private');
+  assert.equal(clone.onlineJoinUrl, null);
+  assert.equal(clone.nativeSafetyChecklistComplete, false);
+  assert.equal(clone.recap, '');
+  assert.equal(clone.showcaseEnabled, false);
+  assert.equal(clone.registrationDeadline, new Date(new Date(template.registrationDeadline!).getTime() + offset).toISOString());
+  assert.equal(clone.listings[0]!.externalId, 'clone-id');
+});
+
+test('map viewport and clustering are bounded and city anchors stay honest', () => {
+  const viewport = { latitude: 13, longitude: 77.6, span: 0.2 };
+  assert.equal(pointInViewport({ latitude: 13.05, longitude: 77.65 }, viewport), true);
+  assert.equal(pointInViewport({ latitude: 14, longitude: 77.6 }, viewport), false);
+  const points = [{ latitude: 13, longitude: 77.6 }, { latitude: 13.01, longitude: 77.61 }, { latitude: 14, longitude: 78.6 }];
+  assert.equal(clusterByGrid(points, (point) => point, 0.1).length, 2);
+  const mumbai = localityById('city-mumbai')!;
+  assert.equal(mumbai.geocode.resultType, 'city');
+  assert.equal(mumbai.geocode.osmPlaceId, null);
+  assert.match(mumbai.geocode.source, /approximate city-centre/);
 });

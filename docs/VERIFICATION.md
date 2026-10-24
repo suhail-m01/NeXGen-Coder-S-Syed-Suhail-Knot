@@ -1,29 +1,30 @@
 # Verification report
 
-**Date:** 24 October 2026  
-**Application:** Fresh Knot product on Vite/React/TypeScript  
+**Date:** 24 October 2026
+**Application:** Fresh Knot product on Vite/React/TypeScript
 **Result:** Passing for the documented browser-local implementation
 
 ## Commands and results
 
 | Check | Command | Result |
 |---|---|---|
-| Domain regressions | `npm test` | **46 passed, 0 failed** |
-| TypeScript + production bundle | `npm run build` | **Passed**; 2,113 modules transformed; no chunk-size warning |
+| Domain regressions | `npm test` | **53 passed, 0 failed** |
+| TypeScript + production bundle | `npm run build` | **Passed**; 2,122 modules transformed; no chunk-size warning |
 | Core Chromium flows | `npm run test:e2e` | **84 passed, 0 failed** |
 | Expansion Chromium flows | `npm run test:e2e:expansion` | **42 passed, 0 failed** |
 | Instant Add adapter flows | `npm run test:e2e:adapters` | **9 passed, 0 failed** |
-| Combined browser gate | `npm run test:e2e:all` | **135 checks** across the three suites |
+| Final growth/media/team/series/map flows | `npm run test:e2e:final` | **30 passed, 0 failed** |
+| Combined browser gate | `npm run test:e2e:all` | **165 checks** across four suites |
 | Dependency audit | `npm audit --audit-level=high` | **0 vulnerabilities** |
 | Whitespace/conflict check | `git diff --check` | **Passed** |
 | Browser runtime | Console and `pageerror` listeners | **0 unexpected captured errors** in final suites |
 | Responsive smoke | 1440 px desktop and 390 px mobile | No horizontal overflow in tested home/search/admin/communications/studio/event views |
 
-The final production build emitted a **377.97 kB main chunk** (113.33 kB gzip), a 334.64 kB secondary application chunk, a 51.20 kB React vendor chunk, route-level lazy chunks and 97.28 kB CSS (18.47 kB gzip). OCR runtime assets are served locally from generated `public/ocr/` files and are not part of the JavaScript main chunk.
+The final production build emitted a **404.12 kB main chunk** (120.65 kB gzip), a 334.64 kB secondary application chunk, a 51.31 kB React vendor chunk, route-level lazy chunks and 103.24 kB CSS (19.37 kB gzip). OCR runtime assets are served locally from generated `public/ocr/` files and are not part of the JavaScript main chunk.
 
 ## Domain coverage
 
-The 46 tests cover:
+The 53 tests cover:
 
 - Age-band overlap, exclusion, uncertainty, guardian consent and native minor-safety gates.
 - Adult publishing/review permissions and closed/restricted account behavior.
@@ -48,6 +49,10 @@ The 46 tests cover:
 - Overnight/daytime quiet-hour delivery behavior.
 - Material versus cosmetic studio changes.
 - Public URL credential/private-network rejection.
+- Team invitation expiry, shared membership/capacity and complementary-skill readiness.
+- Referral session deduplication and native-conversion/external-handoff separation.
+- Adult opt-in return-cohort maturity, exclusions and null-count small-group suppression.
+- Safe series recurrence/cloning, viewport/grid clustering and honest city-anchor precision.
 
 ## Core browser suite — 84 checks
 
@@ -87,6 +92,21 @@ A third fresh-state scenario uses real browser inputs:
 - A private-network URL is rejected before fetching.
 - No unexpected runtime/console errors are captured.
 
+## Final expansion browser suite — 30 checks
+
+A fourth fresh-state, multi-account scenario verifies:
+
+1. Native event publication with team rules and series assignment.
+2. Referral URL/QR generation, honest empty state, guest aggregate open and atomic session deduplication.
+3. Referral preservation through account creation and native registration, with organizer conversion reporting.
+4. Adult return-analytics consent controls.
+5. In-app adult team invitation, acceptance, complementary-skill readiness, continuity and contact boundaries.
+6. Real PNG normalization to WebP, private draft, explicit publication and sponsor-logo association.
+7. Published image rendering after reload from IndexedDB, followed by public takedown and actual blob deletion.
+8. Controlled due-time series automation, private safe clone and human publication.
+9. A controlled five-adult mature attendance fixture producing a 40% verified 60-day return cohort; this is test data, not pilot evidence.
+10. Map viewport search, accessible results, approximate Mumbai city-anchor labelling, 390 px media-studio overflow and zero unexpected browser errors.
+
 ## Defects found and fixed during expansion verification
 
 - Closed an incomplete EventEngagement JSX container and removed unused studio imports.
@@ -100,6 +120,9 @@ A third fresh-state scenario uses real browser inputs:
 - Added action-level material-change confirmation rather than relying only on a dialog.
 - Fixed structured URL extraction so `Source URL` is not a title/registration link, ISO dates are read and timezone offsets are not age rules.
 - Restored route-level code splitting after expanded pages increased the main bundle.
+- Fixed floating-point grid-cell assignment that could split nearby map markers incorrectly.
+- Moved referral deduplication into the atomic repository update after a double-effect race created duplicate visits.
+- Suppressed exact cohort counts in the domain result itself, not only in the table rendering.
 
 ## Reproduce
 
@@ -131,3 +154,6 @@ Set `E2E_BASE_URL` to test another running deployment. Screenshots are generated
 - OCR tests use a clear generated English poster; accuracy across low-quality posters, other languages and handwritten text is not certified.
 - Scheduled communication tests verify local in-app records, not email/SMS/WhatsApp delivery or reading.
 - Sample events are product fixtures, not real coverage, pilot traction or impact evidence.
+- Media tests verify IndexedDB persistence and takedown in Chromium, not cloud object storage or every browser quota policy.
+- Series tests use a controlled due date and on-open processing, not a server scheduler while the browser is closed.
+- Return-cohort tests use controlled attendance fixtures, not real longitudinal pilot data or multi-device identity attribution.

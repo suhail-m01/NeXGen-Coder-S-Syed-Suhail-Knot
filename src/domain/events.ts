@@ -1,4 +1,5 @@
 import { checkAgeBand } from './age';
+import { eventSearchScore, queryRelevanceCompare } from './discovery';
 import { distanceForEvent } from './geo';
 import { localityById } from './localities';
 import type { EventFilters, FitResult, KnotEvent, Locality, UserAccount } from './types';
@@ -114,10 +115,7 @@ export function filterEvents(events: KnotEvent[], filters: EventFilters, now = n
     if (!['published', 'changed', 'stale'].includes(event.status)) return false;
     if ((event.visibility ?? 'public') !== 'public') return false;
     if (new Date(event.endAt ?? event.startAt).getTime() < now.getTime()) return false;
-    if (query) {
-      const haystack = [event.title, event.summary, event.organizerName, event.eventType, ...event.interests, ...event.skills].join(' ').toLowerCase();
-      if (!haystack.includes(query)) return false;
-    }
+    if (query && eventSearchScore(event, query) === 0) return false;
     if (filters.eventType !== 'all' && event.eventType !== filters.eventType) return false;
     if (filters.mode !== 'all' && event.mode !== filters.mode) return false;
     if (filters.time === 'custom') {
@@ -137,9 +135,10 @@ export function filterEvents(events: KnotEvent[], filters: EventFilters, now = n
     if (filters.skill && !event.skills.includes(filters.skill)) return false;
     if (!matchesAgeFilter(event, filters.ageRule)) return false;
     if (filters.onlyJoinable && (!filters.ageBand || checkAgeBand(filters.ageBand, event.ageRule) === 'cannot_join')) return false;
-    if (event.mode !== 'online' && origin && event.venue) {
+    if (event.mode !== 'online' && origin) {
       const distance = eventDistance(event, origin);
-      if (distance !== null && distance > filters.radiusKm) return false;
+      // Unknown coordinates are not treated as being inside a radius.
+      if (distance === null || distance > filters.radiusKm) return false;
     }
     return true;
   });
@@ -153,9 +152,12 @@ export function participationFit(user: UserAccount | null, event: KnotEvent, ori
     return { label: 'not_eligible', reasons: [`The event age rule does not include your self-declared age band.`] };
   }
   const interestMatch = event.interests.find((interest) => user.interests.includes(interest));
+  const learnedMatch = user.personalizationConsent === true && user.ageBand === '18_plus'
+    ? event.interests.find((interest) => user.learnedInterests?.includes(interest)) : undefined;
   const skillMatch = event.skills.find((skill) => user.skills.includes(skill));
   const learningMatch = event.learningOutcomes.find((skill) => user.learningGoals.includes(skill));
   if (interestMatch) reasons.push(`Matches your interest in ${interestMatch}`);
+  if (learnedMatch && learnedMatch !== interestMatch) reasons.push(`Matches ${learnedMatch}, learned from your consented adult activity`);
   if (skillMatch) reasons.push(`Matches your ${skillMatch} skill`);
   if (learningMatch) reasons.push(`Matches your goal to learn ${learningMatch}`);
   const distance = eventDistance(event, origin);
@@ -165,7 +167,7 @@ export function participationFit(user: UserAccount | null, event: KnotEvent, ori
   if (ageResult === 'check_rule') reasons.push('Check the event age rule before joining');
   if (event.team.mode === 'team' || event.team.mode === 'solo_or_team') reasons.push(event.team.maxSize ? `Teams up to ${event.team.maxSize} people` : 'Team participation is supported');
 
-  const hasMatch = Boolean(interestMatch || skillMatch || learningMatch);
+  const hasMatch = Boolean(interestMatch || learnedMatch || skillMatch || learningMatch);
   const locationCheckable = event.mode === 'online' || distance !== null;
   const canBeStrong = hasMatch && event.eligibilityKnown && ageResult === 'can_join' && locationCheckable && isRegistrationOpen(event);
   if (canBeStrong) return { label: 'strong', reasons };
@@ -177,6 +179,10 @@ export function sortEvents(events: KnotEvent[], filters: EventFilters, user: Use
   const origin = localityById(filters.localityId);
   const fitWeight = { strong: 3, possible: 2, not_eligible: 0, null: 1 } as const;
   return [...events].sort((a, b) => {
+    if (filters.sort === 'relevance') {
+      const difference = queryRelevanceCompare(a, b, filters);
+      if (difference) return difference;
+    }
     if (filters.sort === 'best_fit') {
       const difference = fitWeight[participationFit(user, b, origin).label ?? 'null'] - fitWeight[participationFit(user, a, origin).label ?? 'null'];
       if (difference) return difference;

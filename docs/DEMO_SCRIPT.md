@@ -1,7 +1,7 @@
 # Knot — two-minute product demo
 
-**Deliverable:** `deliverables/Knot_Demo.mp4`  
-**Format:** Silent, captioned H.264 MP4 · 1280×720 · 30 fps · exactly 120.000 seconds  
+**Deliverable:** `deliverables/Knot_Demo.mp4`
+**Format:** Silent, captioned H.264 MP4 · 1280×720 · 30 fps · exactly 120.000 seconds
 **Mode:** Real browser-local product workflow; sample destinations and local accounts are not presented as production services.
 
 ## Timestamped path
@@ -14,9 +14,9 @@
 | **00:35–00:50** | **One studio for the full event lifecycle.** Required private registration question, four-part minor-safety checklist and reusable FAQ. |
 | **00:50–01:10** | **Minor Mode is restrictive by design.** 16–17 account creation, local guardian attestation and successful gated registration with a private answer. |
 | **01:10–01:25** | **Participation continues beyond registration.** Attendee question and repository-backed project submission. |
-| **01:25–01:42** | **Organizers close the loop.** Organizer answer, rubric score/feedback and targeted in-app announcement ledger. |
+| **01:25–01:42** | **Organizers close the loop.** Organizer answer, rubric score/feedback, targeted in-app announcement and referral channel/QR creation. |
 | **01:42–01:52** | **Participants return to one honest plan.** Notification receipt and My Plan. |
-| **01:52–02:00** | **Discovery → participation → community.** Closing verification caption: 46 domain tests, 135 Chromium checks, local-first and honest states. |
+| **01:52–02:00** | **Discovery → participation → community.** Map viewport search and closing verification caption: 53 domain tests, 165 Chromium checks, local-first and honest states. |
 
 ## Accessibility and honesty notes
 

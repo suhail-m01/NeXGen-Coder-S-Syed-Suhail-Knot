@@ -30,12 +30,24 @@ export interface Locality {
   longitude: number;
   geocode: {
     source: string;
-    osmPlaceId: number;
+    osmPlaceId: number | null;
     displayName: string;
     resultType: string;
     boundingBox: number[];
     geocodedAt: string;
   };
+}
+
+export interface GeocodedLocation {
+  latitude: number;
+  longitude: number;
+  displayName: string;
+  precision: Exclude<LocationPrecision, 'none'>;
+  resultType: string;
+  osmType: string | null;
+  osmId: number | null;
+  boundingBox: number[];
+  geocodedAt: string;
 }
 
 export interface Venue {
@@ -48,6 +60,7 @@ export interface Venue {
   longitude: number | null;
   locationPrecision: LocationPrecision;
   confirmedBy: 'organizer' | 'geocoder' | 'knot_team' | 'unknown';
+  geocode?: Omit<GeocodedLocation, 'latitude' | 'longitude' | 'precision'> & { source: string };
 }
 
 export interface EventListing {
@@ -157,7 +170,7 @@ export interface KnotEvent {
   summary: string;
   description: string;
   eventType: EventType;
-  organizerId: string;
+  organizerId: string | null;
   organizerName: string;
   communityId: string;
   mode: EventMode;
@@ -182,6 +195,7 @@ export interface KnotEvent {
   price: Price;
   prizes: string[];
   nativeSafetyChecklistComplete: boolean;
+  sponsors?: EventSponsor[];
   safetyChecklist?: EventSafetyChecklist;
   visibility?: 'public' | 'unlisted' | 'private';
   seriesId?: string | null;
@@ -218,6 +232,7 @@ export interface EventOperationsPatch {
   collaborators?: EventCollaborator[];
   recap?: string;
   showcaseEnabled?: boolean;
+  sponsors?: EventSponsor[];
   tagline?: string;
   description?: string;
   submissionDeadline?: string | null;
@@ -254,6 +269,8 @@ export interface UserAccount {
   accountStatus?: 'active' | 'restricted' | 'closed';
   guardianEmail?: string | null;
   personalizationConsent?: boolean;
+  /** Explicit adult-only opt-in for aggregate 60-day return cohorts. */
+  returnAnalyticsConsent?: boolean;
   learnedInterests?: string[];
   experienceLevel?: 'beginner' | 'intermediate' | 'advanced' | 'not_stated';
   education?: string;
@@ -286,6 +303,8 @@ export interface Registration {
   checkInToken?: string;
   /** Private operational answers keyed by event registration-question ID. */
   answers?: Record<string, string>;
+  /** Aggregate referral-channel conversion; not an external registration proof. */
+  referralCampaignId?: string | null;
 }
 
 export interface SavedEvent {
@@ -557,11 +576,104 @@ export interface AuditRecord {
   createdAt: string;
 }
 
+export interface EventSponsor {
+  id: string;
+  name: string;
+  url: string;
+  logoAssetId: string | null;
+}
+
+export interface SeriesAutomation {
+  templateEventId: string;
+  frequency: 'weekly' | 'monthly';
+  nextAt: string;
+  occurrencesRemaining: number;
+  active: boolean;
+}
+
 export interface EventSeries {
   id: string;
   organizerId: string;
   title: string;
   createdAt: string;
+  automation?: SeriesAutomation | null;
+}
+
+export interface SeriesRun {
+  id: string;
+  seriesId: string;
+  templateEventId: string;
+  clonedEventId: string;
+  scheduledFor: string;
+  createdAt: string;
+}
+
+export interface TeamInvitation {
+  id: string;
+  postId: string;
+  inviteeId: string;
+  role: string;
+  note: string;
+  status: 'pending' | 'accepted' | 'declined';
+  expiresAt: string;
+  createdAt: string;
+  respondedAt: string | null;
+}
+
+export interface TeamContinuityOptIn {
+  postId: string;
+  userId: string;
+  enabled: boolean;
+  updatedAt: string;
+}
+
+export interface ReferralCampaign {
+  id: string;
+  eventId: string;
+  label: string;
+  token: string;
+  active: boolean;
+  createdById: string;
+  createdAt: string;
+}
+
+/** Aggregate, session-deduplicated referral open. No account or persistent guest profile. */
+export interface ReferralVisit {
+  id: string;
+  campaignId: string;
+  eventId: string;
+  sessionKey: string;
+  visitedAt: string;
+}
+
+export type PersonalizationAction = 'view' | 'save' | 'share' | 'participation';
+
+/** Adult-consented, interest-level signal. No precise location, guest profile or attendance inference. */
+export interface PersonalizationSignal {
+  id: string;
+  userId: string;
+  eventId: string;
+  action: PersonalizationAction;
+  interests: string[];
+  occurredAt: string;
+  expiresAt: string;
+}
+
+export interface MediaAsset {
+  id: string;
+  eventId: string;
+  uploaderId: string;
+  kind: 'event_image' | 'recap_photo' | 'sponsor_logo';
+  title: string;
+  altText: string;
+  mimeType: 'image/webp' | 'image/png' | 'image/jpeg';
+  sizeBytes: number;
+  width: number;
+  height: number;
+  consentBasis: 'not_applicable' | 'adult_only_declared' | 'guardian_consent_declared';
+  status: 'draft' | 'published' | 'removed';
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AppData {
@@ -591,6 +703,13 @@ export interface AppData {
   certificates: ParticipationCertificate[];
   auditRecords: AuditRecord[];
   series: EventSeries[];
+  seriesRuns: SeriesRun[];
+  teamInvitations: TeamInvitation[];
+  teamContinuity: TeamContinuityOptIn[];
+  referralCampaigns: ReferralCampaign[];
+  referralVisits: ReferralVisit[];
+  mediaAssets: MediaAsset[];
+  personalizationSignals: PersonalizationSignal[];
 }
 
 export interface EventFilters {
@@ -611,7 +730,7 @@ export interface EventFilters {
   ageRule: 'all' | 'all_ages' | '13_plus' | '16_plus' | '18_plus' | 'under_18' | 'not_stated';
   onlyJoinable: boolean;
   ageBand: AgeBand | null;
-  sort: 'soonest' | 'best_fit' | 'closing' | 'nearest' | 'newest';
+  sort: 'soonest' | 'best_fit' | 'closing' | 'nearest' | 'newest' | 'relevance';
 }
 
 export type FitLabel = 'strong' | 'possible' | 'not_eligible' | null;

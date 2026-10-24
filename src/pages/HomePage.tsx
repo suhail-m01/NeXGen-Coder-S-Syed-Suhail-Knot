@@ -81,7 +81,7 @@ export function HomePage() {
       </section>
 
       <section className="trust-strip">
-        <div><MapPin size={19} /><span><strong>40 Bengaluru localities</strong>Neighbourhood-level discovery</span></div>
+        <div><MapPin size={19} /><span><strong>40 Bengaluru localities + 13 city anchors</strong>Neighbourhood and clearly labelled city-level discovery</span></div>
         <div><ShieldCheck size={19} /><span><strong>Source-linked details</strong>Freshness and original listings</span></div>
         <div><CheckCircle2 size={19} /><span><strong>Browse without an account</strong>Sign in only when you act</span></div>
       </section>
