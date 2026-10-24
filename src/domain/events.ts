@@ -64,7 +64,7 @@ function dayOfWeek(key: string) {
 }
 
 export function matchesTime(event: KnotEvent, filter: EventFilters['time'], now = new Date()) {
-  if (filter === 'any') return true;
+  if (filter === 'any' || filter === 'custom') return true;
   const timeZone = event.timezone || 'Asia/Kolkata';
   const today = dateKey(now.toISOString(), timeZone);
   const start = dateKey(event.startAt, timeZone);
@@ -112,6 +112,7 @@ export function filterEvents(events: KnotEvent[], filters: EventFilters, now = n
   const query = filters.query.trim().toLowerCase();
   return events.filter((event) => {
     if (!['published', 'changed', 'stale'].includes(event.status)) return false;
+    if ((event.visibility ?? 'public') !== 'public') return false;
     if (new Date(event.endAt ?? event.startAt).getTime() < now.getTime()) return false;
     if (query) {
       const haystack = [event.title, event.summary, event.organizerName, event.eventType, ...event.interests, ...event.skills].join(' ').toLowerCase();
@@ -119,7 +120,19 @@ export function filterEvents(events: KnotEvent[], filters: EventFilters, now = n
     }
     if (filters.eventType !== 'all' && event.eventType !== filters.eventType) return false;
     if (filters.mode !== 'all' && event.mode !== filters.mode) return false;
-    if (!matchesTime(event, filters.time, now)) return false;
+    if (filters.time === 'custom') {
+      const start = dateKey(event.startAt, event.timezone || 'Asia/Kolkata');
+      const end = dateKey(event.endAt ?? event.startAt, event.timezone || 'Asia/Kolkata');
+      if (filters.customFrom && end < filters.customFrom) return false;
+      if (filters.customTo && start > filters.customTo) return false;
+    } else if (!matchesTime(event, filters.time, now)) return false;
+    if (filters.price && filters.price !== 'all' && event.price.kind !== filters.price) return false;
+    if (filters.source && !event.listings.some((listing) => listing.source === filters.source)) return false;
+    if (filters.team && filters.team !== 'all' && event.team.mode !== filters.team) return false;
+    if (filters.maxTravelMinutes && event.mode !== 'online') {
+      const distance = eventDistance(event, origin);
+      if (distance === null || Math.round((distance / 25) * 60 + 10) > filters.maxTravelMinutes) return false;
+    }
     if (filters.interest && !event.interests.includes(filters.interest)) return false;
     if (filters.skill && !event.skills.includes(filters.skill)) return false;
     if (!matchesAgeFilter(event, filters.ageRule)) return false;

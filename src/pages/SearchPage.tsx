@@ -17,7 +17,9 @@ import type { AgeBand, EventFilters } from '../domain/types';
 const validAgeBands: AgeBand[] = ['under_13', '13_15', '16_17', '18_plus'];
 
 export function SearchPage() {
-  const { data, filters, setFilters, currentUser } = useApp();
+  const { data, filters, setFilters, currentUser, saveSearch, deleteSearch, checkSavedSearch } = useApp();
+  const [searchName, setSearchName] = useState('');
+  const [searchMessage, setSearchMessage] = useState('');
   const [searchParams, setSearchParams] = useSearchParams();
   const [view, setView] = useState<'list' | 'map'>(searchParams.get('view') === 'map' ? 'map' : 'list');
   const [initialized, setInitialized] = useState(false);
@@ -34,6 +36,12 @@ export function SearchPage() {
     if (searchParams.get('mode')) patch.mode = searchParams.get('mode') as EventFilters['mode'];
     if (searchParams.get('time')) patch.time = searchParams.get('time') as EventFilters['time'];
     if (searchParams.get('sort')) patch.sort = searchParams.get('sort') as EventFilters['sort'];
+    if (searchParams.get('price')) patch.price = searchParams.get('price') as EventFilters['price'];
+    if (searchParams.get('source')) patch.source = searchParams.get('source')!;
+    if (searchParams.get('team')) patch.team = searchParams.get('team') as EventFilters['team'];
+    if (searchParams.get('travel')) patch.maxTravelMinutes = Number(searchParams.get('travel'));
+    if (searchParams.get('from')) patch.customFrom = searchParams.get('from')!;
+    if (searchParams.get('to')) patch.customTo = searchParams.get('to')!;
     if (searchParams.get('age') === 'joinable' && activeAge) patch.onlyJoinable = true;
     setFilters({ ...filters, ...patch, ageBand: activeAge ?? filters.ageBand });
     setInitialized(true);
@@ -53,6 +61,12 @@ export function SearchPage() {
     if (filters.skill) params.set('skill', filters.skill);
     if (filters.localityId) params.set('area', filters.localityId);
     if (filters.radiusKm !== 10) params.set('radius', String(filters.radiusKm));
+    if (filters.price && filters.price !== 'all') params.set('price', filters.price);
+    if (filters.source) params.set('source', filters.source);
+    if (filters.team && filters.team !== 'all') params.set('team', filters.team);
+    if (filters.maxTravelMinutes) params.set('travel', String(filters.maxTravelMinutes));
+    if (filters.customFrom) params.set('from', filters.customFrom);
+    if (filters.customTo) params.set('to', filters.customTo);
     if (view === 'map') params.set('view', 'map');
     if (filters.onlyJoinable) params.set('age', 'joinable');
     setSearchParams(params, { replace: true });
@@ -82,6 +96,7 @@ export function SearchPage() {
       </div>
       <LocationControls />
       <FilterBar detailed />
+      <div className="saved-search-bar"><div><label>Save these explicit filters<input value={searchName} onChange={(event) => setSearchName(event.target.value)} placeholder="e.g. Free design events this weekend" /></label><button className="button button--secondary button--small" onClick={() => { try { saveSearch(searchName); setSearchName(''); setSearchMessage('Search saved in this workspace.'); } catch (reason) { setSearchMessage(reason instanceof Error ? reason.message : 'Could not save search.'); } }}>Save search</button></div>{currentUser && data.savedSearches.filter((search) => search.userId === currentUser.id).map((search) => <article key={search.id}><button onClick={() => setFilters(search.filters)}>{search.name}</button><button onClick={() => { try { setSearchMessage(`${checkSavedSearch(search.id)} new matches since the last check.`); } catch (reason) { setSearchMessage(reason instanceof Error ? reason.message : 'Could not check search.'); } }}>Check new</button><button aria-label={`Delete ${search.name}`} onClick={() => deleteSearch(search.id)}>×</button></article>)}{searchMessage && <span role="status">{searchMessage}</span>}</div>
       <div className="join-filter-bar">
         <div><SlidersHorizontal size={17} /><span><strong>Age-aware discovery</strong>Your guest age stays on this device.</span></div>
         {!currentUser && <label>Your age range

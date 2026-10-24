@@ -2,49 +2,76 @@
 
 **Verified on:** 24 October 2026  
 **Implementation:** Fresh `/knot-product` application  
-**Mode:** Browser-local repository; cloud not connected
+**Mode:** Browser-local repository; production cloud not connected
 
-This file separates working software from the full committed destination. It is not a claim that every v4 capability is production-complete.
+This file distinguishes working local software from production activation and internet-scale destination scope. It is not a claim that every corrected-v4 capability is production-complete.
+
+## Delivered local expansion
+
+The current tree implements the connected participant/organizer/trust workflows rather than decorative screens:
+
+- Custom registration questions with private answers, sensitive-field rejection, attendee search and CSV export.
+- FAQs, attendee question inbox, organizer answers and FAQ conversion without duplicate public rendering.
+- Resources, rounds, agendas, project submissions, independent showcase consent, judging, scores and feedback.
+- Series, text recaps, certificates tied to organizer attendance, consented showcases and return-loop event modules.
+- Saved searches, custom dates, organizer/topic follows, estimated-travel filters, conflict/deadline planning, going and participation history.
+- Restrictive 13–17 accounts with local guardian attestation, Minor Mode, withdrawal/deletion and the four-part organizer safety gate.
+- Guest reports, prioritized minor-safety handling, organizer claims, aggregate counts and sensitive-action audits.
+- Full event-studio basics, access controls, adult collaborator roles and explicit participant-critical change confirmation.
+- Scheduled in-app announcements, per-user quiet-hour delivery metadata and immediate critical-change notices.
+- Permissioned, bounded JSON-feed imports that enter human review; no auto-publication.
+- Instant Add public URL/HTML/JSON-LD import and real local English poster OCR, both using the same private-evidence review path.
+- Route-level code splitting and locally installed OCR assets.
 
 ## Baseline phase coverage
 
-| Baseline phase | Current state | Working now | Remaining before phase completion / production |
-|---|---|---|---|
-| **Phase 0 — Architecture and trust foundations** | Substantial local foundation | Fresh typed architecture, responsive design system, canonical models, age decisions, permissions in application actions, privacy-separated operational states, 40 geocoded localities, tests | Production backend authorization, identity, RLS, secrets management, abuse protection, observability, accessibility audit and legal/privacy activation review |
-| **Phase 1 — Catalog, discovery, posting and registration** | Broad local implementation | Public catalog/list/map/details, source ledger, Quick Post, native basics, pasted-text Instant Add draft/review submission, authenticated external handoff, native registration, fit, saves, calendar and material-change alerts | Privileged admin review UI, approved live sources, Source Records/Permission Gate service, ingestion conflict operations, custom dates/saved searches, production notification delivery and baseline cloud analytics |
-| **Phase 2 — Participation and communities** | Initial working slice | Fuller profile preferences, adult team posts/requests/acceptance, community pages/follows, operational organizer counts, check-in and feedback foundations | Organizer claims, FAQs/question inbox, approval/waitlist workflows, targeted communication, QR check-in, reach estimates, badges/history/return prompts, topic follows and travel-time ranges |
-| **Phase 3 — Minor accounts and full organizer operations** | Gated; not activated | Domain consent/native-safety guards, minor-gate explanation, restrictive adult-only publishing/team formation | Guardian consent, Minor Mode, withdrawal/deletion service, minors-welcome checklist, native minor participation, rounds/submissions/judging/resources, certificates/showcases/recaps |
-| **Phase 4 — Scale and federation** | Not started | Local canonical/dedupe foundations that can support later adapters | Permissioned federation, open-web scale, India-wide expansion, additional official integrations, series automation, coverage/quality/performance hardening |
+| Baseline phase | Local implementation | Remaining before destination/production completion |
+|---|---|---|
+| **0 — Architecture and trust foundations** | Typed domain architecture, responsive UI, canonical models, permissions in application actions, additive migrations, privacy-separated states, 40 geocoded localities and three browser suites | Production identity/backend authorization, RLS, secrets/abuse controls, observability, formal accessibility/security/privacy reviews |
+| **1 — Catalog, discovery, posting and registration** | Public list/map/details, source ledger, Quick Post, full registration states, custom dates/saved searches, text/URL/OCR Instant Add, review/merge workflows and material-change alerts | Approved live connectors, server-enforced review roles, large-scale conflict/freshness operations and cloud analytics |
+| **2 — Participation and communities** | Full preferences, teams, follows/going/history, custom questions, attendee search, FAQs/Q&A, reach suppression, QR/check-in, targeted communications and trust claims | Referral attribution, richer team invitations/readiness, production notification channels and validated long-term return reporting |
+| **3 — Minor accounts and full organizer operations** | Local consent states, Minor Mode, safety checklist, native minor participation, full studio, rounds/submissions/judging/resources, recaps/certificates/showcases | Production-verifiable guardian consent, minor retention/legal activation, rich media/photo consent workflows and formal safeguarding review |
+| **4 — Scale and federation** | Source Permission Gate, bounded reviewed JSON adapter, local OCR assets, code splitting and canonical foundations | Internet-scale open-web discovery, India-wide data expansion, official live integrations, automated series cloning and production scale/quality operations |
 
-## Conditional capabilities
+## Honest feature boundaries
 
-Paid ticketing/payments, live video hosting, WhatsApp automation and guardian-managed dependent profiles are **not implemented or implied**. They require separate product approval and their relevant legal, safety or integration gates.
+The following are **not represented as complete**: rich media/photo storage and sponsor libraries, referral attribution, automated series cloning, 60-day behavioural cohort reporting, map viewport search/clustering at scale, automated email delivery, and internet-scale crawling/federation. Static/local implementations must not be read as evidence that these production capabilities exist.
 
-## Data and evidence rules currently enforced
+Paid ticketing/payments, live video hosting, WhatsApp automation and guardian-managed dependent profiles remain separately gated and are not implemented or implied.
 
-1. Sample events and sample community profiles are labelled.
-2. Unknown price remains `unknown`; conditional free wording is preserved.
-3. Class, grade and student wording does not become an invented numeric age.
-4. Unknown eligibility prevents a Strong Fit label.
-5. Public browsing does not require an account; participation and organizer actions do.
-6. External registration happens on the original platform after the Knot gate.
-7. A blocked external tab does not create a handoff record.
-8. External opening, self-confirmation, native registration and organizer check-in are separate records.
-9. Pending registrations cannot be checked in; check-in has an event-time window.
-10. Feedback is post-event and retains its attendance basis.
-11. Native online joining links appear only for eligible native registration states.
-12. Material venue changes create revisions and participant/saver notifications.
-13. Original Instant Add text is shown only as private review evidence in the submitter workflow; it is not published automatically.
-14. Guest discovery uses a selected locality, not a saved live-location history.
+## Data and evidence rules enforced
+
+1. Sample events are labelled and never presented as live coverage or traction.
+2. Unknown price/eligibility stays unknown; conditional free wording is preserved.
+3. Class/grade wording and timezone fragments do not become invented numeric ages.
+4. Unknown eligibility cannot produce Strong Fit.
+5. Guests browse public pages; protected participation/organizer actions require authentication.
+6. External registration completes on the original platform. Opens, self-confirmation and verified attendance are distinct.
+7. Pending/waitlisted/rejected/cancelled records do not consume confirmed capacity or receive confirmed-only passes.
+8. Native online joining links appear only for eligible native states.
+9. Minor participation requires age eligibility, guardian consent, active account state and the organizer safety checklist.
+10. Minor identity is excluded from public showcases/going identity and behavioural learning.
+11. Original Instant Add evidence remains private; blocked URLs and unreadable posters produce errors, not fabricated fields.
+12. Public URL imports reject private-network hosts and do not bypass CORS; OCR runs locally.
+13. Federated imports require source permission, approved method and evidence, then enter pending review.
+14. Material studio changes require confirmation when participants/savers are affected and generate revision/audit/notification records.
+15. Scheduled optional announcements re-resolve recipients at delivery time and respect opt-out/quiet hours; critical notices remain separate.
+16. Certificates require native organizer attendance after event end and make no skill/winner claim.
+17. Public project display requires organizer publication, showcase enablement, adult authorship and explicit project consent.
+18. Small adult reach groups are suppressed; minors/restricted/closed accounts are not behavioural reach cohorts.
+19. Guest safety reports do not require accounts but have a local per-event hourly limit.
+20. “Sent” means local in-app records were written, not external delivery or reading.
 
 ## Cloud decision
 
-A new Supabase project could not be created because the available organization reached its free-project limit. No existing project was modified, paused, deleted or reused without authorization. The application therefore continues in local mode until the owner explicitly chooses a cloud path.
+Supabase project creation remains blocked by the available organization’s free-project limit. No project was modified, paused, deleted or reused without authorization. The application remains local until the owner explicitly chooses a cloud path.
 
-## Next production milestone
+## Production activation requirements
 
-1. Select and authorize a cloud/backend path.
-2. Add production identity, server-side permissions, RLS and repository adapters.
-3. Add the privileged Instant Add/admin review workflow and source-permission records.
-4. Complete approval/waitlist, organizer communication and QR check-in operations.
-5. Run accessibility, security, privacy and safeguarding reviews before activating minor accounts or live source ingestion.
+1. Select and authorize a backend/cloud path.
+2. Add production identity, server-side permissions, RLS, transactional capacity/waitlist operations and repository adapters.
+3. Replace local workspace-owner bootstrap with managed reviewer roles and audit retention.
+4. Activate only reviewed source methods/connectors with current permission evidence.
+5. Complete verified guardian consent, safeguarding, retention, legal/privacy and accessibility reviews before production minor activation.
+6. Add production notification providers, abuse/rate controls, observability, backup/deletion pipelines and device/cross-browser testing.
+7. Validate real event coverage and pilot outcomes separately; no Seed Pack or pilot target is reported as achieved here.

@@ -1,4 +1,6 @@
 import { buildSampleEvents } from '../domain/sample';
+import { buildInitialSources } from '../domain/sources';
+import { createCheckInToken } from '../domain/checkin';
 import type { AppData } from '../domain/types';
 
 const STORAGE_KEY = 'knot.product.data.v1';
@@ -13,10 +15,24 @@ export const createInitialData = (): AppData => ({
   saves: [],
   follows: [],
   notifications: [],
+  announcements: [],
   submissions: [],
+  sources: buildInitialSources(),
   feedback: [],
   teamPosts: [],
   teamRequests: [],
+  savedSearches: [],
+  topicFollows: [],
+  going: [],
+  questions: [],
+  projectSubmissions: [],
+  projectScores: [],
+  reports: [],
+  claims: [],
+  consentRecords: [],
+  certificates: [],
+  auditRecords: [],
+  series: [],
 });
 
 export function loadData(): AppData {
@@ -27,18 +43,62 @@ export function loadData(): AppData {
     const parsed = JSON.parse(raw) as AppData;
     if (parsed.version !== DATA_VERSION || !Array.isArray(parsed.events)) return createInitialData();
     const initial = createInitialData();
+    const parsedUsers = Array.isArray(parsed.users) ? parsed.users : [];
+    const hasEligibleAdmin = parsedUsers.some((user) => user.ageBand === '18_plus' && (user.role === 'admin' || user.workspaceAdmin === true));
+    const firstAdultIndex = parsedUsers.findIndex((user) => user.ageBand === '18_plus');
+    const users = parsedUsers.map((user, index) => ({
+      ...user,
+      workspaceAdmin: user.ageBand === '18_plus'
+        ? user.workspaceAdmin ?? (!hasEligibleAdmin && index === firstAdultIndex)
+        : false,
+      accountStatus: user.accountStatus ?? (user.guardianConsent === 'withdrawn' ? 'restricted' : 'active'),
+      personalizationConsent: user.personalizationConsent ?? false,
+      learnedInterests: user.learnedInterests ?? [],
+      guardianEmail: user.guardianEmail ?? null,
+    }));
+    const submissions = (Array.isArray(parsed.submissions) ? parsed.submissions : []).map((submission) => ({
+      ...submission,
+      review: submission.review ?? null,
+    }));
+    const registrations = (Array.isArray(parsed.registrations) ? parsed.registrations : []).map((registration) => (
+      registration.kind === 'native' && !registration.checkInToken ? { ...registration, checkInToken: createCheckInToken() } : registration
+    ));
+    const events = parsed.events.map((event) => ({
+      ...event,
+      visibility: event.visibility ?? 'public',
+      seriesId: event.seriesId ?? null,
+      registration: {
+        ...event.registration,
+        waitlistEnabled: event.registration.waitlistEnabled ?? (event.registration.kind === 'native' && event.registration.capacity !== null),
+      },
+    }));
     return {
       ...initial,
       ...parsed,
-      users: Array.isArray(parsed.users) ? parsed.users : [],
-      registrations: Array.isArray(parsed.registrations) ? parsed.registrations : [],
+      events,
+      users,
+      registrations,
       saves: Array.isArray(parsed.saves) ? parsed.saves : [],
       follows: Array.isArray(parsed.follows) ? parsed.follows : [],
       notifications: Array.isArray(parsed.notifications) ? parsed.notifications : [],
-      submissions: Array.isArray(parsed.submissions) ? parsed.submissions : [],
+      announcements: Array.isArray(parsed.announcements) ? parsed.announcements : [],
+      submissions,
+      sources: Array.isArray(parsed.sources) ? parsed.sources : initial.sources,
       feedback: Array.isArray(parsed.feedback) ? parsed.feedback : [],
       teamPosts: Array.isArray(parsed.teamPosts) ? parsed.teamPosts : [],
       teamRequests: Array.isArray(parsed.teamRequests) ? parsed.teamRequests : [],
+      savedSearches: Array.isArray(parsed.savedSearches) ? parsed.savedSearches : [],
+      topicFollows: Array.isArray(parsed.topicFollows) ? parsed.topicFollows : [],
+      going: Array.isArray(parsed.going) ? parsed.going : [],
+      questions: Array.isArray(parsed.questions) ? parsed.questions : [],
+      projectSubmissions: Array.isArray(parsed.projectSubmissions) ? parsed.projectSubmissions : [],
+      projectScores: Array.isArray(parsed.projectScores) ? parsed.projectScores : [],
+      reports: Array.isArray(parsed.reports) ? parsed.reports : [],
+      claims: Array.isArray(parsed.claims) ? parsed.claims : [],
+      consentRecords: Array.isArray(parsed.consentRecords) ? parsed.consentRecords : [],
+      certificates: Array.isArray(parsed.certificates) ? parsed.certificates : [],
+      auditRecords: Array.isArray(parsed.auditRecords) ? parsed.auditRecords : [],
+      series: Array.isArray(parsed.series) ? parsed.series : [],
     };
   } catch {
     return createInitialData();

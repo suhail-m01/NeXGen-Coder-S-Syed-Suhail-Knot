@@ -1,15 +1,23 @@
-import { Bell, Bookmark, CalendarDays, ChevronDown, CircleUserRound, Compass, Home, Info, LayoutDashboard, LogOut, Map, Menu, Plus, Search, X } from 'lucide-react';
+import { Bell, Bookmark, CalendarDays, ChevronDown, CircleUserRound, Compass, Home, Info, LayoutDashboard, LogOut, Map, Menu, Plus, Search, ShieldCheck, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useApp } from '../state/AppContext';
 import { Logo } from './Logo';
+import { canReviewSubmissions } from '../domain/permissions';
 
 export function AppShell() {
-  const { currentUser, unreadCount, data, markNotificationsRead, signOut } = useApp();
+  const { currentUser, data, markNotificationsRead, signOut } = useApp();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [now, setNow] = useState(Date.now());
   const location = useLocation();
-  const notifications = currentUser ? data.notifications.filter((item) => item.userId === currentUser.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)) : [];
+  const notifications = currentUser ? data.notifications.filter((item) => item.userId === currentUser.id && (!item.deliverAt || new Date(item.deliverAt).getTime() <= now)).sort((a, b) => b.createdAt.localeCompare(a.createdAt)) : [];
+  const unreadCount = notifications.filter((item) => !item.readAt).length;
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -28,6 +36,7 @@ export function AppShell() {
             <NavLink to="/search?view=map">Map</NavLink>
             <NavLink to="/add">Instant Add</NavLink>
             {currentUser && <NavLink to="/organizer">For organizers</NavLink>}
+            {canReviewSubmissions(currentUser) && <NavLink to="/admin">Review</NavLink>}
           </nav>
           <div className="header-actions">
             <Link to="/publish" className="button button--primary button--small header-publish"><Plus size={16} /> Publish event</Link>
@@ -46,6 +55,7 @@ export function AppShell() {
           <NavLink to="/add"><Plus size={18} /> Instant Add</NavLink>
           <NavLink to="/publish"><CalendarDays size={18} /> Publish or host</NavLink>
           {currentUser && <NavLink to="/organizer"><LayoutDashboard size={18} /> Organizer dashboard</NavLink>}
+          {canReviewSubmissions(currentUser) && <NavLink to="/admin"><ShieldCheck size={18} /> Review & sources</NavLink>}
           {currentUser && <button onClick={signOut}><LogOut size={18} /> Sign out</button>}
         </nav>}
       </header>

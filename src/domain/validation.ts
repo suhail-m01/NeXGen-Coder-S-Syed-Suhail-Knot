@@ -10,6 +10,9 @@ export interface QuickPostInput {
   localityId: string;
   address: string;
   registrationKind: 'external' | 'native';
+  capacity: number | null;
+  approval: 'none' | 'manual';
+  waitlistEnabled: boolean;
   registrationUrl: string;
   onlineJoinUrl: string;
   ageRule: AgeRule;
@@ -39,6 +42,7 @@ export function validateQuickPost(input: QuickPostInput, now = new Date()) {
   if (input.registrationDeadline && new Date(input.registrationDeadline).getTime() > new Date(input.startAt).getTime()) errors.registrationDeadline = 'Registration deadline must be before the event starts.';
   if (input.mode !== 'online' && !input.venueName.trim()) errors.venueName = 'Add a venue for an in-person or hybrid event.';
   if (input.mode !== 'online' && !input.localityId) errors.localityId = 'Choose a locality.';
+  if (input.registrationKind === 'native' && input.capacity !== null && (!Number.isInteger(input.capacity) || input.capacity < 1 || input.capacity > 100_000)) errors.capacity = 'Use a whole-number capacity from 1 to 100,000, or leave it blank for unlimited.';
   if (input.registrationUrl && !validWebUrl(input.registrationUrl)) errors.registrationUrl = 'Add a valid external registration link.';
   if (input.registrationKind === 'external' && input.mode !== 'online' && !validWebUrl(input.registrationUrl)) errors.registrationUrl = 'Add a valid external registration link.';
   if (input.onlineJoinUrl && !validWebUrl(input.onlineJoinUrl)) errors.onlineJoinUrl = 'Use a valid joining link or leave it blank.';

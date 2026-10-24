@@ -1,21 +1,30 @@
 import { AlertTriangle, ArrowLeft, ArrowUpRight, Bookmark, CalendarDays, Check, CheckCircle2, Clock3, Download, ExternalLink, Flag, Info, Link2, MapPin, Share2, ShieldCheck, Users, Video } from 'lucide-react';
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { AgeBadge, FitBadge, SampleBadge } from '../components/Badges';
 import { EventCard } from '../components/EventCard';
 import { LocalityMap } from '../components/LocalityMap';
+import { ParticipantCheckInPass } from '../components/ParticipantCheckInPass';
 import { ageRuleLabel, participationDecision } from '../domain/age';
 import { eventDistance, eventModeLabel, eventToICS, eventTypeLabel, formatEventDate, participationFit, priceLabel } from '../domain/events';
 import { localityById } from '../domain/localities';
+import { waitlistPosition } from '../domain/registration';
+import { canManageEvent, registrationAnswerErrors } from '../domain/operations';
+import type { RegistrationStatus } from '../domain/types';
 import { useApp } from '../state/AppContext';
+
+const EventEngagement = lazy(() => import('../components/EventEngagement').then((module) => ({ default: module.EventEngagement })));
 
 export function EventPage() {
   const { eventId } = useParams();
-  const { data, currentUser, filters, toggleSave, participate, selfConfirmExternal, toggleFollow } = useApp();
+  const { data, currentUser, filters, toggleSave, participate, selfConfirmExternal, toggleFollow, cancelRegistration } = useApp();
   const event = data.events.find((candidate) => candidate.id === eventId || candidate.slug === eventId);
   const [selfDeclared, setSelfDeclared] = useState(false);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answerErrors, setAnswerErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('');
   if (!event) return <div className="page-container"><div className="empty-state"><h1>Event not found</h1><p>It may have been removed or the link may be incorrect.</p><Link className="button button--primary" to="/search">Back to discovery</Link></div></div>;
+  if (event.visibility === 'private' && !canManageEvent(currentUser, event)) return <div className="page-container"><div className="empty-state"><ShieldCheck size={30} /><h1>Private event</h1><p>Only authorized event managers can open this private operations listing.</p><Link className="button button--primary" to="/search">Back to discovery</Link></div></div>;
 
   const origin = localityById(filters.localityId);
   const fit = participationFit(currentUser, event, origin);
@@ -28,14 +37,22 @@ export function EventPage() {
   const externalHost = event.registration.externalUrl ? new URL(event.registration.externalUrl).hostname.replace('www.', '') : primaryListing?.source ?? 'original site';
   const nextEvent = data.events.find((candidate) => candidate.communityId === event.communityId && candidate.id !== event.id && new Date(candidate.startAt).getTime() > Date.now());
   const lastCheckedHours = Math.max(0, Math.floor((Date.now() - new Date(event.lastCheckedAt).getTime()) / 3_600_000));
+  const position = registration ? waitlistPosition(data.registrations, registration.id) : null;
+  const nativeCopy = registration?.kind === 'native' ? nativeRegistrationCopy(registration.status, position) : null;
+  const canCancel = registration?.kind === 'native' && ['registered', 'approved', 'pending', 'waitlisted'].includes(registration.status);
 
   const register = () => {
-    const result = participate(event, selfDeclared);
+    const nextAnswerErrors = event.registration.kind === 'native' ? registrationAnswerErrors(event.registration.questions ?? [], answers) : {};
+    setAnswerErrors(nextAnswerErrors);
+    if (Object.keys(nextAnswerErrors).length) { setMessage('Complete the required registration answers before continuing.'); return; }
+    const result = participate(event, selfDeclared, answers);
     const messages: Record<string, string> = {
+      answers_required: 'Complete the required registration answers before continuing.',
       opened_externally: `Opened ${externalHost}. Knot has recorded a handoff, not a completed registration.`,
       open_blocked: 'Your browser blocked the registration tab. Allow pop-ups or use the original-listing link below; no handoff was recorded.',
       registered: 'You are registered. It has been added to My Plan.',
       pending: 'Your registration is pending organizer review.',
+      waitlisted: 'You joined the waitlist. This is not a confirmed registration.',
       duplicate: 'You already have a participation record for this event.',
       check_rule: 'Confirm that you meet the stated age rule before continuing.',
       cannot_join: 'Your self-declared age band is outside this event’s rule.',
@@ -124,16 +141,19 @@ export function EventPage() {
 
         <aside className="participation-card">
           <div className="participation-card__price"><span>{priceLabel(event)}</span><small>{eventModeLabel(event.mode)}</small></div>
-          <div className="participation-card__meta"><span><CalendarDays />{formatEventDate(event.startAt, true)}</span><span>{event.mode === 'online' ? <Video /> : <MapPin />}{event.mode === 'online' ? 'Online event' : event.venue?.name}</span>{event.registrationDeadline && <span><Clock3 />Register by {formatEventDate(event.registrationDeadline)}</span>}</div>
+          <div className="participation-card__meta"><span><CalendarDays />{formatEventDate(event.startAt, true)}</span><span>{event.mode === 'online' ? <Video /> : <MapPin />}{event.mode === 'online' ? 'Online event' : event.venue?.name}</span>{event.registrationDeadline && <span><Clock3 />Register by {formatEventDate(event.registrationDeadline)}</span>}{event.registration.kind === 'native' && <span><Users />{event.registration.capacity === null ? 'Open capacity' : `Capacity ${event.registration.capacity}`}{event.registration.approval === 'manual' ? ' · Organizer review' : ''}{event.registration.waitlistEnabled ? ' · Waitlist available' : ''}</span>}</div>
           {fit.label && <div className={`fit-explanation fit-explanation--${fit.label}`}><FitBadge label={fit.label} /><ul>{fit.reasons.slice(0, 4).map((reason) => <li key={reason}>{reason}</li>)}</ul></div>}
           {!currentUser && <div className="auth-note"><Info size={16} /><span>You can browse freely. Sign-in is required only when you register, join, save or publish.</span></div>}
           {event.status === 'cancelled' && <div className="eligibility-notice"><AlertTriangle size={18} /><span>This event was cancelled by its organizer. Existing records are preserved for reference.</span></div>}
           {decision === 'check_rule' && currentUser && <label className="check-rule"><input type="checkbox" checked={selfDeclared} onChange={(input) => setSelfDeclared(input.target.checked)} /><span>I confirm that I meet the age rule: <strong>{ageRuleLabel(event.ageRule)}</strong>. This is self-declared.</span></label>}
-          {registration ? <div className="registration-state"><CheckCircle2 /><div><strong>{registration.status === 'opened_externally' ? 'Registration page opened' : registration.status === 'self_confirmed_registered' ? 'Registration self-confirmed' : registration.status === 'registered' ? 'You’re registered' : registration.status}</strong><p>{registration.kind === 'external' ? 'External registration is completed on the original platform.' : 'Your native participation record is in My Plan.'}</p></div></div> : <>
+          {!registration && event.registration.kind === 'native' && (event.registration.questions?.length ?? 0) > 0 && <div className="registration-questions"><h3>Registration questions</h3><p>Your answers are private operational data for this event’s organizer, not public profile or behavioural analytics.</p>{event.registration.questions!.map((question) => <label key={question.id}>{question.label}{question.required && <em>Required</em>}{question.kind === 'long_text' ? <textarea rows={3} value={answers[question.id] ?? ''} onChange={(input) => setAnswers({ ...answers, [question.id]: input.target.value })} /> : question.kind === 'single_choice' ? <select value={answers[question.id] ?? ''} onChange={(input) => setAnswers({ ...answers, [question.id]: input.target.value })}><option value="">Choose an answer</option>{question.options.map((option) => <option key={option} value={option}>{option}</option>)}</select> : <input value={answers[question.id] ?? ''} onChange={(input) => setAnswers({ ...answers, [question.id]: input.target.value })} />}{answerErrors[question.id] && <small className="field-error">{answerErrors[question.id]}</small>}</label>)}</div>}
+          {registration ? <div className="registration-state">{['pending', 'waitlisted'].includes(registration.status) ? <Clock3 /> : <CheckCircle2 />}<div><strong>{registration.status === 'opened_externally' ? 'Registration page opened' : registration.status === 'self_confirmed_registered' ? 'Registration self-confirmed' : registration.status === 'registered' ? 'You’re registered' : nativeCopy?.title ?? registration.status}</strong><p>{registration.kind === 'external' ? 'External registration is completed on the original platform.' : nativeCopy?.body ?? 'Your native participation record is in My Plan.'}</p></div></div> : <>
             {decision === 'cannot_join' || decision === 'needs_consent' || decision === 'not_open_yet' || decision === 'closed' ? <div className="eligibility-notice"><AlertTriangle size={18} /><span>{decision === 'cannot_join' ? 'This event’s age rule does not include your age band. You can still read its public details.' : decision === 'needs_consent' ? 'Guardian consent is required before participation.' : decision === 'not_open_yet' ? (event.registrationOpensAt && new Date(event.registrationOpensAt).getTime() > Date.now() ? `Registration opens ${formatEventDate(event.registrationOpensAt, true)}.` : 'Native minor participation is not open yet.') : 'Registration is currently closed.'}</span></div> : <button className="button button--primary button--full button--large" onClick={register}>{decision === 'auth_required' ? 'Sign in to register' : event.registration.kind === 'external' ? `Register on ${externalHost}` : decision === 'check_rule' ? 'Confirm & register' : 'Register on Knot'}<ArrowUpRight size={18} /></button>}
           </>}
+          {canCancel && registration && <button className="button button--ghost button--full" onClick={() => { if (window.confirm(registration.status === 'waitlisted' ? 'Leave this waitlist?' : 'Cancel this native participation record?')) { cancelRegistration(registration.id); setMessage(registration.status === 'waitlisted' ? 'You left the waitlist.' : 'Your native participation record was cancelled. Any available confirmed spot was handled by the waitlist rules.'); } }}>Cancel {registration.status === 'waitlisted' ? 'waitlist entry' : registration.status === 'pending' ? 'registration request' : 'registration'}</button>}
           {registration?.kind === 'external' && registration.status === 'opened_externally' && <button className="button button--secondary button--full" onClick={() => { selfConfirmExternal(event.id); setMessage('Marked as self-confirmed by you. Knot cannot verify the external registration.'); }}>I completed external registration</button>}
           {registration?.kind === 'native' && ['registered', 'approved', 'checked_in', 'attended'].includes(registration.status) && event.onlineJoinUrl && <a className="button button--accent button--full" href={event.onlineJoinUrl} target="_blank" rel="noreferrer">Open joining link <ExternalLink size={16} /></a>}
+          {registration?.kind === 'native' && ['registered', 'approved'].includes(registration.status) && <ParticipantCheckInPass event={event} registration={registration} />}
           <div className="participation-actions"><button className={saved ? 'is-saved' : ''} onClick={() => toggleSave(event.id)}><Bookmark fill={saved ? 'currentColor' : 'none'} />{saved ? 'Saved' : 'Save'}</button><button onClick={downloadCalendar}><Download /> Calendar</button><button onClick={share}><Share2 /> Share</button></div>
           <button className="follow-button" onClick={() => toggleFollow(event.communityId)}><Users size={16} />{following ? `Following ${event.organizerName}` : `Follow ${event.organizerName}`}</button>
           {message && <div className="action-message" role="status">{message}</div>}
@@ -141,9 +161,20 @@ export function EventPage() {
         </aside>
       </div>
 
+      <Suspense fallback={<div className="page-container"><p>Loading participation tools…</p></div>}><EventEngagement event={event} registration={registration} /></Suspense>
+
       {nextEvent && <section className="page-container next-event-section"><div className="section-heading"><div><span className="eyebrow">Keep the connection</span><h2>Next from {event.organizerName}</h2></div></div><div className="event-grid event-grid--single"><EventCard event={nextEvent} compact /></div></section>}
     </div>
   );
+}
+
+function nativeRegistrationCopy(status: RegistrationStatus, position: number | null) {
+  if (status === 'pending') return { title: 'Registration pending', body: 'Organizer review is pending. This is not a confirmed registration.' };
+  if (status === 'approved') return { title: 'Registration approved', body: 'The organizer approved your registration. Your native spot is confirmed.' };
+  if (status === 'waitlisted') return { title: position ? `Waitlist position ${position}` : 'You’re waitlisted', body: 'This is not a confirmed registration. Promotion depends on a confirmed spot opening.' };
+  if (status === 'checked_in') return { title: 'Checked in', body: 'The organizer recorded your check-in.' };
+  if (status === 'attended') return { title: 'Organizer check-in recorded', body: 'Attendance is verified only by this organizer check-in record.' };
+  return { title: status.replaceAll('_', ' '), body: 'Your native participation record is in My Plan.' };
 }
 
 function FlaskIcon() {

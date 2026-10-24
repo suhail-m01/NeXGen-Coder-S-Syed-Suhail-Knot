@@ -20,7 +20,7 @@ function CommunityCard({ community }: { community: CommunityProfile }) {
 export function CommunityPage() {
   const { communityId } = useParams();
   const { currentUser, data, requireAuth, toggleFollow, createTeamPost, requestTeam, respondTeamRequest } = useApp();
-  const communities = useMemo(() => communitiesFromEvents(data.events), [data.events]);
+  const communities = useMemo(() => communitiesFromEvents(data.events.filter((event) => (event.visibility ?? 'public') === 'public')), [data.events]);
   const community = communities.find((item) => item.id === communityId);
   const [tab, setTab] = useState<'events' | 'teams'>('events');
   const [teamFormOpen, setTeamFormOpen] = useState(false);

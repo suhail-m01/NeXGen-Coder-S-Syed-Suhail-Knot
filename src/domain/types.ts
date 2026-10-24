@@ -72,11 +72,21 @@ export interface EventRevision {
   summary: string;
 }
 
+export interface RegistrationQuestion {
+  id: string;
+  label: string;
+  kind: 'short_text' | 'long_text' | 'single_choice';
+  required: boolean;
+  options: string[];
+}
+
 export interface RegistrationConfig {
   kind: RegistrationKind;
   externalUrl: string | null;
   capacity: number | null;
   approval: 'none' | 'manual';
+  waitlistEnabled: boolean;
+  questions?: RegistrationQuestion[];
 }
 
 export interface TeamRule {
@@ -90,6 +100,53 @@ export interface Price {
   kind: 'free' | 'paid' | 'unknown';
   amountInr: number | null;
   note: string;
+}
+
+export interface EventFaq {
+  id: string;
+  question: string;
+  answer: string;
+  visibility: 'public' | 'participant_only';
+}
+
+export interface EventResource {
+  id: string;
+  title: string;
+  url: string;
+  kind: 'guide' | 'dataset' | 'api' | 'code_of_conduct' | 'other';
+  visibility: 'public' | 'participant_only';
+}
+
+export interface EventRound {
+  id: string;
+  title: string;
+  description: string;
+  startAt: string;
+  endAt: string;
+  submissionDeadline: string | null;
+}
+
+export interface EventSession {
+  id: string;
+  title: string;
+  speaker: string;
+  location: string;
+  startAt: string;
+  endAt: string;
+}
+
+export interface EventCollaborator {
+  id: string;
+  userId: string;
+  role: 'co_organizer' | 'volunteer' | 'judge';
+  addedAt: string;
+}
+
+export interface EventSafetyChecklist {
+  safeguardingContact: boolean;
+  codeOfConduct: boolean;
+  supervisedEnvironment: boolean;
+  dataMinimization: boolean;
 }
 
 export interface KnotEvent {
@@ -125,6 +182,18 @@ export interface KnotEvent {
   price: Price;
   prizes: string[];
   nativeSafetyChecklistComplete: boolean;
+  safetyChecklist?: EventSafetyChecklist;
+  visibility?: 'public' | 'unlisted' | 'private';
+  seriesId?: string | null;
+  accessibilityNotes?: string;
+  codeOfConduct?: string;
+  faqs?: EventFaq[];
+  resources?: EventResource[];
+  rounds?: EventRound[];
+  sessions?: EventSession[];
+  collaborators?: EventCollaborator[];
+  recap?: string;
+  showcaseEnabled?: boolean;
   isSample: boolean;
   createdById: string | null;
   createdAt: string;
@@ -135,6 +204,34 @@ export interface KnotEvent {
   revisions: EventRevision[];
 }
 
+export interface EventOperationsPatch {
+  registrationQuestions?: RegistrationQuestion[];
+  safetyChecklist?: EventSafetyChecklist;
+  visibility?: 'public' | 'unlisted' | 'private';
+  seriesId?: string | null;
+  accessibilityNotes?: string;
+  codeOfConduct?: string;
+  faqs?: EventFaq[];
+  resources?: EventResource[];
+  rounds?: EventRound[];
+  sessions?: EventSession[];
+  collaborators?: EventCollaborator[];
+  recap?: string;
+  showcaseEnabled?: boolean;
+  tagline?: string;
+  description?: string;
+  submissionDeadline?: string | null;
+  team?: TeamRule;
+  prizes?: string[];
+  price?: Price;
+  experienceLevel?: KnotEvent['experienceLevel'];
+  eligibilityText?: string;
+  eligibilityKnown?: boolean;
+  interests?: string[];
+  skills?: string[];
+  learningOutcomes?: string[];
+}
+
 export interface UserAccount {
   id: string;
   email: string;
@@ -142,6 +239,10 @@ export interface UserAccount {
   passwordSalt: string;
   passwordHash: string;
   role: UserRole;
+  /** Local adult-workspace bootstrap only; production admin assignment belongs on the server. */
+  workspaceAdmin?: boolean;
+  /** Opts out of organizer announcements, not critical material-change/safety records. */
+  announcementOptOut?: boolean;
   ageBand: AgeBand;
   ageBandConfirmedOn: string;
   guardianConsent: 'not_required' | 'pending' | 'complete' | 'withdrawn';
@@ -150,6 +251,17 @@ export interface UserAccount {
   interests: string[];
   skills: string[];
   learningGoals: string[];
+  accountStatus?: 'active' | 'restricted' | 'closed';
+  guardianEmail?: string | null;
+  personalizationConsent?: boolean;
+  learnedInterests?: string[];
+  experienceLevel?: 'beginner' | 'intermediate' | 'advanced' | 'not_stated';
+  education?: string;
+  availability?: string;
+  maxPriceInr?: number | null;
+  teamStatus?: 'solo' | 'open_to_team' | 'has_team' | 'not_stated';
+  quietHoursStart?: string;
+  quietHoursEnd?: string;
   createdAt: string;
 }
 
@@ -170,6 +282,10 @@ export interface Registration {
   createdAt: string;
   updatedAt: string;
   checkedInAt?: string;
+  /** Random participant pass token; never derived from email, user ID or registration ID. */
+  checkInToken?: string;
+  /** Private operational answers keyed by event registration-question ID. */
+  answers?: Record<string, string>;
 }
 
 export interface SavedEvent {
@@ -184,6 +300,35 @@ export interface Follow {
   createdAt: string;
 }
 
+export type AnnouncementKind = 'general' | 'logistics' | 'deadline' | 'post_event';
+export type AnnouncementAudience = 'all_native' | 'confirmed' | 'pending' | 'waitlisted' | 'attended';
+
+export interface Announcement {
+  id: string;
+  eventId: string;
+  authorId: string;
+  kind: AnnouncementKind;
+  audience: AnnouncementAudience;
+  subject: string;
+  body: string;
+  channel: 'in_app';
+  status: 'scheduled' | 'sent';
+  scheduledFor?: string | null;
+  sentAt?: string | null;
+  audienceCount: number;
+  recipientCount: number;
+  optedOutCount: number;
+  createdAt: string;
+}
+
+export interface AnnouncementInput {
+  kind: AnnouncementKind;
+  audience: AnnouncementAudience;
+  subject: string;
+  body: string;
+  scheduledFor?: string | null;
+}
+
 export interface KnotNotification {
   id: string;
   userId: string;
@@ -193,6 +338,8 @@ export interface KnotNotification {
   body: string;
   dedupeKey: string;
   readAt: string | null;
+  /** Future in-app visibility time for scheduling/quiet hours; not an external delivery claim. */
+  deliverAt?: string;
   createdAt: string;
 }
 
@@ -256,14 +403,164 @@ export interface ExtractionDraft {
   summary: ExtractedField<string>;
 }
 
+export type IngestionMethod = 'native' | 'manual' | 'link_only' | 'api' | 'open_web';
+export type SourcePermission = 'owned' | 'sample_only' | 'review_required' | 'approved' | 'blocked';
+
+export interface SourceRecord {
+  id: string;
+  name: string;
+  kind: 'native' | 'community' | 'sample' | 'platform' | 'open_web';
+  baseUrl: string | null;
+  permission: SourcePermission;
+  approvedMethods: IngestionMethod[];
+  active: boolean;
+  evidenceUrl: string | null;
+  notes: string;
+  lastReviewedAt: string | null;
+  updatedBy: string | null;
+  updatedAt: string;
+}
+
+export interface SubmissionReview {
+  reviewerId: string;
+  action: 'approved' | 'rejected' | 'needs_info' | 'merged';
+  note: string;
+  at: string;
+}
+
 export interface Submission {
   id: string;
   submitterId: string;
   inputType: 'text' | 'url';
   rawText: string;
-  status: 'draft' | 'pending_review' | 'published' | 'rejected';
+  status: 'draft' | 'pending_review' | 'needs_info' | 'published' | 'merged' | 'rejected';
   draft: ExtractionDraft;
   canonicalEventId: string | null;
+  review: SubmissionReview | null;
+  createdAt: string;
+}
+
+export interface SavedSearch {
+  id: string;
+  userId: string;
+  name: string;
+  filters: EventFilters;
+  alertEnabled: boolean;
+  lastCheckedAt: string;
+  createdAt: string;
+}
+
+export interface TopicFollow {
+  userId: string;
+  topic: string;
+  createdAt: string;
+}
+
+export interface GoingRecord {
+  userId: string;
+  eventId: string;
+  createdAt: string;
+}
+
+export interface AttendeeQuestion {
+  id: string;
+  eventId: string;
+  askerId: string;
+  body: string;
+  visibility: 'public' | 'participant_only';
+  status: 'open' | 'answered' | 'hidden';
+  answer: string | null;
+  answeredBy: string | null;
+  createdAt: string;
+  answeredAt: string | null;
+}
+
+export interface ProjectSubmission {
+  id: string;
+  eventId: string;
+  roundId: string | null;
+  userId: string;
+  title: string;
+  description: string;
+  repositoryUrl: string;
+  videoUrl: string;
+  documentUrl: string;
+  status: 'submitted' | 'shortlisted' | 'winner' | 'not_selected';
+  /** Explicit author opt-in; public showcase additionally excludes minor identities. */
+  showcase?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectScore {
+  id: string;
+  submissionId: string;
+  judgeId: string;
+  innovation: number;
+  execution: number;
+  impact: number;
+  feedback: string;
+  createdAt: string;
+}
+
+export interface TrustReport {
+  id: string;
+  reporterId: string | null;
+  eventId: string | null;
+  targetType: 'event' | 'user' | 'source' | 'listing';
+  reason: string;
+  details: string;
+  priority: 'standard' | 'minor_safety';
+  status: 'open' | 'resolved' | 'dismissed';
+  resolutionNote: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+}
+
+export interface OrganizerClaim {
+  id: string;
+  eventId: string;
+  userId: string;
+  evidence: string;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewNote: string | null;
+  reviewerId: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+}
+
+export interface GuardianConsentRecord {
+  id: string;
+  userId: string;
+  guardianEmail: string;
+  status: 'pending' | 'complete' | 'withdrawn';
+  method: 'local_guardian_attestation';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ParticipationCertificate {
+  id: string;
+  eventId: string;
+  userId: string;
+  verificationCode: string;
+  issuedAt: string;
+}
+
+export interface AuditRecord {
+  id: string;
+  actorId: string;
+  action: string;
+  targetType: string;
+  targetId: string;
+  details: string;
+  createdAt: string;
+}
+
+export interface EventSeries {
+  id: string;
+  organizerId: string;
+  title: string;
   createdAt: string;
 }
 
@@ -276,17 +573,37 @@ export interface AppData {
   saves: SavedEvent[];
   follows: Follow[];
   notifications: KnotNotification[];
+  announcements: Announcement[];
   submissions: Submission[];
+  sources: SourceRecord[];
   feedback: EventFeedback[];
   teamPosts: TeamPost[];
   teamRequests: TeamRequest[];
+  savedSearches: SavedSearch[];
+  topicFollows: TopicFollow[];
+  going: GoingRecord[];
+  questions: AttendeeQuestion[];
+  projectSubmissions: ProjectSubmission[];
+  projectScores: ProjectScore[];
+  reports: TrustReport[];
+  claims: OrganizerClaim[];
+  consentRecords: GuardianConsentRecord[];
+  certificates: ParticipationCertificate[];
+  auditRecords: AuditRecord[];
+  series: EventSeries[];
 }
 
 export interface EventFilters {
   query: string;
   eventType: 'all' | EventType;
   mode: 'all' | EventMode;
-  time: 'any' | 'today' | 'tonight' | 'tomorrow' | 'weekend' | 'next7';
+  time: 'any' | 'today' | 'tonight' | 'tomorrow' | 'weekend' | 'next7' | 'custom';
+  customFrom?: string;
+  customTo?: string;
+  price?: 'all' | 'free' | 'paid' | 'unknown';
+  source?: string;
+  team?: 'all' | 'solo' | 'team' | 'solo_or_team' | 'not_stated';
+  maxTravelMinutes?: number | null;
   localityId: string | null;
   radiusKm: number;
   interest: string;

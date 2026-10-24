@@ -66,8 +66,9 @@ export function participationDecision(
   const ageResult = checkAgeBand(user.ageBand, event.ageRule);
   if (ageResult === 'cannot_join') return 'cannot_join';
 
+  if (user.accountStatus === 'closed') return 'closed';
   if (isMinorBand(user.ageBand)) {
-    if (user.guardianConsent !== 'complete') return 'needs_consent';
+    if (user.guardianConsent !== 'complete' || user.accountStatus === 'restricted') return 'needs_consent';
     if (event.registration.kind === 'native' && !event.nativeSafetyChecklistComplete) return 'not_open_yet';
   }
 
@@ -75,5 +76,5 @@ export function participationDecision(
 }
 
 export function canPublish(user: UserAccount | null) {
-  return Boolean(user && user.ageBand === '18_plus');
+  return Boolean(user && user.ageBand === '18_plus' && user.accountStatus !== 'restricted' && user.accountStatus !== 'closed');
 }

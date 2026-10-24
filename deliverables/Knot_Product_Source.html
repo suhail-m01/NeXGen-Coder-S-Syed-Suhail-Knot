@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Knot — Product overview</title>
+<style>
+  @page { size: 13.333333in 7.5in; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #e9e4f0; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #211735; }
+  .slide { position: relative; width: 13.333333in; height: 7.5in; padding: 54px 64px 48px; overflow: hidden; page-break-after: always; background: #f8f6fc; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .slide:last-child { page-break-after: auto; }
+  .slide.dark { color: #fff; background: radial-gradient(circle at 88% 12%, #4b3070 0, transparent 34%), linear-gradient(135deg,#1b102e,#291842 65%,#1c1230); }
+  .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
+  .brand { display: flex; align-items: center; gap: 11px; font-size: 25px; font-weight: 900; letter-spacing: -1px; }
+  .mark { width: 35px; height: 35px; border-radius: 12px 12px 12px 4px; background: linear-gradient(135deg,#8265ff,#ff8b68); transform: rotate(-8deg); position: relative; }
+  .mark:after { content: ''; position: absolute; width: 16px; height: 16px; border: 4px solid #fff; border-radius: 50%; left: 7px; top: 7px; }
+  .kicker { color: #7553e8; text-transform: uppercase; font-size: 12px; letter-spacing: 2.2px; font-weight: 900; }
+  .dark .kicker { color: #ffab8f; }
+  .page { font-size: 12px; color: #81778e; font-weight: 700; letter-spacing: 1px; }
+  .dark .page { color: #bdb0cf; }
+  h1 { max-width: 770px; font-size: 53px; line-height: 1.03; letter-spacing: -2.6px; margin: 13px 0 18px; }
+  h2 { font-size: 39px; line-height: 1.08; letter-spacing: -1.7px; margin: 9px 0 13px; }
+  h3 { margin: 0 0 7px; font-size: 18px; letter-spacing: -.3px; }
+  p { margin: 0; line-height: 1.48; }
+  .lead { max-width: 690px; font-size: 19px; line-height: 1.45; color: #c9bedb; }
+  .muted { color: #746a82; }
+  .dark .muted { color: #c5b9d5; }
+  .grid { display: grid; gap: 18px; }
+  .two { grid-template-columns: 1fr 1fr; }
+  .three { grid-template-columns: repeat(3,1fr); }
+  .four { grid-template-columns: repeat(4,1fr); }
+  .card { background: #fff; border: 1px solid #e5dfed; border-radius: 20px; padding: 21px; box-shadow: 0 8px 24px rgba(42,25,65,.045); }
+  .card p { color: #70667d; font-size: 14px; }
+  .card .num { color: #7958e9; font-size: 12px; font-weight: 900; letter-spacing: 1.2px; margin-bottom: 12px; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 7px 11px; background: #eee9fa; color: #6848c6; font-size: 11px; font-weight: 800; }
+  .pill.coral { background: #fff0e9; color: #b95337; }
+  .pill.mint { background: #e7f8f2; color: #20775e; }
+  .footer { position: absolute; bottom: 28px; left: 64px; right: 64px; display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #8c8297; }
+  .dark .footer { color: #a99abc; }
+  .loop { position: absolute; right: 68px; top: 165px; width: 370px; height: 370px; border: 1px solid rgba(255,255,255,.13); border-radius: 50%; transform: scale(.85); transform-origin: top right; }
+  .loop:before { content: ''; position: absolute; inset: 55px; border: 1px dashed rgba(255,255,255,.2); border-radius: 50%; }
+  .loop-center { position: absolute; inset: 125px; display: grid; place-items: center; text-align: center; border-radius: 50%; background: linear-gradient(135deg,#7955e9,#ff8b68); font-weight: 900; font-size: 24px; line-height: 1.1; box-shadow: 0 20px 50px rgba(0,0,0,.25); }
+  .node { position: absolute; width: 130px; padding: 14px 12px; text-align: center; border-radius: 16px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); backdrop-filter: blur(8px); font-size: 13px; font-weight: 800; }
+  .node small { display: block; margin-top: 4px; color: #bfb2d1; font-size: 10px; font-weight: 500; }
+  .n1 { left: 120px; top: -20px; } .n2 { right: -22px; top: 145px; } .n3 { left: 120px; bottom: -20px; } .n4 { left: -22px; top: 145px; }
+  .problem-row { position: absolute; left: 64px; right: 64px; bottom: 67px; }
+  .dark .card { background: rgba(255,255,255,.065); border-color: rgba(255,255,255,.12); box-shadow: none; }
+  .dark .card p { color: #bfb3d0; }
+  .dark .card .num { color: #ff9b7d; }
+  .mini-ui { padding: 18px; border-radius: 22px; background: #fff; border: 1px solid #e3ddec; box-shadow: 0 16px 40px rgba(42,25,65,.08); }
+  .mini-search { display: flex; gap: 8px; margin-bottom: 14px; }
+  .mini-search span { flex: 1; padding: 11px; border-radius: 10px; background: #f2eff7; color: #8a7e96; font-size: 12px; }
+  .event { display: grid; grid-template-columns: 7px 1fr auto; gap: 13px; padding: 14px 5px; border-top: 1px solid #ece7f1; align-items: center; }
+  .bar { border-radius: 5px; height: 50px; background: #8060ed; } .bar.c { background: #ff906f; } .bar.m { background: #54c6a7; }
+  .event strong { display: block; font-size: 14px; margin-bottom: 5px; }
+  .event small { color: #7e738a; font-size: 11px; }
+  .pipeline { display: grid; gap: 9px; }
+  .pipe { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 13px; background: #fff; border: 1px solid #e4deeb; font-size: 13px; font-weight: 800; }
+  .pipe b { display: grid; place-items: center; min-width: 26px; height: 26px; border-radius: 8px; background: #eee9fa; color: #6c4bd2; font-size: 11px; }
+  .arrow { color: #9b8fad; text-align: center; height: 4px; font-size: 15px; }
+  .rule { margin-top: 17px; padding: 15px 18px; border-radius: 15px; background: #241738; color: #fff; font-size: 14px; line-height: 1.45; }
+  .states { display: grid; gap: 10px; margin-top: 16px; }
+  .state { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 13px 15px; background: #fff; border: 1px solid #e5dfeb; border-radius: 13px; font-size: 13px; }
+  .state strong { font-size: 13px; }
+  .gate { display: flex; align-items: center; gap: 7px; margin: 18px 0; }
+  .gate span { flex: 1; padding: 12px 8px; text-align: center; border-radius: 12px; background: #eee9f8; color: #5e457d; font-size: 11px; font-weight: 800; }
+  .gate i { color: #ad9fba; font-style: normal; }
+  .studio { display: grid; grid-template-columns: 150px 1fr; min-height: 335px; overflow: hidden; padding: 0; }
+  .studio-nav { padding: 22px 14px; color: #fff; background: #251638; }
+  .studio-nav div { padding: 11px 12px; border-radius: 9px; color: #c6b9d6; font-size: 12px; }
+  .studio-nav div.active { color: #fff; background: #7150d4; }
+  .studio-main { padding: 24px; }
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; margin-top: 16px; }
+  .field { padding: 13px; border-radius: 11px; background: #f4f1f8; color: #756a82; font-size: 11px; }
+  .field b { display: block; color: #342642; margin-bottom: 5px; font-size: 12px; }
+  .return { display: grid; gap: 12px; }
+  .return-card { padding: 18px; border-radius: 17px; color: #fff; background: linear-gradient(135deg,#6c4bd2,#8564e9); }
+  .return-card:nth-child(2) { background: linear-gradient(135deg,#e66f50,#ff9878); }
+  .return-card:nth-child(3) { color: #183b32; background: linear-gradient(135deg,#a8ead7,#d3f4e9); }
+  .return-card p { color: inherit; opacity: .83; font-size: 12px; }
+  .metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin: 25px 0 20px; }
+  .metric { padding: 20px; border-radius: 18px; background: #fff; border: 1px solid #e5dfed; }
+  .metric strong { display: block; color: #6e4bd3; font-size: 33px; letter-spacing: -1.5px; }
+  .metric span { color: #756a81; font-size: 12px; }
+  .delivery { display: grid; grid-template-columns: 1.2fr .8fr; gap: 20px; }
+  .checklist { display: grid; gap: 10px; margin-top: 13px; }
+  .check { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; line-height: 1.4; }
+  .check b { color: #4ca98d; }
+  .boundary { color: #fff; background: #271839; border: 0; }
+  .boundary p, .boundary li { color: #c8bdd4; }
+  .boundary ul { padding-left: 17px; margin: 12px 0 0; font-size: 12px; line-height: 1.55; }
+</style>
+</head>
+<body>
+<section class="slide dark">
+  <div class="top"><div class="brand"><span class="mark"></span>knot</div><div class="kicker">Product overview · corrected v4 baseline</div><div class="page">01 / 05</div></div>
+  <h1>From scattered events<br>to lasting participation.</h1>
+  <p class="lead">Knot connects discovery, eligibility, registration, event operations and community return—without turning unknowns into favourable claims.</p>
+  <div class="loop"><div class="loop-center">One<br>Knot</div><div class="node n1">DISCOVER<small>local + online</small></div><div class="node n2">FIT<small>rules + context</small></div><div class="node n3">PARTICIPATE<small>native + external</small></div><div class="node n4">RETURN<small>community + next</small></div></div>
+  <div class="problem-row grid three">
+    <div class="card"><div class="num">01 · DISCOVERY FAILURE</div><h3>Events are fragmented</h3><p>Platforms, websites, posters and forwarded messages lack one trustworthy participation record.</p></div>
+    <div class="card"><div class="num">02 · PARTICIPATION FAILURE</div><h3>“Can I join?” is hard</h3><p>Age, eligibility, location, cost, schedule and team rules are difficult to evaluate together.</p></div>
+    <div class="card"><div class="num">03 · RETURN FAILURE</div><h3>Organizers lose the thread</h3><p>Registration is only the start: communication, operations and the next event need the same context.</p></div>
+  </div>
+  <div class="footer"><span>India-first · Bengaluru neighbourhood coverage · online discovery</span><span>Find your people. Find your next event.</span></div>
+</section>
+
+<section class="slide">
+  <div class="top"><div class="brand"><span class="mark"></span>knot</div><div class="kicker">Trustworthy discovery + Instant Add</div><div class="page">02 / 05</div></div>
+  <h2>Discovery that explains itself.</h2>
+  <p class="muted" style="font-size:16px;max-width:780px">Hyperlocal and online filters meet canonical source records, conservative extraction and mandatory review.</p>
+  <div class="grid two" style="grid-template-columns:.9fr 1.1fr;margin-top:25px">
+    <div class="mini-ui">
+      <div class="mini-search"><span>Search events, skills or organizers</span><span style="flex:0 0 100px;color:#6d4bd1">Design ▾</span></div>
+      <div style="display:flex;gap:7px;margin-bottom:10px"><span class="pill">Within 10 km</span><span class="pill mint">Custom dates</span><span class="pill coral">Travel estimate</span></div>
+      <div class="event"><i class="bar"></i><div><strong>Design Systems for Everyone</strong><small>Indiranagar · Native registration · source fresh</small></div><span class="pill mint">Possible fit</span></div>
+      <div class="event"><i class="bar c"></i><div><strong>Bengaluru AI Builders</strong><small>Hackathon · Team 2–4 · original listing</small></div><span class="pill">18+</span></div>
+      <div class="event"><i class="bar m"></i><div><strong>Open Source Sprint</strong><small>Online · Skill match · source-aware</small></div><span class="pill">13+</span></div>
+      <p class="muted" style="font-size:11px;margin-top:13px">Saved searches · follows · schedule conflicts · ICS plans</p>
+    </div>
+    <div>
+      <div class="pipeline">
+        <div class="pipe"><b>01</b> Pasted text · public URL · local poster OCR</div><div class="arrow">↓</div>
+        <div class="pipe"><b>02</b> Private original evidence</div><div class="arrow">↓</div>
+        <div class="pipe"><b>03</b> Structured fields + confidence + duplicates</div><div class="arrow">↓</div>
+        <div class="pipe"><b>04</b> Human review · merge · source permission</div><div class="arrow">↓</div>
+        <div class="pipe"><b>05</b> Canonical event + preserved original listings</div>
+      </div>
+      <div class="rule"><strong>Honesty rule:</strong> unknown price is not Free, a source URL is not a title, OCR is not auto-publication, and an external click is not a registration.</div>
+    </div>
+  </div>
+  <div class="footer"><span>40 geocoded Bengaluru localities · reviewed JSON federation boundary</span><span>Public browsing requires no account</span></div>
+</section>
+
+<section class="slide">
+  <div class="top"><div class="brand"><span class="mark"></span>knot</div><div class="kicker">Participation + Minor Mode</div><div class="page">03 / 05</div></div>
+  <h2>Real states. Restrictive safeguards.</h2>
+  <p class="muted" style="font-size:16px">Authentication and event rules come before participation—not after a click is mistaken for success.</p>
+  <div class="grid two" style="grid-template-columns:1fr 1fr;margin-top:24px">
+    <div class="card">
+      <span class="pill">NATIVE + EXTERNAL</span>
+      <h3 style="margin-top:14px">One plan, distinct evidence</h3>
+      <div class="states">
+        <div class="state"><strong>External page opened</strong><span class="pill coral">handoff only</span></div>
+        <div class="state"><strong>External registration self-confirmed</strong><span class="pill">self-report</span></div>
+        <div class="state"><strong>Pending → approved / waitlisted</strong><span class="pill">not confirmed yet</span></div>
+        <div class="state"><strong>QR check-in → attended</strong><span class="pill mint">organizer record</span></div>
+      </div>
+      <p style="margin-top:14px">Capacity, custom private questions, deterministic promotion, controlled joining links and attendance-based certificates.</p>
+    </div>
+    <div class="card">
+      <span class="pill coral">13–17 · MINOR MODE</span>
+      <h3 style="margin-top:14px">Every gate must pass</h3>
+      <div class="gate"><span>Age rule</span><i>→</i><span>Guardian consent</span><i>→</i><span>Organizer checklist</span></div>
+      <div class="grid two" style="gap:11px">
+        <div class="field"><b>Explicit-only</b>No behaviour-derived interests or promotional profiling.</div>
+        <div class="field"><b>Private by default</b>No public going identity, badges or minor showcase.</div>
+        <div class="field"><b>Account control</b>Pending, active, withdrawn and deleted states.</div>
+        <div class="field"><b>Event safety</b>Four organizer declarations; never blanket verification.</div>
+      </div>
+      <div class="rule" style="background:#fff0e9;color:#8b422f"><strong>Local boundary:</strong> guardian attestation demonstrates the workflow; production activation still requires verifiable consent, retention and safeguarding review.</div>
+    </div>
+  </div>
+  <div class="footer"><span>Guests browse publicly · Register / Join / Publish / Host require authentication</span><span>Unknown eligibility never becomes a favourable rule</span></div>
+</section>
+
+<section class="slide">
+  <div class="top"><div class="brand"><span class="mark"></span>knot</div><div class="kicker">Organizer operations + community return</div><div class="page">04 / 05</div></div>
+  <h2>One studio. The whole participation loop.</h2>
+  <div class="grid" style="grid-template-columns:1.35fr .65fr;margin-top:24px">
+    <div class="card studio">
+      <div class="studio-nav"><div class="active">Registration</div><div>Safety & access</div><div>Content</div><div>Q&A</div><div>Projects</div><div>Communications</div><div>Insights</div></div>
+      <div class="studio-main">
+        <span class="pill">FULL EVENT OPERATIONS</span>
+        <h3 style="margin-top:12px">Bengaluru AI Builders Hackathon</h3>
+        <p class="muted" style="font-size:12px">One audited canonical record powers every participant-facing view.</p>
+        <div class="fields">
+          <div class="field"><b>Private registration</b>Custom questions · approval · waitlists</div>
+          <div class="field"><b>Event content</b>FAQs · resources · rounds · agenda</div>
+          <div class="field"><b>Projects & judging</b>Submissions · rubrics · feedback</div>
+          <div class="field"><b>People & access</b>Co-organizer · judge · volunteer</div>
+          <div class="field"><b>Material changes</b>Confirm · revise · audit · notify</div>
+          <div class="field"><b>Delivery ledger</b>Preview · opt-out · schedule · quiet hours</div>
+        </div>
+      </div>
+    </div>
+    <div class="return">
+      <div class="return-card"><h3>Before</h3><p>Reach estimates with small-group suppression. Saved searches, follows and readiness context.</p></div>
+      <div class="return-card"><h3>During</h3><p>QR check-in, attendee Q&A, resources, announcements and issue reporting.</p></div>
+      <div class="return-card"><h3>After</h3><p>Projects, feedback, certificates, recaps, series and the next relevant event.</p></div>
+    </div>
+  </div>
+  <div class="footer"><span>Adult teams · community follows · self-declared going kept separate from registration</span><span>Operational analytics—not invented impact</span></div>
+</section>
+
+<section class="slide">
+  <div class="top"><div class="brand"><span class="mark"></span>knot</div><div class="kicker">Verification + delivery</div><div class="page">05 / 05</div></div>
+  <h2>Built to be trusted—and tested.</h2>
+  <p class="muted" style="font-size:16px">A fresh implementation with connected workflows, real input adapters and explicit production boundaries.</p>
+  <div class="metrics">
+    <div class="metric"><strong>46 / 46</strong><span>domain regressions</span></div>
+    <div class="metric"><strong>135 / 135</strong><span>Chromium product checks</span></div>
+    <div class="metric"><strong>120.000s</strong><span>captioned product demo</span></div>
+    <div class="metric"><strong>0</strong><span>audit vulnerabilities + unexpected browser errors</span></div>
+  </div>
+  <div class="delivery">
+    <div class="card">
+      <span class="pill mint">DELIVERED</span>
+      <div class="checklist">
+        <div class="check"><b>✓</b><span><strong>Optimized application:</strong> TypeScript build, 2,113 modules, lazy routes and no chunk-size warning.</span></div>
+        <div class="check"><b>✓</b><span><strong>Real adapter tests:</strong> generated QR decoding and local Tesseract OCR—not mocked outputs.</span></div>
+        <div class="check"><b>✓</b><span><strong>Responsive workflows:</strong> multi-account, minor, organizer, trust, federation and 390 px mobile paths.</span></div>
+        <div class="check"><b>✓</b><span><strong>Delivery bundle:</strong> source, documentation, exactly-five-slide PDF and 120-second MP4.</span></div>
+      </div>
+    </div>
+    <div class="card boundary">
+      <span class="pill coral">HONEST BOUNDARY</span>
+      <ul>
+        <li>Browser-local repository; no production cloud or multi-device sync.</li>
+        <li>No live platform connector or internet-scale crawl is claimed.</li>
+        <li>Local guardian attestation is not production-verified consent.</li>
+        <li>No email/SMS/WhatsApp delivery or proof of reading.</li>
+        <li>Paid ticketing, live video, WhatsApp automation and dependent profiles remain separately gated.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer"><span><strong>Knot</strong> · Find your people. Find your next event.</span><span>Local product implementation · 24 October 2026</span></div>
+</section>
+</body>
+</html>

@@ -15,6 +15,11 @@ function findEventType(text: string) {
 }
 
 function parseDate(text: string, now: Date) {
+  const iso = text.match(/\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:?\d{2})?\b/);
+  if (iso) {
+    const parsed = new Date(iso[0]);
+    if (Number.isFinite(parsed.getTime())) return { value: parsed.toISOString(), confidence: 'high' as Confidence, evidence: iso[0] };
+  }
   const numeric = text.match(/\b(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?\b/);
   let day: number, month: number, year: number, confidence: Confidence, evidence: string;
   if (numeric) {
@@ -56,8 +61,8 @@ function parseAgeRule(text: string): ExtractedField<AgeRule> {
   if (range && Number(range[1]) >= 5 && Number(range[2]) <= 100) {
     return field({ ...defaultAgeRule(), mode: 'age_range', minAge: Number(range[1]), maxAge: Number(range[2]), source: 'extracted_from_source', confidence: 'high', ruleText: range[0] }, 'high', range[0]);
   }
-  const minimum = text.match(/\b(?:ages?\s*)?(\d{1,2})\s*\+/i);
-  if (minimum) {
+  const minimum = text.match(/\b(?:ages?\s*)?(\d{1,2})\s*\+(?!\d)/i);
+  if (minimum && Number(minimum[1]) >= 5 && Number(minimum[1]) <= 100) {
     const age = Number(minimum[1]);
     return field({ ...defaultAgeRule(), mode: age === 18 ? 'adults_only' : 'min_age', minAge: age, source: 'extracted_from_source', confidence: 'high', ruleText: minimum[0] }, 'high', minimum[0]);
   }
@@ -70,11 +75,19 @@ function parseAgeRule(text: string): ExtractedField<AgeRule> {
 export function parseInstantText(rawText: string, now = new Date()): ExtractionDraft {
   const text = rawText.trim();
   const lines = text.split(/\n+/).map((line) => line.trim()).filter(Boolean);
-  const titleLine = lines.find((line) => line.length >= 5 && line.length <= 120 && !/^(date|time|venue|location|register|eligibility)\b/i.test(line)) ?? null;
+  const explicitTitle = lines.find((line) => /^title\s*:/i.test(line))?.replace(/^title\s*:\s*/i, '')
+    ?? lines.find((line) => /^page title\s*:/i.test(line))?.replace(/^page title\s*:\s*/i, '') ?? null;
+  const titleLine = explicitTitle ?? lines.find((line) => line.length >= 5 && line.length <= 120 && !/^(source url|date|time|start|end|venue|location|register|event url|eligibility|description|page summary|price evidence)\b/i.test(line) && !/^https?:\/\//i.test(line)) ?? null;
   const date = parseDate(text, now);
+  const endLine = lines.find((line) => /^end\s*:/i.test(line));
+  const endDate = endLine ? parseDate(endLine, now) : null;
+  const deadlineLine = lines.find((line) => /^(registration deadline|register by)\s*:/i.test(line));
+  const deadline = deadlineLine ? parseDate(deadlineLine, now) : null;
   const venueLine = lines.find((line) => /^(venue|location)\s*[:\-]/i.test(line));
   const venueValue = venueLine?.replace(/^(venue|location)\s*[:\-]\s*/i, '') ?? null;
-  const url = text.match(/https?:\/\/[^\s)\]]+/i)?.[0] ?? null;
+  const registrationLine = lines.find((line) => /^(register|registration|event url)\s*[:\-]/i.test(line));
+  const labelledUrl = registrationLine?.match(/https?:\/\/[^\s)\]]+/i)?.[0] ?? null;
+  const url = labelledUrl ?? lines.filter((line) => !/^source url\s*:/i.test(line)).join('\n').match(/https?:\/\/[^\s)\]]+/i)?.[0] ?? null;
   const mode: EventMode = /hybrid/i.test(text) ? 'hybrid' : /online|zoom|google meet|virtual|webinar/i.test(text) ? 'online' : venueValue ? 'in_person' : 'in_person';
   const freeForSome = /free\s+for\s+(members|students|women|college|early)/i.test(text);
   const price: Price = freeForSome ? { kind: 'unknown', amountInr: null, note: text.match(/free\s+for\s+[^.\n]+/i)?.[0] ?? 'Conditional price wording' } :
@@ -92,8 +105,8 @@ export function parseInstantText(rawText: string, now = new Date()): ExtractionD
     eventType: field(eventType, eventType ? 'high' : 'missing'),
     organizer: field(lines.find((line) => /^(organizer|organised by|organized by|hosted by)\s*[:\-]/i.test(line))?.replace(/^[^:\-]+[:\-]\s*/, '') ?? null, 'missing'),
     startDatetime: field(date?.value ?? null, date?.confidence ?? 'missing', date?.evidence ?? ''),
-    endDatetime: field(null, 'missing'),
-    registrationDeadline: field(null, 'missing'),
+    endDatetime: field(endDate?.value ?? null, endDate?.confidence ?? 'missing', endDate?.evidence ?? ''),
+    registrationDeadline: field(deadline?.value ?? null, deadline?.confidence ?? 'missing', deadline?.evidence ?? ''),
     mode: field(mode, venueValue || /online|hybrid|virtual|webinar/i.test(text) ? 'high' : 'low'),
     venueName: field(venueValue, venueValue ? 'high' : 'missing', venueLine ?? ''),
     addressOrLocality: field(venueValue, venueValue ? 'medium' : 'missing', venueLine ?? ''),

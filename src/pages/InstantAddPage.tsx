@@ -4,6 +4,8 @@ import { Link, Navigate } from 'react-router-dom';
 import { LoadingButton } from '../components/LoadingButton';
 import { normalizeTitle } from '../domain/dedupe';
 import { eventTypeLabel } from '../domain/events';
+import { readPublicEventPage } from '../domain/inputAdapters';
+import { extractPosterText } from '../domain/ocr';
 import { useApp } from '../state/AppContext';
 import type { Confidence, Submission } from '../domain/types';
 
@@ -24,6 +26,11 @@ export function InstantAddPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [sourceUrl, setSourceUrl] = useState('');
+  const [urlLoading, setUrlLoading] = useState(false);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrProgress, setOcrProgress] = useState(0);
+  const [inputMessage, setInputMessage] = useState('');
 
   const duplicates = useMemo(() => {
     if (!submission || !title.trim()) return [];
@@ -32,6 +39,27 @@ export function InstantAddPage() {
 
   if (!currentUser) return <Navigate to="/auth?returnTo=%2Fadd&action=add%20an%20event" replace />;
   if (currentUser.ageBand !== '18_plus') return <div className="page-container"><div className="empty-state"><h1>Event submission is adult-only</h1><p>Public discovery remains available without an account.</p></div></div>;
+
+  const fetchPublicPage = async () => {
+    setError(''); setInputMessage(''); setUrlLoading(true);
+    try {
+      const evidence = await readPublicEventPage(sourceUrl);
+      setRawText(evidence);
+      setInputMessage('Public page text imported. Review the evidence below, then create a draft; nothing is public yet.');
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not read this public page.'); }
+    finally { setUrlLoading(false); }
+  };
+
+  const readPoster = async (file: File | undefined) => {
+    if (!file) return;
+    setError(''); setInputMessage(''); setOcrLoading(true); setOcrProgress(0);
+    try {
+      const text = await extractPosterText(file, setOcrProgress);
+      setRawText(text);
+      setInputMessage('Local English OCR completed. Check names, dates, URLs and any personal contact details before creating a review draft.');
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not read this poster.'); }
+    finally { setOcrLoading(false); }
+  };
 
   const readText = () => {
     setError(''); setLoading(true);
@@ -69,9 +97,11 @@ export function InstantAddPage() {
           <div className="paste-panel__heading"><ClipboardPaste /><div><h2>Paste event text</h2><p>WhatsApp forwards, email announcements and plain-text poster content work best.</p></div></div>
           <textarea value={rawText} onChange={(event) => setRawText(event.target.value)} rows={14} placeholder="Paste the event title, date, time, venue, eligibility, registration link and other details here…" />
           <div className="paste-panel__footer"><button className="text-button" onClick={() => setRawText(sampleText)}>Insert labelled sample text</button><span>{rawText.length} characters</span></div>
+          <div className="input-adapters"><div><label>Public event URL <span>Optional · CORS permitting</span><div className="input-with-action"><input type="url" value={sourceUrl} onChange={(event) => setSourceUrl(event.target.value)} placeholder="https://public-site.example/event" /><LoadingButton loading={urlLoading} className="button button--secondary button--small" onClick={fetchPublicPage}>Fetch text</LoadingButton></div></label><label>Poster or screenshot <span>Local English OCR · up to 8 MB</span><input type="file" accept="image/png,image/jpeg,image/webp,image/bmp" disabled={ocrLoading} onChange={(event) => void readPoster(event.target.files?.[0])} /></label>{ocrLoading && <div className="ocr-progress" role="status">Reading poster locally… {Math.round(ocrProgress * 100)}%</div>}</div><p>Public pages are fetched without account credentials. Private networks are rejected, and Knot does not bypass CORS. Poster images and original evidence stay private to you and reviewers; inspect personal contact details before submitting.</p></div>
+          {inputMessage && <div className="action-message" role="status">{inputMessage}</div>}
           {error && <div className="form-error" role="alert">{error}</div>}
           <LoadingButton loading={loading} className="button button--primary button--full button--large" onClick={readText}><Sparkles size={18} /> Read and create draft <ArrowRight size={18} /></LoadingButton>
-          <div className="reader-limits"><Info size={16} /><span>This milestone reads pasted text. Public-URL fetching and poster OCR are separate connectors; Knot will not pretend an unread image or blocked page was processed.</span></div>
+          <div className="reader-limits"><Info size={16} /><span>Pasted text, user-given public pages and local poster OCR all require your review and then human review before publication. Blocked pages and unreadable images produce errors—not invented fields.</span></div>
         </section>
         <aside className="instant-add-rules"><h3>What Knot will not invent</h3><ul><li><CheckCircle2 /> Missing price never becomes “Free”</li><li><CheckCircle2 /> “Free for members” stays conditional</li><li><CheckCircle2 /> Class or grade wording never becomes a numeric age</li><li><CheckCircle2 /> Missing dates and venues are highlighted</li><li><CheckCircle2 /> Possible duplicates appear before review</li></ul><div><ShieldCheck /><span>Community submissions are not organizer confirmations.</span></div></aside>
       </div> : submitted ? <div className="submission-success"><div className="success-icon"><CheckCircle2 /></div><span className="eyebrow">Submitted for human review</span><h1>Your draft is in the queue</h1><p>It is <strong>not public yet</strong>. A reviewer can approve, edit, merge, reject or request more information. The original message remains private evidence.</p><div className="submission-reference"><span>Submission reference</span><strong>{submission.id}</strong><span>Status: pending review</span></div><div className="button-row button-row--center"><Link className="button button--primary" to="/search">Back to discovery</Link><button className="button button--secondary" onClick={() => { setSubmission(null); setSubmitted(false); setRawText(''); }}>Add another event</button></div></div> : <div className="draft-layout">

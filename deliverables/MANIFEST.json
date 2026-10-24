@@ -1,0 +1,49 @@
+{
+  "generatedOn": "2026-10-24",
+  "product": "Knot",
+  "mode": "browser-local implementation; production cloud not connected",
+  "verification": {
+    "domainTests": {
+      "passed": 46,
+      "failed": 0
+    },
+    "chromiumChecks": {
+      "core": 84,
+      "expansion": 42,
+      "inputAdapters": 9,
+      "total": 135,
+      "failed": 0
+    },
+    "productionBuild": {
+      "status": "passed",
+      "modulesTransformed": 2113,
+      "chunkSizeWarning": false
+    },
+    "npmAuditHigh": {
+      "vulnerabilities": 0
+    },
+    "unexpectedBrowserErrors": 0
+  },
+  "artifacts": {
+    "deliverables/Knot_Product.pdf": {
+      "pages": 5,
+      "pageSizePoints": [
+        960,
+        540
+      ],
+      "sha256": "f498868bc849005bd78994a61945d9dd16c7cc48510121bf16a6327cf5ef239f",
+      "bytes": 335037
+    },
+    "deliverables/Knot_Demo.mp4": {
+      "durationSeconds": 120.0,
+      "codec": "h264",
+      "width": 1280,
+      "height": 720,
+      "framesPerSecond": 30,
+      "decodeCheck": "passed",
+      "sha256": "6410fa48637a19dfcdafd3489513410fcb44d6bb8047856af508fe8647a90a6a",
+      "bytes": 2938250
+    }
+  },
+  "limits": "See docs/PRODUCT_STATUS.md and docs/VERIFICATION.md. No production, live-source, scale or real-pilot claim."
+}

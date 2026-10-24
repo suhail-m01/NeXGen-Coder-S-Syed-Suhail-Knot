@@ -31,6 +31,9 @@ export function QuickPostPage() {
   const [localityId, setLocalityId] = useState('koramangala');
   const [address, setAddress] = useState('');
   const [registrationKind, setRegistrationKind] = useState<'external' | 'native'>('native');
+  const [capacity, setCapacity] = useState('');
+  const [approval, setApproval] = useState<'none' | 'manual'>('none');
+  const [waitlistEnabled, setWaitlistEnabled] = useState(true);
   const [registrationUrl, setRegistrationUrl] = useState('');
   const [onlineJoinUrl, setOnlineJoinUrl] = useState('');
   const [registrationDeadline, setRegistrationDeadline] = useState(futureInput(6, 22));
@@ -61,6 +64,7 @@ export function QuickPostPage() {
 
   const input: QuickPostInput = {
     title, eventType, startAt, endAt, mode, venueName, localityId, address, registrationKind,
+    capacity: capacity ? Number(capacity) : null, approval, waitlistEnabled: Boolean(capacity) && waitlistEnabled,
     registrationUrl, onlineJoinUrl, ageRule, description, eligibilityText, interests, skills,
     priceKind, priceAmount: priceAmount ? Number(priceAmount) : null, registrationDeadline,
   };
@@ -122,13 +126,14 @@ export function QuickPostPage() {
             <div className="form-section__heading"><span>03</span><div><h2>Registration & age rule</h2><p>Choose where registration happens and who can participate.</p></div></div>
             <div className="registration-choice"><button type="button" className={registrationKind === 'native' ? 'selected' : ''} onClick={() => setRegistrationKind('native')}><Users /><span><strong>Register on Knot</strong><small>Free native registration</small></span>{registrationKind === 'native' && <Check />}</button><button type="button" className={registrationKind === 'external' ? 'selected' : ''} onClick={() => setRegistrationKind('external')}><Link2 /><span><strong>Another website</strong><small>Original-platform handoff</small></span>{registrationKind === 'external' && <Check />}</button></div>
             {registrationKind === 'external' && <label className="field-full">External registration link <em>Required</em><input type="url" value={registrationUrl} onChange={(event) => setRegistrationUrl(event.target.value)} placeholder="https://original-platform.com/register" />{errors.registrationUrl && <small className="field-error">{errors.registrationUrl}</small>}</label>}
+            {registrationKind === 'native' && <div className="native-registration-settings"><div className="form-grid"><label>Confirmed capacity <span>Optional · blank means unlimited</span><input type="number" min="1" max="100000" step="1" value={capacity} onChange={(event) => setCapacity(event.target.value)} placeholder="Unlimited" />{errors.capacity && <small className="field-error">{errors.capacity}</small>}</label><label>Registration review<select value={approval} onChange={(event) => setApproval(event.target.value as 'none' | 'manual')}><option value="none">Confirm automatically</option><option value="manual">Review each registration</option></select></label></div>{capacity && <label className="consent-check"><input type="checkbox" checked={waitlistEnabled} onChange={(event) => setWaitlistEnabled(event.target.checked)} /><span>Enable a waitlist when confirmed capacity is full. Pending and waitlisted records are not confirmed registrations.</span></label>}</div>}
             <div className="form-grid">
               <label>Who can join? <em>Required</em><select value={ageChoice} onChange={(event) => setAgeChoice(event.target.value)}><option value="">Choose an age rule</option><option value="all_ages">All ages</option><option value="13_plus">13+</option><option value="16_plus">16+</option><option value="adults_only">18+</option><option value="under_18_only">Under 18 only</option><option value="custom_min">Custom minimum age</option><option value="custom_range">Custom age range</option></select>{errors.ageRule && <small className="field-error">{errors.ageRule}</small>}</label>
               <label>Registration deadline <span>Optional</span><input type="datetime-local" value={registrationDeadline} onChange={(event) => setRegistrationDeadline(event.target.value)} />{errors.registrationDeadline && <small className="field-error">{errors.registrationDeadline}</small>}</label>
               {ageChoice === 'custom_min' && <label>Minimum age<input type="number" min="1" max="100" value={minAge} onChange={(event) => setMinAge(event.target.value)} /></label>}
               {ageChoice === 'custom_range' && <><label>Minimum age<input type="number" min="1" max="100" value={minAge} onChange={(event) => setMinAge(event.target.value)} /></label><label>Maximum age<input type="number" min="1" max="100" value={maxAge} onChange={(event) => setMaxAge(event.target.value)} /></label></>}
             </div>
-            {ageRule.mode !== 'adults_only' && ageRule.mode !== 'not_stated' && <div className="minor-note"><ShieldCheck size={17} /><span>Native participation for minors remains gated until the organizer safety checklist and guardian-consent requirements are active. Public listing is still allowed.</span></div>}
+            {ageRule.mode !== 'adults_only' && ageRule.mode !== 'not_stated' && <div className="minor-note"><ShieldCheck size={17} /><span>Native minor participation opens only when the organizer safety checklist in the full studio is complete and the participant’s guardian consent is active. Public listing is still allowed.</span></div>}
           </section>
 
           <button className="more-details-toggle" type="button" onClick={() => setMoreOpen(!moreOpen)}><Plus size={17} /> Add description, eligibility, interests and price <ChevronDown className={moreOpen ? 'rotate' : ''} /></button>

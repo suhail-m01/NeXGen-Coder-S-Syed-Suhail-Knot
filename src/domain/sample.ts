@@ -49,6 +49,7 @@ function makeSample(now: Date, input: SampleInput): KnotEvent {
     externalUrl: `https://example.com/register/${input.id}`,
     capacity: null,
     approval: 'none',
+    waitlistEnabled: false,
   } satisfies RegistrationConfig;
   const source = registration.kind === 'native' ? 'Knot sample native listing' : 'Sample external catalog';
   const originalUrl = `https://example.com/events/${input.id}`;
@@ -129,13 +130,13 @@ export function buildSampleEvents(now = new Date()): KnotEvent[] {
     makeSample(now, {
       id: 'sample-design-systems', title: 'Design Systems for Everyone', type: 'workshop', locality: 'indiranagar', days: 2,
       deadlineDays: 1, organizer: 'Sample Design Community', interests: ['Design', 'Web development'], skills: ['Design', 'Figma'],
-      registration: { kind: 'native', externalUrl: null, capacity: 60, approval: 'none' },
+      registration: { kind: 'native', externalUrl: null, capacity: 60, approval: 'none', waitlistEnabled: true },
       summary: 'A beginner-friendly, hands-on introduction to reusable components and accessible UI systems.',
     }),
     makeSample(now, {
       id: 'sample-founders-coffee', title: 'Founders & Coffee Meetup', type: 'meetup', locality: 'hsr-layout', days: 1, hour: 18,
       deadlineDays: 0, organizer: 'Sample Startup Circle', interests: ['Startups', 'Careers'], skills: [],
-      ageRule: organizerAgeRule('adults_only'), registration: { kind: 'native', externalUrl: null, capacity: 40, approval: 'none' },
+      ageRule: organizerAgeRule('adults_only'), registration: { kind: 'native', externalUrl: null, capacity: 40, approval: 'none', waitlistEnabled: true },
       summary: 'An informal evening for founders, operators and curious builders to exchange practical lessons.',
     }),
     makeSample(now, {
@@ -162,13 +163,13 @@ export function buildSampleEvents(now = new Date()): KnotEvent[] {
     makeSample(now, {
       id: 'sample-data-storytelling', title: 'Data Storytelling Workshop', type: 'workshop', locality: 'jayanagar', days: 4,
       deadlineDays: 2, organizer: 'Sample Data Society', interests: ['Data', 'Design'], skills: ['Data', 'Python'],
-      registration: { kind: 'native', externalUrl: null, capacity: 45, approval: 'none' },
+      registration: { kind: 'native', externalUrl: null, capacity: 45, approval: 'none', waitlistEnabled: true },
       summary: 'Learn to turn analysis into a clear narrative with purposeful charts and a concise presentation.',
     }),
     makeSample(now, {
       id: 'sample-product-evening', title: 'Product & No-Code Community Evening', type: 'meetup', locality: 'mg-road', days: 0, hour: 18,
       deadlineDays: 0, organizer: 'Sample Product Club', interests: ['Startups', 'Design'], skills: ['Design'],
-      ageRule: organizerAgeRule('adults_only'), registration: { kind: 'native', externalUrl: null, capacity: 50, approval: 'none' },
+      ageRule: organizerAgeRule('adults_only'), registration: { kind: 'native', externalUrl: null, capacity: 50, approval: 'none', waitlistEnabled: true },
       summary: 'A local evening of product demos, no-code experiments and thoughtful feedback from fellow builders.',
     }),
     makeSample(now, {
@@ -180,7 +181,7 @@ export function buildSampleEvents(now = new Date()): KnotEvent[] {
     makeSample(now, {
       id: 'sample-startup-legal', title: 'Startup Legal Basics Webinar', type: 'webinar', mode: 'online', days: 7,
       deadlineDays: 5, organizer: 'Sample Founder School', interests: ['Startups', 'Careers'], skills: [],
-      ageRule: organizerAgeRule('adults_only'), registration: { kind: 'native', externalUrl: null, capacity: null, approval: 'none' },
+      ageRule: organizerAgeRule('adults_only'), registration: { kind: 'native', externalUrl: null, capacity: null, approval: 'none', waitlistEnabled: false },
       summary: 'A plain-language introduction to founder agreements, intellectual property and early compliance.',
     }),
     makeSample(now, {

@@ -6,11 +6,12 @@ import type { EventFilters } from '../domain/types';
 const timeOptions: { value: EventFilters['time']; label: string }[] = [
   { value: 'any', label: 'Any time' }, { value: 'today', label: 'Today' },
   { value: 'tonight', label: 'Tonight' }, { value: 'tomorrow', label: 'Tomorrow' },
-  { value: 'weekend', label: 'This weekend' }, { value: 'next7', label: 'Next 7 days' },
+  { value: 'weekend', label: 'This weekend' }, { value: 'next7', label: 'Next 7 days' }, { value: 'custom', label: 'Custom dates' },
 ];
 
 export function FilterBar({ detailed = false }: { detailed?: boolean }) {
-  const { filters, setFilters } = useApp();
+  const { data, filters, setFilters } = useApp();
+  const sources = [...new Set(data.events.flatMap((event) => event.listings.map((listing) => listing.source)))].sort();
   const patch = (value: Partial<EventFilters>) => setFilters({ ...filters, ...value });
   return (
     <div className="filter-bar">
@@ -21,6 +22,7 @@ export function FilterBar({ detailed = false }: { detailed?: boolean }) {
       <div className="time-chips" aria-label="Filter by time">
         {timeOptions.map((option) => <button key={option.value} className={filters.time === option.value ? 'chip chip--active' : 'chip'} onClick={() => patch({ time: option.value })}>{option.label}</button>)}
       </div>
+      {detailed && filters.time === 'custom' && <div className="custom-date-filter"><label>From date<input type="date" value={filters.customFrom ?? ''} onChange={(event) => patch({ customFrom: event.target.value })} /></label><label>To date<input type="date" value={filters.customTo ?? ''} onChange={(event) => patch({ customTo: event.target.value })} /></label><span>Events overlapping the selected dates are included.</span></div>}
       {detailed && <div className="filter-grid">
         <label><span><SlidersHorizontal size={14} /> Event type</span>
           <select value={filters.eventType} onChange={(event) => patch({ eventType: event.target.value as EventFilters['eventType'] })}>
@@ -50,6 +52,10 @@ export function FilterBar({ detailed = false }: { detailed?: boolean }) {
             <option value="16_plus">16+</option><option value="18_plus">18+</option><option value="under_18">Under 18 only</option><option value="not_stated">Age not stated</option>
           </select>
         </label>
+        <label><span>Price</span><select value={filters.price ?? 'all'} onChange={(event) => patch({ price: event.target.value as EventFilters['price'] })}><option value="all">Any price</option><option value="free">Free</option><option value="paid">Paid</option><option value="unknown">Price not stated</option></select></label>
+        <label><span>Team format</span><select value={filters.team ?? 'all'} onChange={(event) => patch({ team: event.target.value as EventFilters['team'] })}><option value="all">Any team format</option><option value="solo">Solo</option><option value="team">Team</option><option value="solo_or_team">Solo or team</option><option value="not_stated">Not stated</option></select></label>
+        <label><span>Source</span><select value={filters.source ?? ''} onChange={(event) => patch({ source: event.target.value })}><option value="">All sources</option>{sources.map((source) => <option value={source} key={source}>{source}</option>)}</select></label>
+        <label><span>Travel estimate</span><select value={filters.maxTravelMinutes ?? ''} onChange={(event) => patch({ maxTravelMinutes: event.target.value ? Number(event.target.value) : null })}><option value="">Any travel time</option><option value="30">Up to 30 minutes</option><option value="60">Up to 60 minutes</option><option value="90">Up to 90 minutes</option></select><small>Rough estimate, not live traffic</small></label>
         <label><span>Sort by</span>
           <select value={filters.sort} onChange={(event) => patch({ sort: event.target.value as EventFilters['sort'] })}>
             <option value="soonest">Soonest near you</option><option value="best_fit">Best fit</option><option value="closing">Registration closing</option>
