@@ -71,11 +71,13 @@ const { data: overviewData, error: overviewError } = await client.rpc('knot_disc
 if (overviewError) throw overviewError;
 const overview = object(overviewData);
 const categories = Array.isArray(overview.categories) ? overview.categories.map(object) : [];
-assert.equal(categories.reduce((sum, item) => sum + Number(item.count), 0), 6);
+const currentCatalog = await search({ sort: 'soonest' }, null, 1);
+assert.ok(Number(currentCatalog.total) > 0);
+assert.equal(categories.reduce((sum, item) => sum + Number(item.count), 0), Number(currentCatalog.total));
 for (const value of Array.isArray(overview.trending) ? overview.trending.map(object) : []) {
   for (const key of ['confirmedNative', 'saves', 'going']) assert.ok(value[key] === null || Number(value[key]) >= 5, `${key} leaked a small group`);
 }
-pass('catalog-wide category totals and aggregate suppression match the aligned sample truth');
+pass('catalog-wide category totals and aggregate suppression match the current eligible catalog truth');
 
 const travel = await client.rpc('knot_search_events', { p_filters: { maxTravelMinutes: 60 }, p_cursor: null, p_limit: 2 });
 assert.match(travel.error?.message ?? '', /TRAVEL_TIME_REQUIRES_ROUTING/);
