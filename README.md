@@ -130,7 +130,7 @@ Knot is intentionally conservative: unknown information is not converted into fa
 
 ### Prerequisites
 
-- **Node.js 20 or newer**
+- **Node.js 20.19+ or 22.12+**
 - **npm**
 - A Supabase project only if you want cloud mode; local mode works without one
 
@@ -407,7 +407,7 @@ Current source verification includes:
 
 - **68/68 domain and cloud-mapping tests passing**
 - Successful TypeScript and Vite production build
-- Lazy-loaded Leaflet bundle rather than including the map in the initial catalog chunk
+- Lazy-loaded Leaflet bundle and separate React/Supabase vendor chunks
 
 ### Browser suites
 
@@ -456,11 +456,11 @@ The authenticated harness creates disposable users/events and has specific Auth 
 
 ### Evidence recorded during implementation
 
-- Core authenticated Supabase harness: **14/14 checks** in its last complete run, covering adult signup, RLS, consent withdrawal, actual public/private Realtime delivery, registration capacity, waitlists and external-handoff truth.
-- Read-only discovery harness: **11/11 checks** in its last complete run, covering pagination, typo relevance, geographic filtering, aggregates and private-signal denial.
-- Latest cloud browser smoke after the PostGIS move: home rendered, **4 cloud cards**, **4 map markers**, **30 loaded tile images**, and **0 captured browser errors**.
+- Core authenticated Supabase harness: **14/14 checks** in its last complete run, covering adult signup, RLS, consent withdrawal, actual public/private Realtime delivery, registration capacity, waitlists and external-handoff truth. It was not rerun after the latest build/test-only changes.
+- Read-only discovery harness after the PostGIS move: **11/11 checks**, covering pagination, typo relevance, geographic filtering, aggregates and private-signal denial.
+- Complete browser suites after updating the Leaflet marker selector: **166/166 checks**, including real OCR/QR, mobile layouts and zero captured browser errors.
+- Cloud production-build smoke: **6 cloud home cards**, a direct event route, **4 map markers**, **30 loaded tile images**, no mobile overflow and **0 browser errors**.
 - PostGIS migration verification preserved all **8/8 event geography values**, the GiST index, the discovery trigger and **8,500 spatial-reference rows**.
-- The latest full browser suite and full remote harnesses have not all been rerun after every newest map/geocode/PostGIS change. Do not interpret earlier passes as proof of final release certification.
 
 ---
 
@@ -481,7 +481,7 @@ The authenticated harness creates disposable users/events and has specific Auth 
 | Resend/Razorpay/WhatsApp/LiveKit | Guarded adapters exist; credentials and live end-to-end verification remain pending |
 | Approved live feeds/Ticketmaster | Permission/review model exists; approved live source configuration remains pending |
 | Secondary organizer/reviewer/account cloud workflows | Partial; several still use local application state |
-| Production hosting and operations | Deployment, monitoring, backups and final operational verification remain |
+| Production hosting and operations | Vercel/Netlify configuration and deployment guide included; final hosting, monitoring and backups remain |
 | Minor production accounts | Intentionally disabled for the interim adults-only launch |
 | Native mobile | Separate product decision; not claimed as implemented |
 
@@ -491,7 +491,7 @@ The authenticated harness creates disposable users/events and has specific Auth 
 2. Configure and verify an authorized production geocoder and production tile provider.
 3. Add real provider credentials through secret storage and run end-to-end provider tests.
 4. Configure approved live sources and preserve human review/provenance.
-5. Rerun full browser and remote regression suites after the newest changes.
+5. Rerun the authenticated remote harness in a disposable environment before final production certification.
 6. Complete production hosting, observability, backup/restore drills and external accessibility/security/privacy reviews.
 
 ---
@@ -549,6 +549,7 @@ The authenticated harness creates disposable users/events and has specific Auth 
 - [Final Product Baseline](docs/KNOT_FINAL_PRODUCT_BASELINE.md)
 - [Master Product Blueprint v4](docs/KNOT_MASTER_PRODUCT_BLUEPRINT_v4.md)
 - [Production Implementation Brief](docs/PRODUCTION_IMPLEMENTATION_BRIEF.md)
+- [Deployment Guide](docs/DEPLOYMENT.md)
 - [Production Verification](docs/PRODUCTION_VERIFICATION.md)
 - [Product Status](docs/PRODUCT_STATUS.md)
 - [Verification Record](docs/VERIFICATION.md)

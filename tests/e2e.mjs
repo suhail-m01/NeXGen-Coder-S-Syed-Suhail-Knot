@@ -65,7 +65,9 @@ try {
   await page.locator('.filter-grid label').filter({ hasText: 'Interest' }).locator('select').selectOption({ label: 'Design' });
   check('interest filter updates result cards', await page.locator('.event-card').count() > 0);
   await page.getByRole('button', { name: 'Map', exact: true }).click();
-  check('map view renders geocoded locality pins', await page.locator('.map-pin').count() > 0);
+  await page.locator('.knot-leaflet-pin').first().waitFor();
+  check('map view renders geocoded Leaflet event pins', await page.locator('.knot-leaflet-pin').count() > 0);
+  check('map includes the configured basemap attribution', await page.locator('.leaflet-control-attribution').isVisible());
   await page.screenshot({ path: 'artifacts/search-map-desktop.png' });
 
   await goto('/events/sample-ai-builders');
