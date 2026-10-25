@@ -1,163 +1,592 @@
 # Knot
 
-**Find events that fit your life—and turn participation into a community you return to.**
+## Hyperlocal event discovery, participation and community—built around trust
 
-Knot is an India-first event discovery and participation product with Bengaluru neighbourhood coverage. It connects source-linked discovery, age/eligibility decisions, external and native registration, Instant Add, team formation, full organizer operations and post-event return loops.
+**Knot helps people discover events that fit their location, interests, skills and eligibility, then move from discovery to registration, planning, organizer operations and repeat participation.**
 
-This is a **fresh implementation**, not an extension of the rejected prototype. The governing references are [`docs/KNOT_FINAL_PRODUCT_BASELINE.md`](docs/KNOT_FINAL_PRODUCT_BASELINE.md) and [`docs/KNOT_MASTER_PRODUCT_BLUEPRINT_v4.md`](docs/KNOT_MASTER_PRODUCT_BLUEPRINT_v4.md); baseline corrections govern older blueprint wording.
+It is an India-first, TypeScript/React and Supabase application with Bengaluru neighbourhood depth, approximate Indian city anchors, external-registration handoffs, native registration, transactional waitlists, accessible maps and consent-based personalization.
 
-## Run locally
+> **Project status:** Active full-stack implementation. Core local workflows and core Supabase participation/discovery/Realtime paths are implemented and tested. Production activation is not finished: some secondary workflows remain local-only, live provider credentials and approved sources are pending, and public Nominatim access requires an authorized production endpoint.
 
-Requirements: Node.js 20+ and npm.
+![Knot cloud discovery with typo-tolerant search and labelled sample events](docs/images/knot-discovery-preview.png)
+
+*Cloud development preview with labelled sample/legacy event data.*
+
+### Quick links
+
+- [Product highlights](#product-highlights)
+- [Quick start](#quick-start)
+- [Supabase setup](#supabase--cloud-setup)
+- [Architecture](#architecture)
+- [Security and privacy](#security-privacy-and-data-truth)
+- [Testing](#testing-and-verification)
+- [Implementation status](#implementation-status)
+- [Documentation](#documentation-and-demo-artifacts)
+
+---
+
+## Table of contents
+
+1. [Why Knot](#why-knot)
+2. [Product highlights](#product-highlights)
+3. [Technology stack](#technology-stack)
+4. [Quick start](#quick-start)
+5. [Supabase and cloud setup](#supabase--cloud-setup)
+6. [Architecture](#architecture)
+7. [Security, privacy and data truth](#security-privacy-and-data-truth)
+8. [Testing and verification](#testing-and-verification)
+9. [Implementation status](#implementation-status)
+10. [Project structure](#project-structure)
+11. [Useful routes](#useful-routes)
+12. [Documentation and demo artifacts](#documentation-and-demo-artifacts)
+13. [Contributing](#contributing)
+14. [License](#license)
+
+---
+
+## Why Knot
+
+Event information is often scattered across platforms, group chats and social posts. Knot addresses the practical problems that appear after someone finds an event:
+
+- **Where is it?** Search around a locality with geographic filtering, distances and a real basemap.
+- **Does it fit?** Filter by interests, skills, mode, price, schedule and age rules.
+- **Can I trust the details?** Review original sources, freshness, confidence and organizer-provided eligibility information.
+- **Where does registration happen?** Distinguish native registration from an external-platform handoff.
+- **What happens next?** Save events, plan deadlines, join teams and use organizer participation tools.
+- **What does the platform actually know?** Keep clicks, self-confirmation, registration and verified attendance separate.
+
+Knot is intentionally conservative: unknown information is not converted into favourable evidence.
+
+---
+
+## Product highlights
+
+### Public discovery and maps
+
+- Guest browsing for home, search, event details and communities—no login wall for public pages.
+- Locality and radius filtering with PostGIS-backed geographic queries.
+- Typo-tolerant text discovery, relevance ordering and stable cursor pagination.
+- Event type, mode, interest, skill, price, age, team, source and date filters.
+- Shareable filter URLs and saved searches.
+- Leaflet/OpenStreetMap basemap, marker clustering, pan/zoom controls and viewport search.
+- Accessible event-list parity for people who do not use the visual map.
+- Forty Bengaluru locality records plus thirteen explicitly approximate Indian city-centre anchors.
+- Labelled sample/legacy data; sample coverage is never presented as live traction.
+
+### Participation and planning
+
+- Native free registration with optional capacity, approval review and deterministic waitlist promotion.
+- Atomic server-side capacity handling in the Supabase core workflow.
+- External registration on the original platform after Knot authentication and rule checks.
+- Separate states for external handoff, self-confirmed registration and organizer-verified attendance.
+- Saved events, organizer/topic follows, self-declared going and private participation history.
+- Deadline planning, schedule-conflict detection and ICS export.
+- Random-token QR passes and guarded organizer check-in workflows.
+- Adult-only, consented adaptive interests with withdrawal and deletion behavior.
+
+### Organizer and community workflows
+
+- Quick Post for essential event publishing.
+- Full organizer studio for event details, eligibility, resources, agendas, FAQs, rounds and participant operations.
+- Registration questions, attendee search/CSV export and duplicate-safe check-in.
+- Material-change confirmation, revisions and participant notification records.
+- Team posts, requests and expiring adult team invitations.
+- Project submissions, rubric scoring and consent-gated showcases.
+- Targeted in-app announcements, opt-out and quiet-hour handling.
+- Series drafts that reset participant outcomes and require human publication.
+- Local media library with WebP normalization, alt text, consent metadata and takedown support.
+
+**Cloud boundary:** the broader organizer, reviewer, media and account workflows are not all durably migrated to Supabase yet. See [Implementation status](#implementation-status).
+
+### Instant Add and permissioned ingestion
+
+- Create private evidence drafts from pasted event text.
+- Import supported user-provided public pages with private-network and credential protections.
+- Run local English poster/screenshot OCR without a remote OCR service.
+- Preserve original evidence privately while requiring human review before publication.
+- Require explicit source permission and approved methods for feed imports.
+- Never auto-publish Ticketmaster/feed records or destructively reseed the catalog.
+
+---
+
+## Technology stack
+
+| Area | Technology |
+|---|---|
+| Frontend | React 19, TypeScript, Vite |
+| Routing | React Router |
+| Cloud application platform | Supabase Auth, Postgres, PostgREST/RPC and Realtime |
+| Geographic discovery | PostGIS in the `extensions` schema |
+| Maps | Leaflet with a configurable raster basemap; OpenStreetMap by default |
+| Server operations | Supabase Edge Functions and transactional SQL RPCs |
+| Local development data | `localStorage` plus IndexedDB for media |
+| OCR and QR | Tesseract.js, `html5-qrcode` and `qrcode` |
+| Browser verification | Playwright |
+| Optional providers | Resend, Razorpay, Meta WhatsApp Cloud API and LiveKit Cloud |
+
+---
+
+## Quick start
+
+### Prerequisites
+
+- **Node.js 20 or newer**
+- **npm**
+- A Supabase project only if you want cloud mode; local mode works without one
+
+### 1. Clone the repository
 
 ```bash
-npm install
+git clone https://github.com/suhail-m01/NeXGen-Coder-S-Syed-Suhail-Knot.git
+cd NeXGen-Coder-S-Syed-Suhail-Knot
+```
+
+### 2. Install dependencies
+
+```bash
+npm ci
+```
+
+The postinstall step prepares the local OCR worker, WebAssembly and English language assets. Generated OCR files are intentionally not committed.
+
+### 3. Create a local environment file
+
+macOS/Linux:
+
+```bash
+cp .env.example .env.local
+```
+
+Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env.local
+```
+
+The default is safe local development:
+
+```dotenv
+VITE_DATA_PROVIDER=local
+```
+
+### 4. Start the application
+
+```bash
 npm run dev
 ```
 
-Open the Vite URL on port **5174**. `npm install` also prepares local OCR worker, WebAssembly and English language assets; recognition does not require a CDN or remote OCR service.
+Open **http://localhost:5174**.
 
-## Verify
+### 5. Create a production build
 
 ```bash
-npm test                 # 57 domain/cloud-mapping regressions
-npm run build            # TypeScript + optimized production bundle
-npm run dev              # required in another terminal for browser tests
-
-npx playwright install chromium
-npx playwright install-deps chromium  # only if Linux libraries are missing
-npm run test:e2e         # 84 core multi-account checks
-npm run test:e2e:expansion # 42 organizer/minor/trust/federation checks
-npm run test:e2e:adapters  # 9 real public-URL and local-OCR checks
-npm run test:e2e:final     # 30 referral/team/media/series/cohort/map checks
-npm run test:e2e:all       # all 165 Chromium checks
+npm run build
+npm run preview
 ```
 
-Set `E2E_BASE_URL` to target another running deployment.
+`npm run build` performs the TypeScript project build and creates the optimized Vite bundle in `dist/`.
 
-## Current verification
+---
 
-- **57/57 domain and cloud-mapping tests passing**
-- **165/165 Chromium checks passing** across four fresh-state suites
-- **Clean TypeScript and production build**: 2,122 modules, route-level lazy chunks, no chunk-size warning
-- Real QR-image decoding and real local poster OCR are exercised; neither is mocked
-- Desktop and 390 px mobile flows checked; tested expanded views have no horizontal page overflow
-- Zero captured browser runtime/console errors in the final suites
-- `npm audit --audit-level=high`: **0 vulnerabilities**
+## Supabase & cloud setup
 
-See [`docs/VERIFICATION.md`](docs/VERIFICATION.md) for exact coverage and [`docs/PRODUCT_STATUS.md`](docs/PRODUCT_STATUS.md) for the implementation boundary.
+> Use a new or disposable Supabase project while learning the deployment process. Review every migration before applying it to an existing database, and take a backup before production changes. Do not destructively reseed an existing Knot project.
 
-## Working product areas
+### 1. Configure the browser client
 
-### Discovery, provenance and Instant Add
+Update `.env.local`:
 
-- Guest home, search, map, event and community browsing without an account.
-- Locality/radius, custom dates, event type/mode, interest, skill, price, age, team, source and estimated-travel filters; shareable filter URLs and saved searches.
-- Forty Bengaluru localities with stored Nominatim geocode provenance plus thirteen explicitly approximate Indian city-centre anchors.
-- Pan/zoom map viewports, bounded grid clustering, Search this area and accessible loaded-event list parity.
-- Canonical events with multiple listings, confidence, freshness, revisions, merges and conflict-preserving source records.
-- Instant Add from pasted text, user-given public HTML/text pages and local English poster/screenshot OCR. URL imports reject private-network targets, use no credentials, have time/size limits and do not bypass CORS.
-- Structured title/ISO-date/registration extraction, conservative price/age reading, duplicate prompts, private original evidence and mandatory human review before publication.
-- Permissioned JSON-feed adapter for approved Source Records; imports are bounded and enter pending review, never auto-publish.
+```dotenv
+VITE_DATA_PROVIDER=supabase
+VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
+```
 
-### Accounts, fit and participation
+Only the **publishable/anon key** belongs in browser environment variables. Never place a service-role key, database password or provider secret in a `VITE_*` variable.
 
-- Local accounts with salted PBKDF2 password hashes, explicit action gates and post-authentication return paths.
-- Self-declared age bands, conservative eligibility decisions and adult-only publishing/team formation.
-- Restrictive Minor Mode for 13–17 accounts: local guardian attestation, pending/active/withdrawn states, explicit-only personalization, withdrawal/deletion and no behavioural learning.
-- Native minor participation requires age eligibility, active guardian consent and all four organizer minors-welcome declarations. Under-13 individual accounts remain closed.
-- External registration occurs on the original platform after Knot checks. Opening, self-confirmation, native registration and organizer attendance remain separate states.
-- Native free registration with custom private questions, finite/open capacity, manual approval, deterministic waitlists/promotion and controlled joining-link visibility.
-- Participation Fit, full optional preferences, saved events/searches, organizer/topic follows, self-declared going, schedule conflicts, deadline reminders, ICS export and private participation history.
+Cloud mode fails explicitly when configuration is missing; it does not silently disguise a cloud failure as local data.
 
-### Full organizer and participant operations
+### 2. Apply database migrations
 
-- Quick Post plus the full event studio at `/organizer/events/:eventId`.
-- Description, eligibility, experience, interests/skills, team rules, price/prizes, visibility, accessibility/conduct and adult collaborator roles.
-- FAQs, public/participant resources, rounds, agendas/speakers, recaps and consented project showcases.
-- Weekly/monthly series automation creates bounded private drafts on workspace open; joining links, safety declarations and participant outcomes reset before human publication.
-- Persistent IndexedDB event/recap/sponsor images with WebP normalization, alt text, consent-basis records, draft/publication/takedown and sponsor linking.
-- Referral channels with share URLs, QR/share-card downloads and aggregate session-open/native-conversion reporting.
-- Attendee search and CSV export, custom registration answers, minor-safety controls and volunteer-limited check-in.
-- Random-token participant QR passes; camera/image/manual organizer scanning with event/time/eligibility checks and duplicate protection.
-- Structured attendee question inbox, organizer answers, reusable FAQ conversion and asker-notification loop without public minor identity.
-- Repository/video/document project submissions, independent showcase consent, rubric scoring, feedback, shortlist/winner states and judge/co-organizer permissions.
-- Targeted in-app announcements with recipient preview/deduplication, opt-out, scheduling, quiet-hour visibility and an honest local delivery ledger.
-- Participant-critical studio changes require explicit confirmation, create revisions/audit records and immediately notify affected participants/savers.
-- Certificates only after organizer-recorded native attendance and event end; they make no skill or winner claim.
+With the Supabase CLI authenticated:
 
-### Communities, trust and data controls
+```bash
+npx supabase link --project-ref YOUR_PROJECT_REF
+npx supabase db push
+```
 
-- Community pages, event series, next-event modules and adult team posts/requests/acceptance with post-acceptance contact handoff.
-- Adult in-app team invitations with expiry, shared request/invitation capacity, complementary-skill readiness and explicit team-continuity opt-in.
-- Adult-only, explicit-opt-in 60-day return cohorts using verified native attendance, mature windows and suppressed small-group counts.
-- Guest problem/minor-safety reports with local rate limits; privileged report resolution, organizer claims and sensitive-action audit history.
-- Aggregate operational/reach reporting with small-group suppression; unknown attendance, external clicks and organizer claims never become favourable proof.
-- JSON data export without password hashes, account deletion with organizer-offboarding protection and full workspace reset.
+The migration chain includes, among other controls:
 
-## Important boundaries
+- Identity and server-managed profile rules
+- Row Level Security and least-privilege grants
+- Public/private event data separation
+- Transactional native registration, cancellation and waitlist promotion
+- Geographic and text discovery indexes
+- Stable discovery cursors and anonymous-safe read gateways
+- Public/private Realtime authorization
+- Adult-consented personalization and retention controls
+- Provider jobs, media records and bounded series scheduling
+- Geocode cache/rate-limit coordination
+- PostGIS relocation from `public` to `extensions`
 
-**This is a browser-local product implementation, not a production cloud deployment or proof of internet-scale coverage.**
+**PostGIS note:** keep PostGIS in `extensions`. Installing it in `public` exposes `spatial_ref_sys` through the Data API and causes the RLS advisor warning. The current migration preserves Knot geography values and the geographic index while moving the extension.
 
-- Structured data persists in `localStorage` under `knot.product.data.v1`; optimized media blobs use IndexedDB. Supabase is not connected; there is no multi-device sync or production server authorization.
-- The first eligible adult local account bootstraps workspace review access. This is local tooling, not a production admin model.
-- Source Records do not themselves activate APIs, scraping or crawling. Unstop, Devfolio, Devpost and open-web records start disabled; the included federation path accepts reviewed JSON only after permission activation.
-- Guardian attestation is an honest local workflow, not production-verifiable parental consent. Production minor activation requires verified consent, safeguarding, retention and legal review.
-- “Sent” means local in-app records were written. No email/SMS/WhatsApp delivery or proof of reading is claimed. Critical material-change notices bypass optional quiet hours.
-- Local capacity/waitlist transitions are deterministic, not concurrent server transactions.
-- QR tests decode real generated images; physical camera/hardware permission testing remains separate.
-- Local media, referral, series and cohort features do not become cloud storage, external campaign attribution, server schedulers or validated real-world pilot outcomes. Internet-scale open-web discovery and automated external email remain unactivated.
-- Paid ticketing, live video hosting, WhatsApp automation and guardian-managed dependent profiles remain separately gated.
-- No unknown value becomes favourable evidence; no self-report becomes verified attendance; no organizer/source claim becomes safety verification.
+### 3. Deploy Edge Functions
+
+```bash
+npx supabase functions deploy knot-provider-worker
+npx supabase functions deploy knot-razorpay-webhook
+npx supabase functions deploy knot-approved-feed
+npx supabase functions deploy knot-geocode
+```
+
+### 4. Configure server-only secrets
+
+Use Supabase secret storage, not Git or `.env.local`:
+
+```bash
+npx supabase secrets set \
+  RESEND_API_KEY="YOUR_VALUE" \
+  RESEND_FROM_EMAIL="YOUR_VALUE"
+```
+
+Configure only the providers you intend to verify:
+
+| Provider | Required server-side configuration |
+|---|---|
+| Resend | `RESEND_API_KEY`, `RESEND_FROM_EMAIL` |
+| Razorpay | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` |
+| WhatsApp | `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET`, `WHATSAPP_GRAPH_VERSION` |
+| LiveKit | `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `LIVEKIT_WS_URL` |
+
+An unconfigured provider must return an explicit not-configured/deferred state. A queued job is not proof of delivery, payment or room creation.
+
+### 5. Configure geocoding and map tiles
+
+The organizer geocoder supports an authorized Nominatim-compatible endpoint, keyed-query caching, authorization, rate limits, upstream spacing and timeouts.
+
+Set server-side Edge Function configuration as appropriate:
+
+```dotenv
+APP_ORIGINS=https://your-app.example
+NOMINATIM_BASE_URL=https://your-authorized-nominatim.example/
+NOMINATIM_USER_AGENT=KnotEventDiscovery/1.0 (https://your-app.example)
+NOMINATIM_CONTACT_EMAIL=ops@your-app.example
+```
+
+Optional browser tile configuration:
+
+```dotenv
+VITE_TILE_URL=https://tile.openstreetmap.org/{z}/{x}/{y}.png
+VITE_TILE_ATTRIBUTION=&copy; OpenStreetMap contributors
+```
+
+Keep attribution accurate for the selected provider. Public OSM tiles and public Nominatim are not unlimited production service agreements.
+
+If geocoding is unavailable, Knot keeps an honest locality-area marker instead of inventing an exact venue pin.
+
+### 6. Configure Auth and callbacks
+
+For a hosted production environment:
+
+- Set the Auth site URL and allowed redirect URLs.
+- Keep email auto-confirmation disabled unless your verified email flow requires otherwise.
+- Configure provider callback URLs and webhook secrets through their respective dashboards.
+- Keep the current hosted launch adult-only. Do not enable minor production accounts without verified guardian consent and an appropriate safeguarding/privacy setup.
+
+---
 
 ## Architecture
 
 ```text
-src/
-├── components/       Shell, cards, filters, maps, QR and participant engagement
-├── data/             Versioned local repository, IndexedDB media and PBKDF2 auth
-├── domain/           Types, age, geo, discovery, parsing/OCR adapters,
-│                     registration, federation, operations and trust rules
-├── pages/            Public, account, planner, organizer studio and admin routes
-├── state/            Guarded application actions and scheduled notifications
-├── App.tsx           Lazy route table
-└── styles.css        Responsive design system
+Browser
+├── Public React pages and accessible map/list UI
+├── Authenticated participant and organizer workflows
+├── Local repository for explicit local-development mode
+└── Supabase JS client
+    ├── Auth sessions
+    ├── RLS-protected table reads/writes
+    ├── Transactional RPCs
+    ├── Public and private Realtime channels
+    └── Edge Function invocation
 
-tests/
-├── domain.test.ts
-├── e2e.mjs
-├── expansion-e2e.mjs
-├── input-adapters-e2e.mjs
-└── final-expansion-e2e.mjs
-
-scripts/
-├── geocode-localities.ts
-└── prepare-ocr.mjs
+Supabase
+├── Postgres + RLS
+│   ├── Public catalog records
+│   ├── Private user/organizer records
+│   ├── Atomic registration and waitlist operations
+│   ├── Consent-gated personalization signals
+│   └── Review/provenance and provider-job records
+├── PostGIS in extensions
+│   ├── Venue geography
+│   ├── Radius and viewport discovery
+│   └── Geographic indexes
+└── Edge Functions
+    ├── Provider outbox execution
+    ├── Razorpay webhook verification
+    ├── Approved-feed ingestion into review
+    └── Authorized, bounded organizer geocoding
 ```
 
-The domain layer is independent of React. A production repository adapter must enforce permissions and transactions on the server rather than copying browser state into cloud tables.
+### Provider model
+
+Knot supports an explicit local provider for development and a Supabase provider for cloud application data. A provider selection is intentional; failures must not silently move production users to browser-local records.
+
+### Data model principles
+
+- Canonical events can have multiple source listings.
+- Public event payloads exclude participant-only joining links and private evidence.
+- Private user/organizer state is separated from public catalog data.
+- Registration state transitions occur on the server in cloud mode.
+- Discovery aggregates distinguish views, saves, native registrations, going and verified attendance.
+
+---
+
+## Security, privacy and data truth
+
+### Authentication and authorization
+
+- Guests may browse public pages.
+- Register, Join, Publish and Host require authentication, including external-event handoff.
+- Server-managed profiles prevent clients from assigning themselves administrative roles.
+- RLS and authorized RPCs protect private records and privileged mutations.
+- Unlisted event detail access does not permit anonymous bulk export or joining-link leakage.
+
+### Registration truth
+
+- An outbound click is a **handoff**, not a registration.
+- External self-confirmation is not independent verification.
+- Pending, waitlisted, rejected and cancelled records do not consume confirmed capacity.
+- Verified attendance requires an authorized organizer check-in workflow.
+- Certificates and analytics must not convert self-reports into verified outcomes.
+
+### Privacy and consent
+
+- Guest analytics are aggregate-only.
+- Behavioral personalization requires an eligible active adult and explicit consent.
+- Withdrawing personalization consent removes stored interest signals and learned interests.
+- Small aggregate groups are suppressed where required.
+- Private evidence, participant answers and joining links are not inserted into public event payloads.
+- Geocoding should use a public venue address, not a private residence.
+
+### Age safeguards
+
+- The selected interim hosted launch is **adults-only**.
+- Local reference code contains restrictive Minor Mode and guardian-attestation workflows, but these are not production-verifiable parental consent.
+- Minor production activation requires a separate verified consent, safeguarding, retention and legal/privacy review.
+
+### Source and organizer trust
+
+- Source permission is required before live ingestion.
+- An organizer or source claim is not independent safety verification.
+- Unknown price, eligibility, age or attendance remains unknown—not favourable.
+- Feed imports enter review/provenance workflows; they never automatically publish.
+
+### Secret handling
+
+Never commit:
+
+- `.env.local`
+- Service-role keys
+- Database passwords
+- Provider API keys or webhook secrets
+- Production Auth/session tokens
+
+---
+
+## Testing and verification
+
+### Domain tests and build
+
+```bash
+npm test
+npm run build
+```
+
+Current source verification includes:
+
+- **68/68 domain and cloud-mapping tests passing**
+- Successful TypeScript and Vite production build
+- Lazy-loaded Leaflet bundle rather than including the map in the initial catalog chunk
+
+### Browser suites
+
+Start the app in one terminal:
+
+```bash
+npm run dev
+```
+
+In another terminal:
+
+```bash
+npx playwright install chromium
+# Linux only, if system libraries are missing:
+npx playwright install-deps chromium
+
+npm run test:e2e
+npm run test:e2e:expansion
+npm run test:e2e:adapters
+npm run test:e2e:final
+```
+
+Or run all four:
+
+```bash
+npm run test:e2e:all
+```
+
+Set `E2E_BASE_URL` to target another running deployment. Browser suites use fresh application state and should not be pointed casually at production user data.
+
+### Cloud verification
+
+Read-only discovery checks:
+
+```bash
+KNOT_RUN_CLOUD_TESTS=1 npm run test:cloud:discovery
+```
+
+Disposable authenticated production-harness checks:
+
+```bash
+KNOT_RUN_CLOUD_TESTS=1 npm run test:cloud
+```
+
+The authenticated harness creates disposable users/events and has specific Auth test requirements. Use a disposable project and clean up afterward; it is not a routine production test command.
+
+### Evidence recorded during implementation
+
+- Core authenticated Supabase harness: **14/14 checks** in its last complete run, covering adult signup, RLS, consent withdrawal, actual public/private Realtime delivery, registration capacity, waitlists and external-handoff truth.
+- Read-only discovery harness: **11/11 checks** in its last complete run, covering pagination, typo relevance, geographic filtering, aggregates and private-signal denial.
+- Latest cloud browser smoke after the PostGIS move: home rendered, **4 cloud cards**, **4 map markers**, **30 loaded tile images**, and **0 captured browser errors**.
+- PostGIS migration verification preserved all **8/8 event geography values**, the GiST index, the discovery trigger and **8,500 spatial-reference rows**.
+- The latest full browser suite and full remote harnesses have not all been rerun after every newest map/geocode/PostGIS change. Do not interpret earlier passes as proof of final release certification.
+
+---
+
+## Implementation status
+
+| Area | Status |
+|---|---|
+| Local product workflows | Implemented for the current local reference scope |
+| Supabase Auth, RLS and server-managed adult profiles | Implemented; core remote checks passed |
+| Native registration, capacity and waitlists | Integrated and remotely verified in the core harness |
+| External registration truth | Integrated; handoff/self-confirmation remain distinct |
+| Geographic/text discovery and cursors | Integrated; geographic search rechecked after the PostGIS move |
+| Public/private Realtime | Actual authorized row delivery remotely verified |
+| Leaflet/OpenStreetMap maps | Real basemap implemented and browser-smoke checked |
+| PostGIS API exposure | Resolved by moving PostGIS to `extensions` |
+| Organizer address geocoding | Edge adapter and cache implemented; an authorized live upstream is still required |
+| Public Nominatim from hosted Edge | Returned HTTP 403 during testing; the app retains the locality fallback |
+| Resend/Razorpay/WhatsApp/LiveKit | Guarded adapters exist; credentials and live end-to-end verification remain pending |
+| Approved live feeds/Ticketmaster | Permission/review model exists; approved live source configuration remains pending |
+| Secondary organizer/reviewer/account cloud workflows | Partial; several still use local application state |
+| Production hosting and operations | Deployment, monitoring, backups and final operational verification remain |
+| Minor production accounts | Intentionally disabled for the interim adults-only launch |
+| Native mobile | Separate product decision; not claimed as implemented |
+
+### Priority remaining work
+
+1. Complete durable Supabase adapters for secondary organizer, reviewer and account workflows.
+2. Configure and verify an authorized production geocoder and production tile provider.
+3. Add real provider credentials through secret storage and run end-to-end provider tests.
+4. Configure approved live sources and preserve human review/provenance.
+5. Rerun full browser and remote regression suites after the newest changes.
+6. Complete production hosting, observability, backup/restore drills and external accessibility/security/privacy reviews.
+
+---
+
+## Project structure
+
+```text
+.
+├── src/
+│   ├── components/          Shell, cards, filters, maps and engagement UI
+│   ├── data/
+│   │   ├── supabase/       Auth, discovery, Realtime, geocode and cloud RPC adapters
+│   │   └── ...             Local repository and IndexedDB media
+│   ├── domain/             Framework-independent types and business rules
+│   ├── pages/              Public, account, organizer and admin routes
+│   ├── state/              Guarded application actions and provider selection
+│   ├── App.tsx             Lazy route table
+│   └── styles.css          Responsive design system
+├── supabase/
+│   ├── functions/          Provider, webhook, approved-feed and geocode functions
+│   └── migrations/         Forward-only schema, RLS, RPC and PostGIS migrations
+├── tests/                  Domain, cloud-mapping and Playwright suites
+├── scripts/                OCR preparation, demo, locality and cloud verification
+├── docs/                   Product baseline, implementation and verification records
+├── deliverables/           Product PDF, demo video and source artifact
+├── public/                 Static assets; generated OCR assets are ignored
+└── .env.example            Non-secret environment template
+```
+
+---
 
 ## Useful routes
 
 | Route | Purpose |
 |---|---|
 | `/` | Public/personalized discovery |
-| `/search` | Filters, saved searches and locality map |
-| `/events/:eventId` | Details, participation, resources, projects and trust actions |
-| `/auth` | Adult/minor account flows |
+| `/search` | Filters, saved searches and map/list discovery |
+| `/events/:eventId` | Event details, sources and participation |
+| `/auth` | Sign-in and account creation |
 | `/publish` | Quick Post / Host on Knot |
-| `/add` | Instant Add text, public URL and poster OCR |
-| `/plan` | Schedule, deadlines, going and participation history |
-| `/organizer` | Owned-event dashboard |
+| `/add` | Instant Add from text, public URLs and poster OCR |
+| `/plan` | Schedule, deadlines and participation history |
+| `/organizer` | Organizer dashboard |
 | `/organizer/events/:eventId` | Full event operations studio |
-| `/admin` | Review, Source Records, trust/claims and audit queues |
-| `/communities` | Community directory and team formation |
+| `/communities` | Communities and team formation |
 | `/profile` | Preferences, consent, privacy and data controls |
+| `/admin` | Review, source, trust and audit workflows |
 
-## Delivery artifacts
+---
 
-- [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) — timestamped two-minute demonstration path
-- `deliverables/Knot_Product.pdf` — exactly five slides
-- `deliverables/Knot_Demo.mp4` — captioned two-minute local product demonstration
+## Documentation and demo artifacts
 
-The validated source archive is generated only after the documented verification gates pass. GitHub push history and any remaining delivery blocker are recorded in [`docs/DELIVERY.md`](docs/DELIVERY.md).
+### Product and implementation
+
+- [Final Product Baseline](docs/KNOT_FINAL_PRODUCT_BASELINE.md)
+- [Master Product Blueprint v4](docs/KNOT_MASTER_PRODUCT_BLUEPRINT_v4.md)
+- [Production Implementation Brief](docs/PRODUCTION_IMPLEMENTATION_BRIEF.md)
+- [Production Verification](docs/PRODUCTION_VERIFICATION.md)
+- [Product Status](docs/PRODUCT_STATUS.md)
+- [Verification Record](docs/VERIFICATION.md)
+- [Delivery Record](docs/DELIVERY.md)
+
+The baseline corrections govern older blueprint wording. Status documents may describe earlier milestones; this README distinguishes the current core cloud implementation from remaining production work.
+
+### Demo
+
+- [Timestamped Demo Script](docs/DEMO_SCRIPT.md)
+- [Product PDF](deliverables/Knot_Product.pdf)
+- [Demo Video](deliverables/Knot_Demo.mp4)
+
+Demo and sample data are for product evaluation. They are not evidence of live event coverage, provider delivery, attendance or real-world pilot outcomes.
+
+---
+
+## Contributing
+
+1. Create a focused branch.
+2. Keep domain rules independent of React where practical.
+3. Preserve authentication, RLS, age/consent, source-permission and registration-truth requirements.
+4. Add forward-only migrations; do not rewrite migrations already applied to a shared environment.
+5. Never commit secrets or destructive reseeding scripts.
+6. Add or update tests for behavior changes.
+7. Run the relevant checks before committing:
+
+```bash
+npm test
+npm run build
+```
+
+8. Use a clear commit message and explain any remaining external dependencies in the pull request.
+
+When reporting a security concern, do not include credentials, private user data or production access tokens in a public issue.
+
+---
+
+## License
+
+No license file has been added yet. Add a `LICENSE` file to define reuse and distribution terms for this repository.
