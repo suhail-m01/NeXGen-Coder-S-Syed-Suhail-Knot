@@ -634,6 +634,12 @@ Demo and sample data are for product evaluation. They are not evidence of live e
 
 ---
 
+## Contributors
+
+- **Alam Nawaz Sha** ([@AlamNawazSha](https://github.com/AlamNawazSha)) — Core contributor: Hyperlocal discovery, Unstop-style solo & team registration engine, WhatsApp & Poster AI Smart Importer, and Builder Passport verified credentials.
+
+---
+
 ## Contributing
 
 1. Create a focused branch.

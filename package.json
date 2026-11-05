@@ -3,6 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "contributors": [
+    {
+      "name": "Alam Nawaz Sha",
+      "email": "alamalam83802@gmail.com",
+      "url": "https://github.com/AlamNawazSha"
+    }
+  ],
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
   },
