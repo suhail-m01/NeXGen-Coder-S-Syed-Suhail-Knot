@@ -42,8 +42,19 @@ export function HackathonsPage() {
   const [locationStatus, setLocationStatus] = useState('');
   const [guestNotice, setGuestNotice] = useState(false);
   const [savedNotice, setSavedNotice] = useState(false);
+  const [offlineBackupActive, setOfflineBackupActive] = useState(false);
   const [retryNonce, setRetryNonce] = useState(0);
   const requestSequence = useRef(0);
+
+  const loadOfflineBackup = () => {
+    import('./liveSeed').then(({ filterLiveSeedHackathons }) => {
+      const fallback = filterLiveSeedHackathons(filters);
+      setResult(fallback);
+      setFacets(fallback.facets);
+      setError('');
+      setOfflineBackupActive(true);
+    });
+  };
 
   useEffect(() => {
     if (!hackathonsEnabled) return;
@@ -112,8 +123,28 @@ export function HackathonsPage() {
       {guestNotice && <div className="hackathon-notice" role="status"><Info size={17} /><span>You can continue without an account. <Link to="/auth?returnTo=%2Fhackathons">Sign in to keep Interested hackathons in My Interests.</Link></span><button className="icon-button" aria-label="Dismiss sign-in suggestion" onClick={() => setGuestNotice(false)}>×</button></div>}
       {savedNotice && <div className="hackathon-notice" role="status"><Info size={17} /><span>Saved to your local My Interests list for this signed-in browser.</span><button className="icon-button" aria-label="Dismiss saved message" onClick={() => setSavedNotice(false)}>×</button></div>}
       <div className="hackathon-results-heading"><div><h2>{result ? `${result.meta.total} ${result.meta.total === 1 ? 'hackathon' : 'hackathons'}` : 'Hackathons'}</h2><p>{formatLastUpdated(result?.meta.lastUpdated ?? null)}{loading && result ? ' · Updating…' : ''}</p></div>{result && result.meta.total > 0 && <span>Page {result.meta.page} of {Math.max(result.meta.totalPages, 1)}</span>}</div>
+      {offlineBackupActive && (
+        <div className="hackathon-notice" role="status" style={{ marginBottom: 16 }}>
+          <Info size={17} />
+          <span>Showing verified hackathon listings. Live server sync will resume automatically when connected.</span>
+        </div>
+      )}
       {loading && !result && <HackathonSkeleton />}
-      {error && !result && <div className="hackathon-state" role="alert"><AlertCircle size={28} /><h2>We couldn’t load hackathons</h2><p>{error}</p><button className="button button--primary" onClick={() => setRetryNonce((value) => value + 1)}>Try again</button></div>}
+      {error && !result && (
+        <div className="hackathon-state" role="alert">
+          <AlertCircle size={28} />
+          <h2>We couldn’t load hackathons</h2>
+          <p>{error}</p>
+          <div className="button-row" style={{ marginTop: 16 }}>
+            <button className="button button--primary" onClick={() => setRetryNonce((value) => value + 1)}>
+              Try again
+            </button>
+            <button className="button button--secondary" onClick={loadOfflineBackup}>
+              View verified hackathons
+            </button>
+          </div>
+        </div>
+      )}
       {!loading && result && result.data.length === 0 && (
         <div className="hackathon-state">
           <Info size={28} />

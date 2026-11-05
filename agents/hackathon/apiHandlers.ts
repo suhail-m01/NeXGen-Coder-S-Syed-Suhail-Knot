@@ -1,13 +1,14 @@
 import { timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-import { InputError, listHackathons, rowToHackathonDto, type HackathonListResult } from './apiQuery';
+import { InputError, listHackathons, parseHackathonListParams, rowToHackathonDto, type HackathonListResult } from './apiQuery';
 import type { ApiRequest, ApiResponse } from './apiTypes';
 import { getDatabase } from './db';
 import { rateLimit } from './rateLimit';
 import { runHackathonAgent, type RunAgentOptions } from './run';
 import { queueRequestedCity } from './store';
 import type { AgentRunResult } from './types';
+import { filterLiveSeedHackathons, LIVE_VERIFIED_HACKATHONS } from '../../src/features/hackathons/liveSeed';
 
 const header = (request: ApiRequest, name: string): string | undefined => {
   const value = request.headers[name.toLowerCase()];
@@ -46,19 +47,17 @@ export function createHackathonsHandler(deps: {
     }
     if (!allowRate(request, response, 'hackathons-read', 120, 60_000)) return;
     try {
-      const { parseHackathonListParams } = await import('./apiQuery');
-      const params = parseHackathonListParams(request.query);
+      const params = parseHackathonListParams(request.query || {});
       const result = await list(params);
       if (params.city && result.meta.total === 0) await queueCity(params.city).catch(() => undefined);
       response.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=3600');
       response.status(200).json(result);
     } catch (error) {
-      if (error instanceof InputError) response.status(400).json({ error: error.message });
-      else {
+      if (error instanceof InputError) {
+        response.status(400).json({ error: error.message });
+      } else {
         try {
-          const { filterLiveSeedHackathons } = await import('../../src/features/hackathons/liveSeed');
-          const { parseHackathonListParams } = await import('./apiQuery');
-          const params = parseHackathonListParams(request.query);
+          const params = parseHackathonListParams(request.query || {});
           const fallback = filterLiveSeedHackathons(params);
           response.setHeader('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
           response.setHeader('X-Fallback-Source', 'live-seed');
@@ -108,7 +107,6 @@ async function queryHackathonStatus(): Promise<HackathonStatusResult> {
   } catch {
     // Database unreachable; fall back to verified live seed metrics below
   }
-  const { LIVE_VERIFIED_HACKATHONS } = await import('../../src/features/hackathons/liveSeed');
   const perSource: Record<string, number> = {};
   for (const item of LIVE_VERIFIED_HACKATHONS) {
     perSource[item.sourcePlatform] = (perSource[item.sourcePlatform] || 0) + 1;

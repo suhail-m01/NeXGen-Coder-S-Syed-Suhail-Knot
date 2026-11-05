@@ -18,6 +18,12 @@ async function errorMessage(response: Response): Promise<string> {
   } catch {
     // Use the bounded generic message below for non-JSON failures.
   }
+  if (response.status === 500) {
+    return 'The server encountered an error loading hackathons. Please try again or view verified listings.';
+  }
+  if (response.status === 503) {
+    return 'Hackathon discovery is temporarily unavailable. Please retry.';
+  }
   return `Request failed (${response.status}). Please retry.`;
 }
 

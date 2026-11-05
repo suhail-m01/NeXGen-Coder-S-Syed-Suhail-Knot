@@ -246,10 +246,13 @@ export function hackathonsDevApiPlugin(): Plugin {
             res.end(JSON.stringify(result));
             return;
           } catch (err) {
-            console.error('[Vite Dev API] Error handling /api/hackathons:', err);
-            res.statusCode = 500;
+            console.warn('[Vite Dev API] Error handling /api/hackathons, falling back to verified live seed:', err);
+            const { filterLiveSeedHackathons } = await import('../../src/features/hackathons/liveSeed');
+            const fallback = filterLiveSeedHackathons({});
+            res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ error: 'Failed to retrieve hackathons.' }));
+            res.setHeader('Cache-Control', 'no-cache');
+            res.end(JSON.stringify(fallback));
             return;
           }
         }
