@@ -189,6 +189,10 @@ input[type="range"] { width: 100%; accent-color: var(--primary); }
 .hero-quick-links a { color: #ded7e9; text-decoration: underline; text-decoration-color: #6d617e; text-underline-offset: 3px; }
 .hero-panel { position: relative; border: 1px solid rgba(255,255,255,.12); border-radius: 20px; background: rgba(255,255,255,.075); box-shadow: 0 30px 70px rgba(8,5,22,.25); backdrop-filter: blur(10px); }
 .hero-panel__header { display: flex; align-items: center; justify-content: space-between; padding: 19px 21px; border-bottom: 1px solid rgba(255,255,255,.09); color: #d9d2e5; font-size: .7rem; }
+.hero-panel__tabs { display: flex; align-items: center; gap: 6px; }
+.hero-tab-btn { padding: 4px 10px; border-radius: 999px; font-size: .62rem; font-weight: 700; border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.07); color: #d9d2e5; cursor: pointer; transition: all .2s ease; }
+.hero-tab-btn:hover { background: rgba(255,255,255,.14); color: #fff; }
+.hero-tab-btn.active { background: var(--accent); color: var(--deep); border-color: var(--accent); }
 .hero-panel__header > div { display: flex; align-items: center; gap: 8px; font-weight: 700; }
 .hero-panel__header > span { color: #aaa0bb; }
 .hero-panel__event-stack { display: grid; gap: 9px; padding: 16px; }

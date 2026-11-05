@@ -106,7 +106,7 @@ export function hackathonsDevApiPlugin(): Plugin {
   return {
     name: 'knot-hackathons-dev-api',
     configureServer(server) {
-      server.middlewares.use(async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
+      const handler = async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
         const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost:5174'}`);
 
         if (url.pathname === '/api/hackathons' && req.method === 'GET') {
@@ -229,7 +229,10 @@ export function hackathonsDevApiPlugin(): Plugin {
         }
 
         next();
-      });
+      };
+
+      // Place at the top of the stack before internal transform middleware
+      (server.middlewares.stack as Array<any>).unshift({ route: '', handle: handler });
     },
   };
 }

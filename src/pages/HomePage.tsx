@@ -10,14 +10,31 @@ import { localityById } from '../domain/localities';
 import { useApp } from '../state/AppContext';
 import type { KnotEvent } from '../domain/types';
 import { hackathonsEnabled } from '../features/hackathons/flag';
+import { listHackathons } from '../features/hackathons/api';
+import type { Hackathon } from '../features/hackathons/types';
 
 const HomeHackathons = lazy(() => import('../features/hackathons/HomeHackathons').then((module) => ({ default: module.HomeHackathons })));
 
 export function HomePage() {
   const { data, filters, setFilters, currentUser } = useApp();
   const [heroQuery, setHeroQuery] = useState('');
+  const [liveHackathons, setLiveHackathons] = useState<Hackathon[]>([]);
+  const [heroTab, setHeroTab] = useState<'live' | 'local'>('live');
   const navigate = useNavigate();
   const locality = localityById(filters.localityId);
+
+  useEffect(() => {
+    if (!hackathonsEnabled) return;
+    const controller = new AbortController();
+    listHackathons({ limit: 6, sort: 'soonest' }, controller.signal)
+      .then((res) => {
+        if (res.data && res.data.length > 0) {
+          setLiveHackathons(res.data);
+        }
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     if (currentUser?.areaLocalityId && filters.localityId === 'koramangala' && currentUser.areaLocalityId !== 'koramangala') {
@@ -67,17 +84,84 @@ export function HomePage() {
             <div className="hero-quick-links"><span>Popular:</span><Link to={hackathonsEnabled ? '/hackathons' : '/search?type=hackathon'}>Hackathons</Link><Link to="/search?time=weekend">This weekend</Link><Link to="/search?mode=online">Online</Link></div>
           </div>
           <div className="hero-panel">
-            <div className="hero-panel__header"><div><span className="live-dot" /> Happening near you</div><span>{locality?.name}</span></div>
-            <div className="hero-panel__event-stack">
-              {upcoming.slice(0, 3).map((event, index) => <Link to={`/events/${event.id}`} className={`hero-mini-event hero-mini-event--${index + 1}`} key={event.id}>
-                <div className="hero-mini-event__date"><strong>{new Intl.DateTimeFormat('en-IN', { day: '2-digit' }).format(new Date(event.startAt))}</strong><span>{new Intl.DateTimeFormat('en-IN', { month: 'short' }).format(new Date(event.startAt))}</span></div>
-                <div><strong>{event.title}</strong><span>{event.mode === 'online' ? 'Online' : event.venue?.name.replace('Sample venue · ', '')} · {formatEventDate(event.startAt).split(',').slice(-2).join(',')}</span></div>
-                <ArrowRight size={17} />
-              </Link>)}
-              {upcoming.length === 0 && <div className="hero-panel__empty">No nearby events in this view. Try a wider radius or browse online.</div>}
+            <div className="hero-panel__header">
+              <div>
+                <span className="live-dot" />
+                {heroTab === 'live' && liveHackathons.length > 0 ? 'Live Discovered Events' : 'Happening near you'}
+              </div>
+              {hackathonsEnabled && liveHackathons.length > 0 ? (
+                <div className="hero-panel__tabs">
+                  <button
+                    type="button"
+                    className={`hero-tab-btn ${heroTab === 'live' ? 'active' : ''}`}
+                    onClick={() => setHeroTab('live')}
+                  >
+                    Live Agent ({liveHackathons.length})
+                  </button>
+                  <button
+                    type="button"
+                    className={`hero-tab-btn ${heroTab === 'local' ? 'active' : ''}`}
+                    onClick={() => setHeroTab('local')}
+                  >
+                    {locality?.name ?? 'Local'}
+                  </button>
+                </div>
+              ) : (
+                <span>{locality?.name}</span>
+              )}
             </div>
-            <Link to="/search" className="hero-panel__footer">Open your local event guide <Compass size={17} /></Link>
-            <div className="hero-panel__floating"><Users size={17} /><span><strong>Participation, not just listings</strong>Eligibility · skills · teams · age</span></div>
+            <div className="hero-panel__event-stack">
+              {heroTab === 'live' && liveHackathons.length > 0 ? (
+                liveHackathons.slice(0, 3).map((hackathon, index) => (
+                  <Link to={`/hackathons?q=${encodeURIComponent(hackathon.title)}`} className={`hero-mini-event hero-mini-event--${index + 1}`} key={hackathon.id}>
+                    <div className="hero-mini-event__date">
+                      <strong>{new Intl.DateTimeFormat('en-IN', { day: '2-digit' }).format(new Date(hackathon.startDate))}</strong>
+                      <span>{new Intl.DateTimeFormat('en-IN', { month: 'short' }).format(new Date(hackathon.startDate))}</span>
+                    </div>
+                    <div>
+                      <strong>{hackathon.title}</strong>
+                      <span>
+                        <span style={{ color: '#4ade80', fontWeight: 700 }}>● Live</span> · {hackathon.sourcePlatform} · {hackathon.city || (hackathon.mode === 'online' ? 'Online' : 'Nationwide')} · {hackathon.isFree ? 'FREE' : hackathon.priceAmount ? `₹${hackathon.priceAmount}` : 'Free/Open'}
+                      </span>
+                    </div>
+                    <ArrowRight size={17} />
+                  </Link>
+                ))
+              ) : (
+                <>
+                  {upcoming.slice(0, 3).map((event, index) => (
+                    <Link to={`/events/${event.id}`} className={`hero-mini-event hero-mini-event--${index + 1}`} key={event.id}>
+                      <div className="hero-mini-event__date">
+                        <strong>{new Intl.DateTimeFormat('en-IN', { day: '2-digit' }).format(new Date(event.startAt))}</strong>
+                        <span>{new Intl.DateTimeFormat('en-IN', { month: 'short' }).format(new Date(event.startAt))}</span>
+                      </div>
+                      <div>
+                        <strong>{event.title}</strong>
+                        <span>{event.mode === 'online' ? 'Online' : event.venue?.name.replace('Sample venue · ', '')} · {formatEventDate(event.startAt).split(',').slice(-2).join(',')}</span>
+                      </div>
+                      <ArrowRight size={17} />
+                    </Link>
+                  ))}
+                  {upcoming.length === 0 && <div className="hero-panel__empty">No nearby events in this view. Try a wider radius or browse online.</div>}
+                </>
+              )}
+            </div>
+            {heroTab === 'live' && liveHackathons.length > 0 ? (
+              <Link to="/hackathons" className="hero-panel__footer">
+                Explore all {liveHackathons.length} live hackathons <Compass size={17} />
+              </Link>
+            ) : (
+              <Link to="/search" className="hero-panel__footer">
+                Open your local event guide <Compass size={17} />
+              </Link>
+            )}
+            <div className="hero-panel__floating">
+              <Users size={17} />
+              <span>
+                <strong>{heroTab === 'live' && liveHackathons.length > 0 ? 'Verified Real-Time Registrations' : 'Participation, not just listings'}</strong>
+                {heroTab === 'live' && liveHackathons.length > 0 ? 'Autonomous agent · direct organizer links' : 'Eligibility · skills · teams · age'}
+              </span>
+            </div>
           </div>
         </div>
         <div className="hero__location"><LocationControls light /></div>

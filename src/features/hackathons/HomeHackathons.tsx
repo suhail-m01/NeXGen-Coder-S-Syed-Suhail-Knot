@@ -19,8 +19,20 @@ export function HomeHackathons() {
   useEffect(() => {
     if (!hackathonsEnabled) return;
     const controller = new AbortController();
-    listHackathons({ city: locality?.city ?? '', area: locality?.geocode.resultType === 'city' ? '' : locality?.name ?? '', limit: 3, sort: 'soonest' }, controller.signal)
-      .then(setResult).catch((caught: unknown) => { if (!controller.signal.aborted) setError(caught instanceof Error ? caught.message : 'Hackathon discovery is unavailable.'); });
+    const city = locality?.city ?? '';
+    const area = locality?.geocode.resultType === 'city' ? '' : locality?.name ?? '';
+    listHackathons({ city, area, limit: 3, sort: 'soonest' }, controller.signal)
+      .then((res) => {
+        if (res.data.length > 0) {
+          setResult(res);
+        } else {
+          // If no events match this specific city, fetch live upcoming hackathons so real-time data is always displayed
+          return listHackathons({ limit: 3, sort: 'soonest' }, controller.signal).then(setResult);
+        }
+      })
+      .catch((caught: unknown) => {
+        if (!controller.signal.aborted) setError(caught instanceof Error ? caught.message : 'Hackathon discovery is unavailable.');
+      });
     return () => controller.abort();
   }, [locality?.id, locality?.city, locality?.name, locality?.geocode.resultType]);
   if (!hackathonsEnabled) return null;
