@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowLeft, ArrowUpRight, Bookmark, CalendarDays, Check, CheckCircle2, Clock3, Download, ExternalLink, Flag, Info, Link2, MapPin, Share2, ShieldCheck, Sparkles, Users, Video } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowUpRight, Award, Bookmark, CalendarDays, Check, CheckCircle2, Clock3, Download, ExternalLink, Flag, Info, Link2, MapPin, MessageCircle, Navigation, Share2, ShieldCheck, Sparkles, Users, Video } from 'lucide-react';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { AgeBadge, FitBadge, SampleBadge } from '../components/Badges';
@@ -6,8 +6,8 @@ import { EventCard } from '../components/EventCard';
 import { LocalityMap } from '../components/LocalityMap';
 import { ParticipantCheckInPass } from '../components/ParticipantCheckInPass';
 import { ageRuleLabel, participationDecision } from '../domain/age';
-import { eventDistance, eventModeLabel, eventToICS, eventTypeLabel, formatEventDate, participationFit, priceLabel } from '../domain/events';
-import { localityById } from '../domain/localities';
+import { calculateEventMatchScore, eventDistance, eventModeLabel, eventToICS, eventTypeLabel, formatEventDate, participationFit, priceLabel } from '../domain/events';
+import { localityById, nearestMetroOrLandmark } from '../domain/localities';
 import { waitlistPosition } from '../domain/registration';
 import { canManageEvent, registrationAnswerErrors } from '../domain/operations';
 import type { KnotEvent, RegistrationStatus } from '../domain/types';
@@ -45,15 +45,15 @@ export function EventPage() {
   }, [eventId, snapshotEvent, data.session?.userId]);
   useEffect(() => {
     if (event && referralToken) recordReferralVisit(referralToken);
-  // A valid campaign is session-deduplicated in the repository action.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // A valid campaign is session-deduplicated in the repository action.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event?.id, referralToken]);
   useEffect(() => {
     if (!event || !currentUser?.personalizationConsent || currentUser.ageBand !== '18_plus') return;
     const timer = window.setTimeout(() => recordInterestSignal(event.id, 'view', 5), 5000);
     return () => window.clearTimeout(timer);
-  // One deduplicated interest-level signal after a real five-second dwell.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // One deduplicated interest-level signal after a real five-second dwell.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event?.id, currentUser?.id, currentUser?.personalizationConsent]);
   if (!event) return <div className="page-container"><div className="empty-state">{directLoading ? <><h1>Loading event…</h1><p>Fetching the public detail and any authorized participant data.</p></> : <><h1>Event not found</h1><p>{directError || 'It may have been removed or the link may be incorrect.'}</p><Link className="button button--primary" to="/search">Back to discovery</Link></>}</div></div>;
   if (event.visibility === 'private' && !canManageEvent(currentUser, event)) return <div className="page-container"><div className="empty-state"><ShieldCheck size={30} /><h1>Private event</h1><p>Only authorized event managers can open this private operations listing.</p><Link className="button button--primary" to="/search">Back to discovery</Link></div></div>;
@@ -61,6 +61,8 @@ export function EventPage() {
   const origin = localityById(filters.localityId);
   const fit = participationFit(currentUser, event, origin);
   const distance = eventDistance(event, origin);
+  const match = calculateEventMatchScore(currentUser, event, origin);
+  const metro = event.mode !== 'online' ? nearestMetroOrLandmark(event.venue?.localityId) : null;
   const decision = participationDecision(currentUser, event);
   const saved = data.saves.some((save) => save.userId === currentUser?.id && save.eventId === event.id);
   const following = data.follows.some((follow) => follow.userId === currentUser?.id && follow.communityId === event.communityId);
@@ -145,13 +147,41 @@ export function EventPage() {
     } catch { /* A dismissed share sheet needs no error state. */ }
   };
 
+  const shareToWhatsApp = () => {
+    const dateFormatted = formatEventDate(event.startAt, true);
+    const venueText = event.mode === 'online' ? 'Online' : `${event.venue?.name ?? 'Venue pending'}, ${localityById(event.venue?.localityId)?.name ?? 'Bengaluru'}`;
+    const teamText = registration?.teamCode ? `\n👥 Team: *${registration.teamName}* (Code: *${registration.teamCode}*)` : '';
+    const text = `🚀 *Join me at ${event.title}!*
+
+📅 *When:* ${dateFormatted}
+📍 *Where:* ${venueText}${metro ? ` (${metro})` : ''}${teamText}
+✨ *Details:* ${event.tagline || event.summary}
+
+🔗 *Register / View on Knot:* ${window.location.origin}/events/${event.id}${registration?.teamCode ? `?teamCode=${registration.teamCode}` : ''}`;
+
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
+    recordInterestSignal(event.id, 'share');
+  };
+
   return (
     <div className="event-page">
       <div className="page-container event-page__breadcrumb"><Link to="/search"><ArrowLeft size={16} /> Back to discovery</Link><span>/</span><span>{eventTypeLabel(event.eventType)}</span></div>
       <section className="event-hero">
         <div className="page-container event-hero__inner">
           <div className="event-hero__main">
-            <div className="event-hero__badges"><span className="event-type">{eventTypeLabel(event.eventType)}</span>{event.isSample && <SampleBadge />}<AgeBadge rule={event.ageRule} />{event.status === 'stale' && <span className="badge badge--warning">Source may be stale</span>}{event.status === 'cancelled' && <span className="badge badge--warning">Cancelled</span>}</div>
+            <div className="event-hero__badges">
+              <span className="event-type">{eventTypeLabel(event.eventType)}</span>
+              <span
+                className={`match-score-badge ${match.score >= 80 ? 'match-score-badge--high' : 'match-score-badge--mid'}`}
+                title={`Personalized Match Breakdown:\n• ${match.reasons.join('\n• ')}`}
+              >
+                <Sparkles size={12} /> {match.score}% Personalized Match
+              </span>
+              {event.isSample && <SampleBadge />}
+              <AgeBadge rule={event.ageRule} />
+              {event.status === 'stale' && <span className="badge badge--warning">Source may be stale</span>}
+              {event.status === 'cancelled' && <span className="badge badge--warning">Cancelled</span>}
+            </div>
             <h1>{event.title}</h1>
             <p>{event.tagline}</p>
             <Link to={`/communities/${event.communityId}`} className="organizer-line"><span className="organizer-line__avatar">{event.organizerName.slice(0, 1)}</span><span>Hosted by <strong>{event.organizerName}</strong></span><ArrowUpRight size={15} /></Link>
@@ -198,7 +228,7 @@ export function EventPage() {
 
           {event.prizes.length > 0 && <section className="event-section"><h2>Prizes & rewards</h2><ul className="prize-list">{event.prizes.map((prize) => <li key={prize}><Check size={17} />{prize}</li>)}</ul></section>}
 
-          {event.mode !== 'online' && <section className="event-section"><h2>Location</h2><div className="venue-card"><MapPin /><div><strong>{event.venue?.name ?? 'Location pending'}</strong><p>{event.venue?.address}</p><span>{event.venue?.locationPrecision === 'locality' ? 'Area marker — exact venue pin not confirmed' : `${event.venue?.locationPrecision} location`}{distance !== null ? ` · about ${distance.toFixed(1)} km from ${origin?.name}` : ''}</span></div></div><LocalityMap events={[event]} origin={origin} /></section>}
+          {event.mode !== 'online' && <section className="event-section"><h2>Location &amp; Commute</h2><div className="venue-card"><MapPin /><div><strong>{event.venue?.name ?? 'Location pending'}</strong><p>{event.venue?.address}</p>{metro && <span className="venue-metro-note"><Navigation size={13} /> {metro}</span>}<span>{event.venue?.locationPrecision === 'locality' ? 'Area marker — exact venue pin not confirmed' : `${event.venue?.locationPrecision} location`}{distance !== null ? ` · about ${distance.toFixed(1)} km from ${origin?.name}` : ''}</span></div></div><LocalityMap events={[event]} origin={origin} /></section>}
 
           <section className="event-section source-section">
             <div className="section-title-row"><h2>Source & freshness</h2><span className="freshness"><span className="live-dot" /> Checked {lastCheckedHours < 1 ? 'within the last hour' : `${lastCheckedHours}h ago`}</span></div>
@@ -226,7 +256,24 @@ export function EventPage() {
           {registration?.kind === 'external' && registration.status === 'opened_externally' && <button className="button button--secondary button--full" disabled={participationPending} onClick={() => void confirmExternal()}>I completed external registration</button>}
           {registration?.kind === 'native' && ['registered', 'approved', 'checked_in', 'attended'].includes(registration.status) && event.onlineJoinUrl && <a className="button button--accent button--full" href={event.onlineJoinUrl} target="_blank" rel="noreferrer">Open joining link <ExternalLink size={16} /></a>}
           {registration?.kind === 'native' && ['registered', 'approved'].includes(registration.status) && <ParticipantCheckInPass event={event} registration={registration} />}
-          <div className="participation-actions"><button className={saved ? 'is-saved' : ''} onClick={() => toggleSave(event.id)}><Bookmark fill={saved ? 'currentColor' : 'none'} />{saved ? 'Saved' : 'Save'}</button><button onClick={downloadCalendar}><Download /> Calendar</button><button onClick={share}><Share2 /> Share</button></div>
+          {registration?.kind === 'native' && (registration.status === 'attended' || registration.status === 'checked_in') && (
+            <div className="verified-attendance-callout">
+              <Award size={22} color="#10b981" />
+              <div>
+                <strong>Verified In-Person Attendance</strong>
+                <p>Your physical check-in was verified by the organizer! A verified credential stamp has been permanently added to your Builder Passport.</p>
+                <Link to="/profile" className="button button--secondary button--small" style={{ marginTop: 6, display: 'inline-flex' }}>
+                  View Builder Passport
+                </Link>
+              </div>
+            </div>
+          )}
+          <div className="participation-actions">
+            <button className={saved ? 'is-saved' : ''} onClick={() => toggleSave(event.id)}><Bookmark fill={saved ? 'currentColor' : 'none'} />{saved ? 'Saved' : 'Save'}</button>
+            <button onClick={downloadCalendar}><Download /> Calendar</button>
+            <button onClick={share}><Share2 /> Share</button>
+            <button className="whatsapp-share-btn" onClick={shareToWhatsApp} title="Share to WhatsApp Group"><MessageCircle size={15} /> WhatsApp</button>
+          </div>
           <button className="follow-button" onClick={() => toggleFollow(event.communityId)}><Users size={16} />{following ? `Following ${event.organizerName}` : `Follow ${event.organizerName}`}</button>
           {message && <div className="action-message" role="status">{message}</div>}
           <p className="participation-card__footnote">External clicks are handoffs, not proof of registration. Age information is self-declared.</p>

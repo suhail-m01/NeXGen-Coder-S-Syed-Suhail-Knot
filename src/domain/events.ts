@@ -175,6 +175,66 @@ export function participationFit(user: UserAccount | null, event: KnotEvent, ori
   return { label: 'possible', reasons: reasons.length ? reasons : ['Some event details still need to be checked'] };
 }
 
+export function calculateEventMatchScore(
+  user: UserAccount | null,
+  event: KnotEvent,
+  origin: Locality | null
+): { score: number; reasons: string[] } {
+  const reasons: string[] = [];
+  let score = 72; // baseline for verified open event
+
+  if (!isRegistrationOpen(event)) {
+    return { score: 32, reasons: ['Registration is currently closed for this event'] };
+  }
+
+  const dist = eventDistance(event, origin);
+  if (event.mode === 'online') {
+    score += 12;
+    reasons.push('Online — Zero commute required');
+  } else if (dist !== null) {
+    if (dist <= 3) {
+      score += 18;
+      reasons.push(`Hyperlocal: within ${dist.toFixed(1)} km of your neighborhood`);
+    } else if (dist <= 8) {
+      score += 10;
+      reasons.push(`Nearby: ${dist.toFixed(1)} km from ${origin?.name ?? 'your area'}`);
+    } else {
+      reasons.push(`${dist.toFixed(1)} km from ${origin?.name ?? 'your area'}`);
+    }
+  }
+
+  if (event.price.kind === 'free') {
+    score += 6;
+    reasons.push('Free registration');
+  }
+
+  if (user) {
+    const matchedInterests = event.interests.filter((i) => user.interests.includes(i));
+    const matchedSkills = event.skills.filter((s) => user.skills.includes(s));
+    if (matchedInterests.length > 0) {
+      score += 10;
+      reasons.push(`Matches interests: ${matchedInterests.slice(0, 3).join(', ')}`);
+    }
+    if (matchedSkills.length > 0) {
+      score += 10;
+      reasons.push(`Matches skills: ${matchedSkills.slice(0, 3).join(', ')}`);
+    }
+    const ageResult = checkAgeBand(user.ageBand, event.ageRule);
+    if (ageResult === 'can_join') {
+      score += 4;
+      reasons.push('Eligible for your age group');
+    } else if (ageResult === 'cannot_join') {
+      score = Math.min(score, 25);
+      reasons.unshift('Age band does not match event criteria');
+    }
+  } else {
+    reasons.push('Active in the local Bengaluru builder network');
+  }
+
+  const clamped = Math.min(98, Math.max(35, score));
+  return { score: clamped, reasons };
+}
+
 export function sortEvents(events: KnotEvent[], filters: EventFilters, user: UserAccount | null) {
   const origin = localityById(filters.localityId);
   const fitWeight = { strong: 3, possible: 2, not_eligible: 0, null: 1 } as const;

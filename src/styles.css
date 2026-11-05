@@ -2289,3 +2289,653 @@ input[type="range"] { width: 100%; accent-color: var(--primary); }
     width: 100%;
   }
 }
+
+/* ==========================================================================
+   Hyperlocal Winning Enhancements: Match Scores, Metro Commute, AI Importer & Passport
+   ========================================================================== */
+
+/* Personalized Match Score Badges */
+.match-score-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: default;
+}
+
+.match-score-badge--high {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(5, 150, 105, 0.28));
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+}
+
+.match-score-badge--mid {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(79, 70, 229, 0.28));
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.4);
+}
+
+.match-score-badge:hover {
+  transform: translateY(-1px);
+}
+
+/* Hyperlocal Metro & Landmark Commute Indicator */
+.event-card__metro,
+.venue-metro-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  color: #a78bfa;
+  background: rgba(139, 92, 246, 0.1);
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  font-weight: 600;
+}
+
+.venue-metro-note {
+  margin: 0.35rem 0;
+  display: inline-flex;
+}
+
+/* WhatsApp 1-Click Share Action Button */
+.whatsapp-share-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  background: rgba(37, 211, 102, 0.12) !important;
+  color: #25d366 !important;
+  border: 1px solid rgba(37, 211, 102, 0.35) !important;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.whatsapp-share-btn:hover {
+  background: rgba(37, 211, 102, 0.25) !important;
+  border-color: #25d366 !important;
+  transform: translateY(-1px);
+}
+
+/* Verified Attendance Callout Card */
+.verified-attendance-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(6, 78, 59, 0.25));
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: 12px;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.verified-attendance-callout strong {
+  display: block;
+  color: #34d399;
+  font-size: 0.95rem;
+  margin-bottom: 0.25rem;
+}
+
+.verified-attendance-callout p {
+  color: #cbd5e1;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* Header & Mobile WhatsApp Importer Buttons */
+.header-ai-importer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(99, 102, 241, 0.2));
+  color: #a7f3d0;
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  padding: 0.45rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.header-ai-importer-btn:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.28), rgba(99, 102, 241, 0.35));
+  border-color: #34d399;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.mobile-menu-link-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: rgba(16, 185, 129, 0.1);
+  color: #a7f3d0;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Importer Callout Banner on Search Page */
+.importer-callout-banner {
+  background: linear-gradient(135deg, rgba(30, 27, 75, 0.7), rgba(49, 46, 129, 0.5));
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin: 1.25rem 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.importer-callout-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.importer-callout-text {
+  flex: 1;
+  min-width: 260px;
+}
+
+.importer-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  margin-bottom: 0.5rem;
+}
+
+.importer-callout-text strong {
+  display: block;
+  font-size: 1.05rem;
+  color: #f8fafc;
+  margin-bottom: 0.25rem;
+}
+
+.importer-callout-text p {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* ==========================================================================
+   AI WhatsApp & Poster Smart Importer Modal
+   ========================================================================== */
+
+.whatsapp-importer-modal {
+  max-width: 760px;
+  width: 95%;
+}
+
+.whatsapp-tabs {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  padding: 0 1.5rem;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.whatsapp-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  color: #94a3b8;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.whatsapp-tab:hover {
+  color: #f1f5f9;
+}
+
+.whatsapp-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.whatsapp-modal-body {
+  padding: 1.5rem;
+  max-height: 65vh;
+  overflow-y: auto;
+}
+
+.sample-chips-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.sample-chips-row span {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.sample-chip {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sample-chip:hover {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(99, 102, 241, 0.4);
+  color: #a5b4fc;
+}
+
+.whatsapp-textarea {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: #f8fafc;
+  padding: 0.85rem;
+  font-family: inherit;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.whatsapp-textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.whatsapp-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem 1.5rem;
+  border: 2px dashed rgba(99, 102, 241, 0.35);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.4);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.whatsapp-dropzone:hover {
+  border-color: var(--primary);
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.whatsapp-dropzone input {
+  display: none;
+}
+
+.whatsapp-dropzone strong {
+  font-size: 0.95rem;
+  color: #f8fafc;
+}
+
+.whatsapp-dropzone span {
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.whatsapp-ocr-status {
+  margin-top: 1rem;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  padding: 0.75rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.ocr-progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  background: rgba(16, 185, 129, 0.2);
+  transition: width 0.2s ease;
+}
+
+.whatsapp-ocr-status span {
+  position: relative;
+  z-index: 1;
+  font-size: 0.82rem;
+  color: #34d399;
+  font-weight: 600;
+}
+
+/* Extracted Structured Preview */
+.extracted-preview-box {
+  margin-top: 1.25rem;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 10px;
+  padding: 1.25rem;
+}
+
+.extracted-preview-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.extracted-preview-header strong {
+  color: #f8fafc;
+  font-size: 0.92rem;
+  flex: 1;
+}
+
+.clean-pill {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.15);
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  text-transform: uppercase;
+}
+
+.extracted-fields-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+
+.extracted-fields-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.extracted-fields-grid input,
+.extracted-fields-grid select {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+  padding: 0.55rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.extracted-fields-grid .span-2 {
+  grid-column: span 2;
+}
+
+/* ==========================================================================
+   Builder Passport & Community Credentials
+   ========================================================================== */
+
+.builder-passport-container {
+  margin-bottom: 2rem;
+}
+
+.builder-passport-card {
+  background: linear-gradient(135deg, rgba(30, 27, 75, 0.85), rgba(15, 23, 42, 0.95));
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  border-radius: 16px;
+  padding: 1.75rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(139, 92, 246, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.builder-passport-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #ec4899, #8b5cf6, #10b981);
+}
+
+.passport-header {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.passport-emblem {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(16, 185, 129, 0.2));
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #a78bfa;
+}
+
+.passport-title-wrap {
+  flex: 1;
+}
+
+.passport-sub {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #a78bfa;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 0.15rem;
+}
+
+.passport-title-wrap h3 {
+  font-size: 1.35rem;
+  color: #f8fafc;
+  margin: 0 0 0.35rem 0;
+}
+
+.passport-tier {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.12);
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.passport-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.passport-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.passport-stat strong {
+  font-size: 1.35rem;
+  color: #f8fafc;
+}
+
+.passport-stat span {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.passport-stamps-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.95rem;
+  color: #e2e8f0;
+  margin: 0 0 1rem 0;
+}
+
+.passport-empty-stamps {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  color: #94a3b8;
+  gap: 0.75rem;
+}
+
+.passport-empty-stamps p {
+  font-size: 0.85rem;
+  max-width: 440px;
+  margin: 0;
+}
+
+.passport-stamps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.passport-stamp {
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 12px;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.passport-stamp.is-verified {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: linear-gradient(135deg, rgba(6, 78, 59, 0.2), rgba(15, 23, 42, 0.7));
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.1);
+}
+
+.passport-stamp:hover {
+  transform: translateY(-2px);
+}
+
+.stamp-seal {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  margin-bottom: 0.65rem;
+}
+
+.passport-stamp.is-verified .stamp-seal {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.passport-stamp.is-registered .stamp-seal {
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.4);
+}
+
+.passport-stamp h5 {
+  font-size: 0.95rem;
+  color: #f8fafc;
+  margin: 0 0 0.25rem 0;
+  line-height: 1.3;
+}
+
+.stamp-organizer {
+  display: block;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-bottom: 0.65rem;
+}
+
+.stamp-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-bottom: 0.65rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 0.5rem;
+}
+
+.stamp-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.stamp-code {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.7rem;
+}
+
+.stamp-code code {
+  font-family: monospace;
+  color: #a78bfa;
+}
+
+.stamp-code a {
+  color: var(--primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-weight: 600;
+}

@@ -384,9 +384,8 @@ export function UnstopRegistrationModal({
             </div>
             <div className="unstop-step__line" />
             <div
-              className={`unstop-step ${
-                step === 'profile' ? 'active' : ['team', 'questions', 'ticket'].includes(step) ? 'completed' : ''
-              }`}
+              className={`unstop-step ${step === 'profile' ? 'active' : ['team', 'questions', 'ticket'].includes(step) ? 'completed' : ''
+                }`}
             >
               <div className="unstop-step__circle">2</div>
               <span>Profile</span>
@@ -395,9 +394,8 @@ export function UnstopRegistrationModal({
               <>
                 <div className="unstop-step__line" />
                 <div
-                  className={`unstop-step ${
-                    step === 'team' ? 'active' : ['questions', 'ticket'].includes(step) ? 'completed' : ''
-                  }`}
+                  className={`unstop-step ${step === 'team' ? 'active' : ['questions', 'ticket'].includes(step) ? 'completed' : ''
+                    }`}
                 >
                   <div className="unstop-step__circle">3</div>
                   <span>Team</span>
@@ -566,8 +564,8 @@ export function UnstopRegistrationModal({
                 {participationType === 'team'
                   ? 'Proceed to Team Setup'
                   : event.registration.questions && event.registration.questions.length > 0
-                  ? 'Proceed to Questions'
-                  : 'Submit Registration'}
+                    ? 'Proceed to Questions'
+                    : 'Submit Registration'}
                 <ArrowRight size={18} />
               </button>
             </div>
@@ -957,4 +955,3 @@ export function UnstopRegistrationModal({
     </div>
   );
 }
-

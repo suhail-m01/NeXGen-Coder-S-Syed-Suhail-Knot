@@ -1,4 +1,4 @@
-import { List, Map, SlidersHorizontal } from 'lucide-react';
+import { List, Map, MessageSquare, SlidersHorizontal, Sparkles } from 'lucide-react';
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { DiscoveryInsights } from '../components/DiscoveryInsights';
 import { useSearchParams } from 'react-router-dom';
@@ -7,6 +7,7 @@ import { EventCard } from '../components/EventCard';
 import { FilterBar } from '../components/FilterBar';
 import { LoadingButton } from '../components/LoadingButton';
 import { LocationControls } from '../components/LocationControls';
+import { SmartWhatsAppImporterModal } from '../components/SmartWhatsAppImporterModal';
 import { ageBandLabel } from '../domain/age';
 import { defaultFilters } from '../domain/defaults';
 import { paginateDiscovery } from '../domain/discovery';
@@ -28,6 +29,7 @@ export function SearchPage() {
   const [view, setView] = useState<'list' | 'map'>(searchParams.get('view') === 'map' ? 'map' : 'list');
   const [initialized, setInitialized] = useState(false);
   const [page, setPage] = useState(1);
+  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
   const [guestAge, setGuestAge] = useState<AgeBand | null>(() => {
     const value = window.localStorage.getItem('knot.guest.ageBand');
     return validAgeBands.includes(value as AgeBand) ? value as AgeBand : null;
@@ -115,6 +117,18 @@ export function SearchPage() {
       <LocationControls />
       <FilterBar detailed />
       <DiscoveryInsights />
+      <div className="importer-callout-banner">
+        <div className="importer-callout-inner">
+          <div className="importer-callout-text">
+            <span className="importer-pill"><Sparkles size={13} /> Hyperlocal AI Importer</span>
+            <strong>Found an event scattered across WhatsApp groups or Instagram flyers?</strong>
+            <p>Don’t let it get lost in chat threads. Paste forwarded text or upload a poster to instantly extract and discover it on Knot.</p>
+          </div>
+          <button className="button button--accent button--small" onClick={() => setWhatsappModalOpen(true)}>
+            <MessageSquare size={15} /> Open WhatsApp &amp; Poster Importer
+          </button>
+        </div>
+      </div>
       <div className="saved-search-bar"><div><label>Save these explicit filters<input value={searchName} onChange={(event) => setSearchName(event.target.value)} placeholder="e.g. Free design events this weekend" /></label><button className="button button--secondary button--small" onClick={() => { try { saveSearch(searchName); setSearchName(''); setSearchMessage('Search saved in this workspace.'); } catch (reason) { setSearchMessage(reason instanceof Error ? reason.message : 'Could not save search.'); } }}>Save search</button></div>{currentUser && data.savedSearches.filter((search) => search.userId === currentUser.id).map((search) => <article key={search.id}><button onClick={() => setFilters(search.filters)}>{search.name}</button><button onClick={() => { try { setSearchMessage(`${checkSavedSearch(search.id)} new matches since the last check.`); } catch (reason) { setSearchMessage(reason instanceof Error ? reason.message : 'Could not check search.'); } }}>Check new</button><button aria-label={`Delete ${search.name}`} onClick={() => deleteSearch(search.id)}>×</button></article>)}{searchMessage && <span role="status">{searchMessage}</span>}</div>
       <div className="join-filter-bar">
         <div><SlidersHorizontal size={17} /><span><strong>Age-aware discovery</strong>Your guest age stays on this device.</span></div>
@@ -132,6 +146,7 @@ export function SearchPage() {
         : total === 0 ? <EmptyState onReset={() => setFilters(defaultFilters())} />
           : view === 'map' ? <Suspense fallback={<div className="page-container" role="status">Loading the interactive map…</div>}><LocalityMap events={events} origin={locality} /></Suspense>
             : <><div className="event-grid event-grid--search">{visibleEvents.map((event) => <EventCard key={event.id} event={event} />)}</div>{hasMore && <div className="pagination-controls"><button className="button button--secondary" disabled={isCloudProvider && cloud.loadingMore} onClick={() => { if (isCloudProvider) void cloud.loadMore(); else setPage((current) => current + 1); }}>{isCloudProvider && cloud.loadingMore ? 'Loading…' : 'Load more events'}</button><span>{isCloudProvider ? `${visibleEvents.length} of ${total} loaded · ${cloud.pageSize} per server page` : `Page ${resultPage.page} · ${resultPage.pageSize} per page`}</span></div>}</>}
+      <SmartWhatsAppImporterModal open={whatsappModalOpen} onClose={() => setWhatsappModalOpen(false)} />
     </div>
   );
 }

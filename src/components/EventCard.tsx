@@ -1,8 +1,8 @@
-import { Bookmark, CalendarDays, MapPin, Users, Video } from 'lucide-react';
+import { Bookmark, CalendarDays, MapPin, Navigation, Sparkles, Users, Video } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { CSSProperties } from 'react';
-import { eventDistance, eventModeLabel, eventTypeLabel, formatEventDate, participationFit, priceLabel } from '../domain/events';
-import { localityById } from '../domain/localities';
+import { calculateEventMatchScore, eventDistance, eventModeLabel, eventTypeLabel, formatEventDate, participationFit, priceLabel } from '../domain/events';
+import { localityById, nearestMetroOrLandmark } from '../domain/localities';
 import { useApp } from '../state/AppContext';
 import type { KnotEvent } from '../domain/types';
 import { AgeBadge, FitBadge, SampleBadge } from './Badges';
@@ -17,6 +17,8 @@ export function EventCard({ event, compact = false }: { event: KnotEvent; compac
   const origin = localityById(filters.localityId);
   const distance = eventDistance(event, origin);
   const fit = participationFit(currentUser, event, origin);
+  const match = calculateEventMatchScore(currentUser, event, origin);
+  const metro = event.mode !== 'online' ? nearestMetroOrLandmark(event.venue?.localityId) : null;
   const saved = data.saves.some((save) => save.userId === currentUser?.id && save.eventId === event.id);
   const start = new Date(event.startAt);
   const day = new Intl.DateTimeFormat('en-IN', { day: '2-digit', timeZone: 'Asia/Kolkata' }).format(start);
@@ -28,7 +30,16 @@ export function EventCard({ event, compact = false }: { event: KnotEvent; compac
       <div className="event-card__accent" />
       <div className="event-card__topline">
         <span className="event-type">{eventTypeLabel(event.eventType)}</span>
-        <div className="event-card__badges">{event.isSample && <SampleBadge />}</div>
+        <div className="event-card__badges">
+          <span
+            className={`match-score-badge ${match.score >= 80 ? 'match-score-badge--high' : 'match-score-badge--mid'}`}
+            title={`Personalized Match: ${match.score}%\n• ${match.reasons.join('\n• ')}`}
+          >
+            <Sparkles size={11} />
+            {match.score}% Match
+          </span>
+          {event.isSample && <SampleBadge />}
+        </div>
       </div>
       <div className="event-card__body">
         <div className="date-tile" aria-hidden="true"><strong>{day}</strong><span>{month}</span></div>
@@ -44,6 +55,7 @@ export function EventCard({ event, compact = false }: { event: KnotEvent; compac
       <div className="event-card__meta">
         <span><CalendarDays size={15} />{formatEventDate(event.startAt)}</span>
         <span>{event.mode === 'online' ? <Video size={15} /> : <MapPin size={15} />}{location}{distance !== null ? ` · ${distance.toFixed(1)} km` : ''}</span>
+        {metro && <span className="event-card__metro" title={metro}><Navigation size={13} />{metro}</span>}
         {event.team.mode === 'team' && <span><Users size={15} />Teams {event.team.minSize}–{event.team.maxSize}</span>}
       </div>
       <div className="event-card__footer">

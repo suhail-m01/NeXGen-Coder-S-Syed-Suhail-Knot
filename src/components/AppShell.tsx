@@ -1,15 +1,17 @@
-import { Bell, Bookmark, CalendarDays, ChevronDown, CircleUserRound, Compass, Home, Info, LayoutDashboard, LogOut, Map, Menu, Plus, Search, ShieldCheck, Users, X } from 'lucide-react';
+import { Bell, Bookmark, CalendarDays, ChevronDown, CircleUserRound, Compass, Home, Info, LayoutDashboard, LogOut, Map, Menu, Plus, Search, ShieldCheck, Sparkles, Users, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useApp } from '../state/AppContext';
 import { Logo } from './Logo';
 import { canReviewSubmissions } from '../domain/permissions';
 import { hackathonsEnabled } from '../features/hackathons/flag';
+import { SmartWhatsAppImporterModal } from './SmartWhatsAppImporterModal';
 
 export function AppShell() {
   const { currentUser, data, markNotificationsRead, signOut, cloudStatus, cloudError, cloudMutationError } = useApp();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
   const [now, setNow] = useState(Date.now());
   const location = useLocation();
   const notifications = currentUser ? data.notifications.filter((item) => item.userId === currentUser.id && (!item.deliverAt || new Date(item.deliverAt).getTime() <= now)).sort((a, b) => b.createdAt.localeCompare(a.createdAt)) : [];
@@ -51,6 +53,14 @@ export function AppShell() {
             {canReviewSubmissions(currentUser) && <NavLink to="/admin">Review</NavLink>}
           </nav>
           <div className="header-actions">
+            <button
+              type="button"
+              className="header-ai-importer-btn"
+              onClick={() => setWhatsappModalOpen(true)}
+              title="Import from WhatsApp or Flyer"
+            >
+              <Sparkles size={14} /> WhatsApp Importer
+            </button>
             <Link to="/publish" className="button button--primary button--small header-publish"><Plus size={16} /> Publish event</Link>
             {currentUser ? <>
               <button className="icon-button notification-button" onClick={() => setNotificationsOpen(!notificationsOpen)} aria-label={`${unreadCount} unread notifications`} aria-expanded={notificationsOpen}>
@@ -62,6 +72,9 @@ export function AppShell() {
           </div>
         </div>
         {menuOpen && <nav id="mobile-navigation" className="mobile-menu" aria-label="Mobile navigation">
+          <button type="button" className="mobile-menu-link-btn" onClick={() => { setMenuOpen(false); setWhatsappModalOpen(true); }}>
+            <Sparkles size={18} /> WhatsApp / Flyer Importer
+          </button>
           <NavLink to="/search"><Search size={18} /> Discover events</NavLink>
           {hackathonsEnabled && <NavLink to="/hackathons"><Compass size={18} /> Hackathons</NavLink>}
           <NavLink to="/communities"><Users size={18} /> Communities</NavLink>
@@ -75,6 +88,8 @@ export function AppShell() {
       </header>
 
       <main id="main-content" tabIndex={-1}><Outlet /></main>
+
+      <SmartWhatsAppImporterModal open={whatsappModalOpen} onClose={() => setWhatsappModalOpen(false)} />
 
       <footer className="site-footer">
         <div className="site-footer__top">

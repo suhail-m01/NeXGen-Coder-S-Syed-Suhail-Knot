@@ -35,3 +35,27 @@ export const localityById = (id: string | null | undefined) =>
 export const DEFAULT_LOCALITY_ID = 'koramangala';
 
 export const localityOptionLabel = (locality: Locality) => locality.geocode.resultType === 'city' ? `${locality.name} · approximate city centre` : `${locality.name}, ${locality.city}`;
+
+/**
+ * Returns a high-utility hyperlocal commute anchor / nearest metro station for major localities.
+ */
+export function nearestMetroOrLandmark(localityId: string | null | undefined): string | null {
+  if (!localityId) return null;
+  const normalized = localityId.toLowerCase().trim();
+  const anchors: Record<string, string> = {
+    koramangala: 'Sony World Junction · 15 mins to Silk Board Metro',
+    indiranagar: '350m from Indiranagar Metro (Purple Line)',
+    'hsr-layout': 'Near HSR BDA Complex · 2 km to Silk Board',
+    whitefield: 'Near ITPL Metro Station · Whitefield corridor',
+    jayanagar: '400m from Jayanagar Metro (Green Line)',
+    'electronic-city': 'Near Infosys Gate 1 · Elevated Expy',
+    'mg-road': 'Adjacent to MG Road Metro Station',
+    bellandur: 'Outer Ring Road tech hub · Near EcoSpace',
+    marathahalli: 'Near Marathahalli Bridge · Outer Ring Road',
+    btm: 'Near BTM Udupi Garden · 1 km to Jayadeva Metro',
+    malleshwaram: 'Near Sampige Rd Metro Station',
+    hebbal: 'Near Hebbal Flyover · Manyata Tech Park access',
+    rajajinagar: '500m from Rajajinagar Metro Station',
+  };
+  return anchors[normalized] ?? null;
+}
