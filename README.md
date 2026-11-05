@@ -296,6 +296,73 @@ For a hosted production environment:
 
 ---
 
+## Hackathon Discovery Agent
+
+The Hackathon Discovery Agent is repository-native **TypeScript**, rather than a separate Python service: it shares Knot's validation and locality code, runs locally with `tsx`, and deploys as Vercel Node functions beside the Vite application. It is additive and does not reshape `Event` or replace existing discovery, auth, registration, or federation workflows.
+
+The additive migration `supabase/migrations/20261105120000_knot_hackathon_discovery.sql` creates only `hackathons`, `hackathon_interests`, and `agent_runs`, with indexes, least-privilege grants, and RLS. Apply it through the normal reviewed Supabase migration process; do not run it destructively against an existing catalog.
+
+### Sources and collection boundaries
+
+There is one connector module per requested source in `agents/hackathon/sources/`: Devpost, MLH, Devfolio, Unstop, HackerEarth, Hack2Skill, DoraHacks, Eventbrite, Luma, Meetup, Townscript, Insider, Tavily, Brave, and SerpAPI. Official APIs, RSS, and sitemaps are preferred. Search providers are used only for configured discovery queries across Indian cities, Online, and queued city requests.
+
+**Every source is disabled until its approved methods and permission evidence are explicitly configured.** Collection uses an honest `KnotBot` user agent, robots.txt checks, bounded retries, per-domain spacing, response caps, and source failure isolation. It never bypasses a login, CAPTCHA, paywall, robots rule, or rate limit. Source coverage is therefore not claimed as live until an operator configures and verifies each source.
+
+Extraction follows JSON-LD, OpenGraph, then configured CSS selectors, with an optional capped Anthropic fallback. Values are strictly validated; missing or conflicting prices, dates, eligibility, location, and other fields remain unknown rather than becoming favourable assumptions. URLs are cleaned, checked, and labelled as organizer-domain or aggregator-source links. A click is an outbound handoff, not a registration or attendance claim.
+
+### Environment variables
+
+The complete annotated template is in `.env.example`. Server-only values must never use a `VITE_*` or `NEXT_PUBLIC_*` prefix.
+
+| Variable | Purpose |
+|---|---|
+| `NEXT_PUBLIC_ENABLE_HACKATHONS` | Public UI feature flag; omit or set `false` for instant shutoff. |
+| `DATABASE_URL` | Server-only pooled Postgres connection used by the agent and API. |
+| `CRON_SECRET` | At least 16 characters; required as a Bearer token for manual runs and Vercel Cron. |
+| `SUPABASE_URL`, `SUPABASE_ANON_KEY` or `SUPABASE_PUBLISHABLE_KEY` | Server-side optional Supabase JWT verification for logged-in interests; never a service-role key in the browser. |
+| `KNOT_PUBLIC_URL` | Canonical public origin used in agent identity/documentation. |
+| `HACKATHON_ENABLED_SOURCES` | Comma-separated source IDs to activate after review. |
+| `HACKATHON_SOURCE_CONFIG` | JSON array of per-source overrides, including HTTPS `baseUrl`, `discoveryUrls`, `approvedMethods`, and `permissionEvidence`. |
+| `SEARCH_API_PROVIDER`, `SEARCH_API_KEY` | Optional configured `tavily`, `brave`, or `serpapi` discovery provider and its server-only key. |
+| `EVENTBRITE_API_KEY`, `MEETUP_API_KEY` | Optional official API credentials, sent only to their intended API hosts. |
+| `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `HACKATHON_ENABLE_LLM_FALLBACK` | Optional, capped fallback extraction; disabled by default. |
+| `HACKATHON_HTTP_TIMEOUT_MS`, `HACKATHON_HTTP_RETRIES`, `HACKATHON_DOMAIN_DELAY_MS` | HTTP timeout, bounded retry count, and per-domain delay. |
+| `HACKATHON_MAX_SOURCES`, `HACKATHON_MAX_QUERIES`, `HACKATHON_MAX_DOCUMENTS`, `HACKATHON_MAX_DETAIL_PAGES`, `HACKATHON_MAX_ITEMS`, `HACKATHON_MAX_RESPONSE_BYTES`, `HACKATHON_CONCURRENCY` | Hard run, response, pagination, and concurrency caps. |
+
+### Run locally and on a schedule
+
+After applying the migration and configuring only approved sources:
+
+```bash
+npm run agent:hackathons
+```
+
+The CLI writes a run record and prints counts, per-source errors, and saved items. A source or database that is not configured is reported honestly; it is not replaced with fabricated results. To run the scheduled endpoint manually:
+
+```bash
+curl -X POST https://your-app.example/api/hackathons/run \\
+  -H "Authorization: Bearer $CRON_SECRET"
+```
+
+`vercel.json` schedules `/api/hackathons/run` every six hours. Vercel Cron runs on production deployments and supplies the configured secret as a Bearer token. The handler also rejects missing/incorrect secrets and cross-site triggers.
+
+Public API endpoints:
+
+- `GET /api/hackathons?city=&area=&mode=&from=&to=&price=&q=&sort=&page=&limit=`
+- `POST /api/hackathons/[id]/interest` with `{ "context": "web" | "home" | "my_interests" }`
+
+List responses are paginated and filtered with parameterized SQL. `price=free` and `price=paid` never include unknown prices. Interest records the click, saves a logged-in user's interest when configured, and returns the server-selected official URL. Anonymous users can still continue outbound; the UI may suggest sign-in without blocking the handoff.
+
+### Add a source
+
+1. Review the provider's current API/feed documentation, robots.txt, and terms; obtain permission where required.
+2. Add a new TypeScript module under `agents/hackathon/sources/` implementing `discover()` and `parse()` using the shared bounded HTTP and extraction helpers.
+3. Register it in `sources/index.ts`, add its conservative disabled defaults in `sources/defaults.ts`, and add only the necessary server-only credential name to `.env.example`.
+4. Configure approved methods, HTTPS URLs, and permission evidence through `HACKATHON_SOURCE_CONFIG`; add focused fixtures/tests for pagination, malformed records, dates, price, and failure isolation.
+5. Run `npx tsc -b`, `npm test`, `npm run build`, and a reviewed local agent run before enabling the source in production.
+
+---
+
 ## Architecture
 
 ```text

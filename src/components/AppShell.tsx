@@ -4,6 +4,7 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useApp } from '../state/AppContext';
 import { Logo } from './Logo';
 import { canReviewSubmissions } from '../domain/permissions';
+import { hackathonsEnabled } from '../features/hackathons/flag';
 
 export function AppShell() {
   const { currentUser, data, markNotificationsRead, signOut, cloudStatus, cloudError, cloudMutationError } = useApp();
@@ -42,6 +43,7 @@ export function AppShell() {
           <Logo />
           <nav className="desktop-nav" aria-label="Main navigation">
             <NavLink to="/search">Discover</NavLink>
+            {hackathonsEnabled && <NavLink to="/hackathons">Hackathons</NavLink>}
             <NavLink to="/search?view=map">Map</NavLink>
             <NavLink to="/add">Instant Add</NavLink>
             {currentUser && <NavLink to="/organizer">For organizers</NavLink>}
@@ -54,12 +56,13 @@ export function AppShell() {
                 <Bell size={20} />{unreadCount > 0 && <span>{unreadCount}</span>}
               </button>
               <Link to="/profile" className="avatar" aria-label="Open your profile">{currentUser.name.slice(0, 1).toUpperCase()}</Link>
-            </> : <Link to="/auth" className="account-link"><CircleUserRound size={19} /> <span>Sign in</span></Link>}
+            </> : <Link to="/auth" className="account-link" aria-label="Sign in"><CircleUserRound size={19} /> <span>Sign in</span></Link>}
             <button className="icon-button mobile-menu-button" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle navigation" aria-expanded={menuOpen} aria-controls="mobile-navigation">{menuOpen ? <X /> : <Menu />}</button>
           </div>
         </div>
         {menuOpen && <nav id="mobile-navigation" className="mobile-menu" aria-label="Mobile navigation">
           <NavLink to="/search"><Search size={18} /> Discover events</NavLink>
+          {hackathonsEnabled && <NavLink to="/hackathons"><Compass size={18} /> Hackathons</NavLink>}
           <NavLink to="/search?view=map"><Map size={18} /> Map view</NavLink>
           <NavLink to="/add"><Plus size={18} /> Instant Add</NavLink>
           <NavLink to="/publish"><CalendarDays size={18} /> Publish or host</NavLink>

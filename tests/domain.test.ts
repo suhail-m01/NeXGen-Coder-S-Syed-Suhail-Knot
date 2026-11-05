@@ -116,10 +116,10 @@ test('joinable filtering excludes known age conflicts but not unknown rules', ()
 test('Participation Fit explains matches and never treats unknown eligibility as strong', () => {
   const event = eventById(samples(), 'sample-design-systems');
   const origin = localityById('indiranagar');
-  const strong = participationFit(user('18_plus'), event, origin);
+  const strong = participationFit(user('18_plus'), event, origin, now);
   assert.equal(strong.label, 'strong');
   assert.ok(strong.reasons.some((reason) => reason.includes('Design')));
-  const unknown = participationFit(user('18_plus'), { ...event, eligibilityKnown: false, eligibilityText: '' }, origin);
+  const unknown = participationFit(user('18_plus'), { ...event, eligibilityKnown: false, eligibilityText: '' }, origin, now);
   assert.equal(unknown.label, 'possible');
   assert.equal(participationFit(null, event, origin).label, null);
 });

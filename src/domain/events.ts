@@ -144,7 +144,7 @@ export function filterEvents(events: KnotEvent[], filters: EventFilters, now = n
   });
 }
 
-export function participationFit(user: UserAccount | null, event: KnotEvent, origin: Locality | null): FitResult {
+export function participationFit(user: UserAccount | null, event: KnotEvent, origin: Locality | null, now = new Date()): FitResult {
   if (!user) return { label: null, reasons: [] };
   const reasons: string[] = [];
   const ageResult = checkAgeBand(user.ageBand, event.ageRule);
@@ -169,7 +169,7 @@ export function participationFit(user: UserAccount | null, event: KnotEvent, ori
 
   const hasMatch = Boolean(interestMatch || learnedMatch || skillMatch || learningMatch);
   const locationCheckable = event.mode === 'online' || distance !== null;
-  const canBeStrong = hasMatch && event.eligibilityKnown && ageResult === 'can_join' && locationCheckable && isRegistrationOpen(event);
+  const canBeStrong = hasMatch && event.eligibilityKnown && ageResult === 'can_join' && locationCheckable && isRegistrationOpen(event, now);
   if (canBeStrong) return { label: 'strong', reasons };
   if (!hasMatch && reasons.length === 0) return { label: null, reasons: [] };
   return { label: 'possible', reasons: reasons.length ? reasons : ['Some event details still need to be checked'] };

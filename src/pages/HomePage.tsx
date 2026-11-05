@@ -1,5 +1,5 @@
 import { ArrowRight, CalendarClock, CheckCircle2, Compass, MapPin, Search, ShieldCheck, Sparkles, Users, Video } from 'lucide-react';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { EventCard } from '../components/EventCard';
 import { FilterBar } from '../components/FilterBar';
@@ -9,6 +9,9 @@ import { filterEvents, formatEventDate, sortEvents } from '../domain/events';
 import { localityById } from '../domain/localities';
 import { useApp } from '../state/AppContext';
 import type { KnotEvent } from '../domain/types';
+import { hackathonsEnabled } from '../features/hackathons/flag';
+
+const HomeHackathons = lazy(() => import('../features/hackathons/HomeHackathons').then((module) => ({ default: module.HomeHackathons })));
 
 export function HomePage() {
   const { data, filters, setFilters, currentUser } = useApp();
@@ -61,7 +64,7 @@ export function HomePage() {
               <input value={heroQuery} onChange={(event) => setHeroQuery(event.target.value)} placeholder="Try “AI”, “design” or “this weekend”" aria-label="Search for events" />
               <button className="button button--accent" type="submit">Explore <ArrowRight size={17} /></button>
             </form>
-            <div className="hero-quick-links"><span>Popular:</span><Link to="/search?type=hackathon">Hackathons</Link><Link to="/search?time=weekend">This weekend</Link><Link to="/search?mode=online">Online</Link></div>
+            <div className="hero-quick-links"><span>Popular:</span><Link to={hackathonsEnabled ? '/hackathons' : '/search?type=hackathon'}>Hackathons</Link><Link to="/search?time=weekend">This weekend</Link><Link to="/search?mode=online">Online</Link></div>
           </div>
           <div className="hero-panel">
             <div className="hero-panel__header"><div><span className="live-dot" /> Happening near you</div><span>{locality?.name}</span></div>
@@ -88,6 +91,7 @@ export function HomePage() {
 
       <div className="home-content">
         <FilterBar />
+        {hackathonsEnabled && <Suspense fallback={null}><HomeHackathons /></Suspense>}
         {section('Happening soon near you', `Within ${filters.radiusKm} km of ${locality?.name ?? 'you'}`, upcoming)}
         {section('Registration closing soon', 'Decide before the door closes', closing, '/search?sort=closing')}
         {currentUser && personalized.length > 0 && section(`Because you like ${currentUser.interests[0] ?? 'these topics'}`, 'Shaped by your explicit interests', personalized, '/search?sort=best_fit')}

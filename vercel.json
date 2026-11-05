@@ -6,6 +6,9 @@
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ],
+  "crons": [
+    { "path": "/api/hackathons/run", "schedule": "0 */6 * * *" }
+  ],
   "headers": [
     {
       "source": "/(.*)",

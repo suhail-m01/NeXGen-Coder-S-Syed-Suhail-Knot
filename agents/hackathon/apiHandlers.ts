@@ -1,0 +1,212 @@
+import { timingSafeEqual } from 'node:crypto';
+import { createClient } from '@supabase/supabase-js';
+import { z } from 'zod';
+import { InputError, listHackathons, rowToHackathonDto, type HackathonListResult } from './apiQuery';
+import type { ApiRequest, ApiResponse } from './apiTypes';
+import { getDatabase } from './db';
+import { rateLimit } from './rateLimit';
+import { runHackathonAgent, type RunAgentOptions } from './run';
+import { queueRequestedCity } from './store';
+import type { AgentRunResult } from './types';
+
+const header = (request: ApiRequest, name: string): string | undefined => {
+  const value = request.headers[name.toLowerCase()];
+  return Array.isArray(value) ? value[0] : value;
+};
+const requestIp = (request: ApiRequest): string => header(request, 'x-forwarded-for')?.split(',')[0].trim() || request.socket?.remoteAddress || 'unknown';
+
+function allowRate(request: ApiRequest, response: ApiResponse, scope: string, limit: number, windowMs: number): boolean {
+  const result = rateLimit(requestIp(request), scope, limit, windowMs);
+  if (result.allowed) return true;
+  response.setHeader('Retry-After', result.retryAfter);
+  response.status(429).json({ error: 'Too many requests. Please retry shortly.' });
+  return false;
+}
+
+function sameOrigin(request: ApiRequest): boolean {
+  const fetchSite = header(request, 'sec-fetch-site');
+  if (fetchSite === 'cross-site') return false;
+  const origin = header(request, 'origin');
+  const host = header(request, 'host');
+  if (!origin || !host) return true;
+  try { return new URL(origin).host === host; } catch { return false; }
+}
+
+export function createHackathonsHandler(deps: {
+  list?: (params: Parameters<typeof listHackathons>[0]) => Promise<HackathonListResult>;
+  queueCity?: (city: string) => Promise<void>;
+} = {}) {
+  const list = deps.list ?? listHackathons;
+  const queueCity = deps.queueCity ?? queueRequestedCity;
+  return async function handler(request: ApiRequest, response: ApiResponse): Promise<void> {
+    if (request.method !== 'GET') {
+      response.setHeader('Allow', 'GET');
+      response.status(405).json({ error: 'Method not allowed.' });
+      return;
+    }
+    if (!allowRate(request, response, 'hackathons-read', 120, 60_000)) return;
+    try {
+      const { parseHackathonListParams } = await import('./apiQuery');
+      const params = parseHackathonListParams(request.query);
+      const result = await list(params);
+      if (params.city && result.meta.total === 0) await queueCity(params.city).catch(() => undefined);
+      response.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=3600');
+      response.status(200).json(result);
+    } catch (error) {
+      if (error instanceof InputError) response.status(400).json({ error: error.message });
+      else {
+        console.error('Hackathons read failed', error);
+        response.status(503).json({ error: 'Hackathon discovery is temporarily unavailable. Please retry.' });
+      }
+    }
+  };
+}
+
+class InterestError extends Error {
+  constructor(message: string, readonly status: number) { super(message); }
+}
+
+async function optionalUserId(request: ApiRequest): Promise<string | null> {
+  const authorization = header(request, 'authorization');
+  if (!authorization) return null;
+  if (!authorization.startsWith('Bearer ')) throw new InterestError('Invalid authorization header.', 401);
+  const token = authorization.slice(7).trim();
+  if (!token) throw new InterestError('Invalid access token.', 401);
+  const url = process.env.SUPABASE_URL?.trim();
+  const key = process.env.SUPABASE_ANON_KEY?.trim() || process.env.SUPABASE_PUBLISHABLE_KEY?.trim();
+  if (!url || !key) throw new InterestError('Authenticated interest saving is not configured.', 503);
+  const supabase = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data.user) throw new InterestError('The sign-in session is invalid or expired.', 401);
+  return data.user.id;
+}
+
+interface InterestResult {
+  interestId: string;
+  officialUrl: string;
+  officialUrlVerified: boolean;
+  saved: boolean;
+}
+
+async function recordInterest(id: string, userId: string | null, context: 'web' | 'home' | 'my_interests'): Promise<InterestResult> {
+  const db = getDatabase();
+  const rows = await db<{ id: string; official_url: string; official_url_verified: boolean; status: string }[]>`
+    select id, official_url, official_url_verified, status from public.hackathons where id = ${id} limit 1`;
+  const hackathon = rows[0];
+  if (!hackathon) throw new InterestError('Hackathon not found.', 404);
+  if (hackathon.status === 'ended') throw new InterestError('This hackathon has ended.', 410);
+  if (context === 'my_interests' && !userId) throw new InterestError('Sign in to save to My Interests.', 401);
+  const inserted = userId
+    ? await db<{ id: string }[]>`
+      insert into public.hackathon_interests (hackathon_id, user_id, interest_context)
+      values (${id}, ${userId}, ${context})
+      on conflict (hackathon_id, user_id) where user_id is not null
+      do update set clicked_at = now(), interest_context = excluded.interest_context
+      returning id`
+    : await db<{ id: string }[]>`
+      insert into public.hackathon_interests (hackathon_id, user_id, interest_context)
+      values (${id}, null, ${context}) returning id`;
+  if (!inserted[0]) throw new InterestError('Interest could not be recorded.', 503);
+  return { interestId: inserted[0].id, officialUrl: hackathon.official_url, officialUrlVerified: hackathon.official_url_verified, saved: Boolean(userId) };
+}
+
+export function createInterestHandler(deps: {
+  userId?: (request: ApiRequest) => Promise<string | null>;
+  record?: (id: string, userId: string | null, context: 'web' | 'home' | 'my_interests') => Promise<InterestResult>;
+} = {}) {
+  const userId = deps.userId ?? optionalUserId;
+  const record = deps.record ?? recordInterest;
+  return async function handler(request: ApiRequest, response: ApiResponse): Promise<void> {
+    if (request.method !== 'POST') {
+      response.setHeader('Allow', 'POST');
+      response.status(405).json({ error: 'Method not allowed.' });
+      return;
+    }
+    if (!sameOrigin(request)) { response.status(403).json({ error: 'Cross-site interest submissions are not accepted.' }); return; }
+    if (!allowRate(request, response, 'hackathons-interest', 20, 60_000)) return;
+    try {
+      const id = z.string().uuid().parse(Array.isArray(request.query.id) ? request.query.id[0] : request.query.id);
+      const rawBody = typeof request.body === 'string' ? JSON.parse(request.body || '{}') : request.body ?? {};
+      const body = z.object({ context: z.enum(['web', 'home', 'my_interests']).default('web') }).strict().parse(rawBody);
+      const accountId = await userId(request);
+      const result = await record(id, accountId, body.context);
+      response.setHeader('Cache-Control', 'no-store');
+      response.status(200).json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) response.status(400).json({ error: 'A valid hackathon id and interest context are required.' });
+      else if (error instanceof SyntaxError) response.status(400).json({ error: 'Invalid JSON body.' });
+      else if (error instanceof InterestError) response.status(error.status).json({ error: error.message });
+      else {
+        console.error('Hackathon interest failed', error);
+        response.status(503).json({ error: 'Interest could not be recorded. Please retry.' });
+      }
+    }
+  };
+}
+
+async function listSavedInterests(userId: string) {
+  const db = getDatabase();
+  const rows = await db<Record<string, unknown>[]>`
+    select h.* from public.hackathon_interests i
+    join public.hackathons h on h.id = i.hackathon_id
+    where i.user_id = ${userId} and h.status <> 'ended'
+    order by i.clicked_at desc limit 200`;
+  return rows.map(rowToHackathonDto);
+}
+
+export function createMyInterestsHandler(deps: {
+  userId?: (request: ApiRequest) => Promise<string | null>;
+  list?: (userId: string) => Promise<unknown[]>;
+} = {}) {
+  const userId = deps.userId ?? optionalUserId;
+  const list = deps.list ?? listSavedInterests;
+  return async function handler(request: ApiRequest, response: ApiResponse): Promise<void> {
+    if (request.method !== 'GET') {
+      response.setHeader('Allow', 'GET');
+      response.status(405).json({ error: 'Method not allowed.' });
+      return;
+    }
+    if (!allowRate(request, response, 'hackathons-interests-read', 60, 60_000)) return;
+    try {
+      const accountId = await userId(request);
+      if (!accountId) { response.status(401).json({ error: 'Sign in to view My Interests.' }); return; }
+      const data = await list(accountId);
+      response.setHeader('Cache-Control', 'no-store');
+      response.status(200).json({ data });
+    } catch (error) {
+      if (error instanceof InterestError) response.status(error.status).json({ error: error.message });
+      else {
+        console.error('Hackathon interests read failed', error);
+        response.status(503).json({ error: 'My Interests is temporarily unavailable.' });
+      }
+    }
+  };
+}
+
+function secretMatches(provided: string | undefined, expected: string): boolean {
+  if (!provided?.startsWith('Bearer ')) return false;
+  const actual = Buffer.from(provided.slice(7));
+  const target = Buffer.from(expected);
+  return actual.length === target.length && timingSafeEqual(actual, target);
+}
+
+export function createAgentRunHandler(deps: { run?: (options: RunAgentOptions) => Promise<AgentRunResult> } = {}) {
+  const run: (options: RunAgentOptions) => Promise<AgentRunResult> = deps.run ?? runHackathonAgent;
+  return async function handler(request: ApiRequest, response: ApiResponse): Promise<void> {
+    if (!['GET', 'POST'].includes(request.method ?? '')) {
+      response.setHeader('Allow', 'GET, POST');
+      response.status(405).json({ error: 'Method not allowed.' });
+      return;
+    }
+    const secret = process.env.CRON_SECRET;
+    if (!secret || secret.length < 16) { response.status(503).json({ error: 'CRON_SECRET is not configured.' }); return; }
+    if (!secretMatches(header(request, 'authorization'), secret)) { response.status(401).json({ error: 'Unauthorized.' }); return; }
+    if (!sameOrigin(request)) { response.status(403).json({ error: 'Cross-site triggers are not accepted.' }); return; }
+    const trigger = header(request, 'x-vercel-cron') ? 'cron' : 'manual';
+    const result = await run({ trigger });
+    response.setHeader('Cache-Control', 'no-store');
+    response.status(result.status === 'failed' ? 500 : 200).json(result);
+  };
+}
+
+export type { RunAgentOptions, AgentRunResult };
