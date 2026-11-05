@@ -23,18 +23,26 @@ const defaultStore: AgentStore = {
   save: saveHackathons,
 };
 
+const dryRunStore: AgentStore = {
+  createRun: async () => `dry-run-${Date.now()}`,
+  finishRun: async () => {},
+  consumeCities: async () => [],
+  save: async (items: NormalizedHackathon[]) => ({ saved: items.length, items, errors: [] }),
+};
+
 export interface RunAgentOptions {
   config?: AgentConfig;
   http?: HttpClient;
   store?: AgentStore;
   trigger?: 'manual' | 'cron' | 'local';
   now?: Date;
+  dryRun?: boolean;
 }
 
 export async function runHackathonAgent(options: RunAgentOptions = {}): Promise<AgentRunResult> {
   const config = options.config ?? loadAgentConfig();
   const http = options.http ?? createHttpClient(config);
-  const store = options.store ?? defaultStore;
+  const store = options.store ?? (options.dryRun ? dryRunStore : defaultStore);
   const now = options.now ?? new Date();
   const startedAt = now.toISOString();
   const sourceStats: SourceRunStat[] = [];

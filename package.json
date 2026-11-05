@@ -21,6 +21,7 @@
     "slides:render": "node scripts/render-slides.mjs",
     "db:seed:localities": "tsx scripts/geocode-localities.ts",
     "agent:hackathons": "tsx agents/hackathon/cli.ts",
+    "agent:doctor": "tsx scripts/hackathon-doctor.ts",
     "postinstall": "node scripts/prepare-ocr.mjs",
     "test:cloud": "tsx scripts/verify-cloud-production.ts",
     "test:cloud:discovery": "tsx scripts/verify-cloud-discovery.ts"
