@@ -1,6 +1,5 @@
 import postgres from 'postgres';
 import { loadAgentConfig } from '../agents/hackathon/config';
-import { DEFAULT_SOURCES } from '../agents/hackathon/sources/defaults';
 import type { SourceConfig } from '../agents/hackathon/types';
 
 interface EnvCheck {

@@ -99,12 +99,32 @@ export async function createAgentRun(trigger: 'manual' | 'cron' | 'local', sourc
   return rows[0].id;
 }
 
+export async function refreshHackathonLifecycle(now: Date = new Date()): Promise<void> {
+  try {
+    const sql = getDatabase();
+    const isoNow = now.toISOString();
+    await sql`
+      update public.hackathons
+      set status = 'ended', updated_at = ${isoNow}
+      where status <> 'ended' and coalesce(end_date, start_date) < ${isoNow}::timestamptz - interval '2 hours'
+    `;
+    await sql`
+      update public.hackathons
+      set status = 'ongoing', updated_at = ${isoNow}
+      where status = 'upcoming' and start_date <= ${isoNow}::timestamptz and coalesce(end_date, start_date + interval '24 hours') >= ${isoNow}::timestamptz
+    `;
+  } catch {
+    // Database lifecycle refresh is isolated if DB is not configured or offline.
+  }
+}
+
 export async function finishAgentRun(runId: string, result: AgentRunResult): Promise<void> {
   const sql = getDatabase();
   await sql`
     update public.agent_runs set status = ${result.status}, items_found = ${result.itemsFound}, items_saved = ${result.itemsSaved},
       errors = ${sql.json(result.errors)}, stats = ${sql.json(jsonValue({ sources: result.sources }))}, finished_at = ${result.finishedAt}
     where id = ${runId} and kind = 'run'`;
+  await refreshHackathonLifecycle();
 }
 
 export async function consumeRequestedCities(runId: string): Promise<string[]> {

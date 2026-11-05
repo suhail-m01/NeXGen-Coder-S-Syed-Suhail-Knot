@@ -37,6 +37,8 @@ export interface RunAgentOptions {
   trigger?: 'manual' | 'cron' | 'local';
   now?: Date;
   dryRun?: boolean;
+  shard?: { index: number; total: number };
+  sourceIds?: string[];
 }
 
 export async function runHackathonAgent(options: RunAgentOptions = {}): Promise<AgentRunResult> {
@@ -53,9 +55,20 @@ export async function runHackathonAgent(options: RunAgentOptions = {}): Promise<
   try {
     runId = await store.createRun(options.trigger ?? 'manual', config.sources.map((source) => source.id));
     const requestedCities = await store.consumeCities(runId);
-    const queries = buildDiscoveryQueries(now, requestedCities, config.caps.maxQueries);
+    let queries = buildDiscoveryQueries(now, requestedCities, config.caps.maxQueries);
     const authorizedHosts = config.sources.filter(sourceIsAuthorized).map((source) => new URL(source.baseUrl).hostname);
-    const activeSources = config.sources.slice(0, config.caps.maxSources);
+    let activeSources = config.sources.slice(0, config.caps.maxSources);
+
+    if (options.sourceIds && options.sourceIds.length > 0) {
+      const allowed = new Set(options.sourceIds.map((s) => s.trim().toLowerCase()));
+      activeSources = activeSources.filter((s) => allowed.has(s.id.toLowerCase()));
+    }
+    if (options.shard && options.shard.total > 1) {
+      const { index, total } = options.shard;
+      activeSources = activeSources.filter((_, idx) => idx % total === index);
+      queries = queries.filter((_, idx) => idx % total === index);
+    }
+
     const collected: NormalizedHackathon[] = [];
     let llmCalls = 0;
     let cursor = 0;

@@ -1,3 +1,4 @@
+import approvedSources from './sources.approved.json' with { type: 'json' };
 import { DEFAULT_SOURCES } from './sources/defaults';
 import type { AgentCaps, AgentConfig, SourceConfig } from './types';
 
@@ -21,9 +22,12 @@ function loadSourceOverrides(env: NodeJS.ProcessEnv): Partial<SourceConfig>[] {
 export function loadSourceConfig(env: NodeJS.ProcessEnv = process.env): SourceConfig[] {
   const overrides = loadSourceOverrides(env);
   const enabled = new Set((env.HACKATHON_ENABLED_SOURCES ?? '').split(',').map((id) => id.trim().toLowerCase()).filter(Boolean));
+  const approvedList = Array.isArray(approvedSources) ? (approvedSources as Partial<SourceConfig>[]) : [];
+
   return DEFAULT_SOURCES.map((base) => {
+    const approved = approvedList.find((candidate) => candidate.id === base.id) ?? {};
     const override = overrides.find((candidate) => candidate.id === base.id) ?? {};
-    const merged = { ...base, ...override, id: base.id, platform: base.platform };
+    const merged = { ...base, ...approved, ...override, id: base.id, platform: base.platform };
     if (enabled.has(base.id)) merged.enabled = true;
     merged.discoveryUrls = Array.isArray(merged.discoveryUrls) ? merged.discoveryUrls.slice(0, 100) : [];
     merged.approvedMethods = Array.isArray(merged.approvedMethods) ? merged.approvedMethods : [];
@@ -49,7 +53,7 @@ export function loadAgentConfig(env: NodeJS.ProcessEnv = process.env): AgentConf
   const provider = env.SEARCH_API_PROVIDER?.trim().toLowerCase();
   return {
     publicUrl,
-    userAgent: env.HACKATHON_USER_AGENT?.trim() || `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 (compatible; KnotBot/1.0; +${publicUrl}/bot)`,
+    userAgent: env.HACKATHON_USER_AGENT?.trim() || `Mozilla/5.0 (compatible; KnotBot/1.0; +${publicUrl}/bot)`,
     requestTimeoutMs: boundedNumber(env.HACKATHON_HTTP_TIMEOUT_MS, 12_000, 1000, 30_000),
     retries: boundedNumber(env.HACKATHON_HTTP_RETRIES, 2, 0, 4),
     domainDelayMs: boundedNumber(env.HACKATHON_DOMAIN_DELAY_MS, 1500, 250, 10_000),

@@ -118,7 +118,7 @@ function textValue(value: unknown): string | null {
   if (typeof value === 'string' || typeof value === 'number') return String(value);
   if (value && typeof value === 'object') {
     const record = value as Record<string, unknown>;
-    return textValue(record.name ?? record.value ?? record.url ?? record.label ?? null);
+    return textValue(record.text ?? record.name ?? record.value ?? record.url ?? record.label ?? record.utc ?? null);
   }
   return null;
 }

@@ -111,3 +111,65 @@ Verify whether the agent is fetching real data from the live internet, how it be
 - [x] Phase 4: Lighthouse optimization, WCAG 2.1 AA accessibility compliance
 - [x] Tested whether agent fetches from live internet across platforms
 - [x] 89/89 tests passing, production build green
+
+---
+
+## 7. Live Hackathon Data Pipeline (`feature/live-hackathon-data`)
+
+**Branch:** `feature/live-hackathon-data`  
+**Date:** November 5, 2026  
+
+### 7.1 Diagnostics & Source Activation
+- Added `scripts/hackathon-doctor.ts` and `npm run agent:doctor` to diagnose environment, DB schema, and per-source skip reasons without leaking secrets.
+- Created `agents/hackathon/sources.approved.json` with 15 documented sources and permission evidence URLs, merged automatically into `loadSourceConfig`.
+- Enabled approved public endpoints (Devfolio, Unstop, MLH) and API platforms (Eventbrite, Meetup, Tavily, Brave, SerpAPI).
+- Documented permission status and restrictions in `docs/SOURCE_PERMISSIONS.md`.
+- Added fixture tests in `tests/sources-fixtures.test.ts` for Devfolio, Unstop, MLH, Eventbrite, and Web Search API formats.
+
+### 7.2 Reliable Scheduling & Sharding
+- Added sharding options (`?shard=i&of=n` and `?sources=id1,id2`) in `createAgentRunHandler` (`/api/hackathons/run`) to allow serverless runs to fit within the 60s execution budget.
+- Added `.github/workflows/hackathon-agent.yml` running `npm run agent:hackathons` every 6 hours and on manual dispatch without serverless timeouts.
+- Added additive migration `supabase/migrations/20261105180000_add_hackathon_verification_tracking.sql` to track verification lifecycle.
+- Added automatic lifecycle updates (`status = 'ended'` when past, `status = 'ongoing'` during the event).
+
+### 7.3 HTTP Honesty & /bot Page
+- Reverted spoofed browser headers (`Sec-Ch-Ua*`) to honest KnotBot identifier: `Mozilla/5.0 (compatible; KnotBot/1.0; +<KNOT_PUBLIC_URL>/bot)`.
+- Created static `public/bot.html` and client-routed `src/pages/BotInfoPage.tsx` at `/bot` detailing crawler policy, rate limits, and `robots.txt` opt-out.
+
+### 7.4 Website Display & Official-Site Handoff
+- Implemented `GET /api/hackathons/status` returning `lastRunAt`, `lastStatus`, `totalUpcoming`, and `perSource` counts without secrets.
+- Updated hackathon cards to feature prominent **"Register on official site"** outbound link and an explicit **"Interested"** action for saving to My Interests.
+- Added data freshness indicators ("Last updated X ago") and a staleness banner if last run is older than 24h.
+- Enhanced empty states with suggestions for Online hackathons, major hubs, and search queuing notification.
+
+### 7.5 Before & After Test Proof
+- **Baseline:** 89 unit tests passed, 41 browser checks passed.
+- **After (`feature/live-hackathon-data`):**
+  - **Unit Tests:** **96 / 96 PASSED** (`npm test`, 0 failed)
+  - **E2E Browser Checks:** **42 / 42 PASSED** (`npm run test:e2e:hackathons`, 0 failed)
+  - **Production Build:** `npm run build` (`tsc -b && vite build`) passed in 5.30s with zero errors.
+
+### 7.6 Modified & Created Files
+| File | Action | Purpose |
+|---|---|---|
+| `scripts/hackathon-doctor.ts` | `feat:` | Health check CLI diagnosing env vars, DB tables, and source skip reasons. |
+| `agents/hackathon/sources.approved.json` | `feat:` | Registry of approved source configurations, discovery URLs, and permission evidence. |
+| `agents/hackathon/config.ts` | `feat:` | Merges `sources.approved.json` before env overrides; sets honest KnotBot user agent. |
+| `agents/hackathon/httpClient.ts` | `fix:` | Strips browser fingerprinting headers (`Sec-Ch-Ua*`). |
+| `agents/hackathon/run.ts` | `feat:` | Adds invocation sharding (`shard`, `sourceIds`) and dry-run store support. |
+| `agents/hackathon/apiHandlers.ts` | `feat:` | Handles `shard`/`of`/`sources` params; adds `createHackathonsStatusHandler`. |
+| `api/hackathons/status.ts` | `feat:` | Endpoint for `GET /api/hackathons/status`. |
+| `agents/hackathon/devServer.ts` | `feat:` | Adds mock handling for `/api/hackathons/status`. |
+| `agents/hackathon/sources/_shared.ts` | `fix:` | Enhances `textValue` for Eventbrite `{ text: '...' }` and `{ utc: '...' }`. |
+| `agents/hackathon/store.ts` | `feat:` | Adds `refreshHackathonLifecycle()` to transition ended events. |
+| `.github/workflows/hackathon-agent.yml` | `feat:` | Scheduled GitHub Action running every 6 hours. |
+| `public/bot.html` & `src/pages/BotInfoPage.tsx` | `feat:` | Public `/bot` transparency page. |
+| `src/App.tsx` | `feat:` | Routes `/bot` to `BotInfoPage`. |
+| `src/features/hackathons/HackathonCard.tsx` | `feat:` | Renders "Register on official site" and "Interested" save button. |
+| `src/features/hackathons/HackathonsPage.tsx` | `feat:` | Adds staleness warning, richer empty state with Online/hubs suggestions. |
+| `src/features/hackathons/api.ts` | `feat:` | Adds `getHackathonsStatus()`. |
+| `supabase/migrations/20261105180000_add_hackathon_verification_tracking.sql` | `feat:` | Additive migration for `last_verified_at`. |
+| `tests/sources-fixtures.test.ts` | `test:` | Fixture tests for Devfolio, Unstop, MLH, Eventbrite, and Search API. |
+| `tests/hackathon-agent.test.ts` | `test:` | Unit tests for sharding, `/api/hackathons/status`, and source permissions. |
+| `tests/hackathon-e2e.mjs` | `test:` | E2E browser tests covering filter -> Register -> new tab opens official URL. |
+

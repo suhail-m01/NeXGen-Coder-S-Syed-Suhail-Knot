@@ -103,12 +103,32 @@ export function HackathonsPage() {
     <div className="page-container hackathons-page">
       <div className="page-heading"><div><span className="eyebrow">Permissioned discovery · India + Online</span><h1>Hackathons worth building for.</h1><p>Fresh, source-linked hackathon listings with conservative details. An Interested click opens the official site; it is not a registration.</p></div><div className="button-row"><Link className="button button--secondary" to="/hackathons/interests">My Interests</Link><Link className="button button--secondary" to="/search"><ArrowLeft size={16} /> All Knot events</Link></div></div>
       <HackathonFilters value={filters} locationText={locationText} datePreset={datePreset} facets={facets} locationStatus={locationStatus} onChange={patch} onLocationTextChange={changeLocation} onDatePresetChange={changePreset} onUseLocation={useMyLocation} onReset={reset} />
+      {Boolean(result?.meta.lastUpdated && Date.now() - new Date(result.meta.lastUpdated).getTime() > 24 * 3600 * 1000) && (
+        <div className="hackathon-notice hackathon-notice--stale" role="status">
+          <Info size={17} />
+          <span>Listing data may be stale (last verified over 24h ago). The autonomous agent runs every 6 hours to refresh upcoming hackathons.</span>
+        </div>
+      )}
       {guestNotice && <div className="hackathon-notice" role="status"><Info size={17} /><span>You can continue without an account. <Link to="/auth?returnTo=%2Fhackathons">Sign in to keep Interested hackathons in My Interests.</Link></span><button className="icon-button" aria-label="Dismiss sign-in suggestion" onClick={() => setGuestNotice(false)}>×</button></div>}
       {savedNotice && <div className="hackathon-notice" role="status"><Info size={17} /><span>Saved to your local My Interests list for this signed-in browser.</span><button className="icon-button" aria-label="Dismiss saved message" onClick={() => setSavedNotice(false)}>×</button></div>}
       <div className="hackathon-results-heading"><div><h2>{result ? `${result.meta.total} ${result.meta.total === 1 ? 'hackathon' : 'hackathons'}` : 'Hackathons'}</h2><p>{formatLastUpdated(result?.meta.lastUpdated ?? null)}{loading && result ? ' · Updating…' : ''}</p></div>{result && result.meta.total > 0 && <span>Page {result.meta.page} of {Math.max(result.meta.totalPages, 1)}</span>}</div>
       {loading && !result && <HackathonSkeleton />}
       {error && !result && <div className="hackathon-state" role="alert"><AlertCircle size={28} /><h2>We couldn’t load hackathons</h2><p>{error}</p><button className="button button--primary" onClick={() => setRetryNonce((value) => value + 1)}>Try again</button></div>}
-      {!loading && result && result.data.length === 0 && <div className="hackathon-state"><Info size={28} /><h2>No hackathons match these filters</h2><p>Try another city, Online, a wider date range, or All prices. If you searched a new city, an authorized future run may discover it.</p><button className="button button--secondary" onClick={reset}>Clear filters</button></div>}
+      {!loading && result && result.data.length === 0 && (
+        <div className="hackathon-state">
+          <Info size={28} />
+          <h2>No hackathons match these filters</h2>
+          <p>
+            Hackathon listings refresh automatically via our scheduled agent{result.meta.lastUpdated ? ` (last checked ${formatLastUpdated(result.meta.lastUpdated)})` : ''}.
+            Try exploring <strong>Online</strong> hackathons or major hubs like <strong>Bengaluru</strong>, <strong>Delhi NCR</strong>, <strong>Mumbai</strong>, or <strong>Hyderabad</strong>.
+            If you searched a new city, it will be queued for the next discovery run.
+          </p>
+          <div className="button-row" style={{ marginTop: 16 }}>
+            <button className="button button--primary" onClick={() => patch({ mode: 'online', city: '', page: 1 })}>Browse Online hackathons</button>
+            <button className="button button--secondary" onClick={reset}>Clear filters</button>
+          </div>
+        </div>
+      )}
       {result && result.data.length > 0 && <div className="hackathon-grid">{result.data.map((hackathon) => <HackathonCard key={hackathon.id} hackathon={hackathon} onGuestContinue={() => setGuestNotice(true)} onSaved={() => setSavedNotice(true)} />)}</div>}
       {error && result && <div className="hackathon-inline-error" role="alert">{error} Existing results are shown while you retry.</div>}
       {result && result.meta.totalPages > 1 && <nav className="hackathon-pagination" aria-label="Hackathon pages"><button className="button button--secondary" disabled={filters.page <= 1 || loading} onClick={() => patch({ page: filters.page - 1 })}><ArrowLeft size={16} /> Previous</button><span>Page {filters.page} / {result.meta.totalPages}</span><button className="button button--secondary" disabled={filters.page >= result.meta.totalPages || loading} onClick={() => patch({ page: filters.page + 1 })}>Next <ArrowRight size={16} /></button></nav>}

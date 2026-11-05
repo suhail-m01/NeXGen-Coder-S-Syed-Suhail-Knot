@@ -86,9 +86,10 @@ try {
   check('unknown price remains explicit', await page.getByText('Price not stated', { exact: true }).isVisible());
   check('unverified official site is not presented as verified', await page.getByText('Official site not independently verified', { exact: true }).isVisible());
   check('correction report opens a draft without claiming submission', (await page.getByRole('link', { name: /Report incorrect info/ }).first().getAttribute('title'))?.includes('no report is sent automatically'));
-  const interested = page.getByRole('link', { name: 'Interested', exact: true }).first();
-  check('outbound link uses a new tab', await interested.getAttribute('target') === '_blank');
-  check('outbound link severs opener/referrer', (await interested.getAttribute('rel')) === 'noopener noreferrer');
+  check('card retains Interested button for saving to My Interests', await page.getByRole('button', { name: 'Interested', exact: true }).first().isVisible());
+  const outboundLink = page.getByRole('link', { name: /Register on official site/i }).first();
+  check('outbound link uses a new tab', await outboundLink.getAttribute('target') === '_blank');
+  check('outbound link severs opener/referrer', (await outboundLink.getAttribute('rel')) === 'noopener noreferrer');
 
   const modeRequest = page.waitForRequest((request) => new URL(request.url()).searchParams.get('mode') === 'online');
   await page.getByLabel('Mode', { exact: true }).selectOption('online');
@@ -126,10 +127,10 @@ try {
   await page.locator('.hackathon-card').first().waitFor();
 
   const guestPopupPromise = context.waitForEvent('page');
-  await page.getByRole('link', { name: 'Interested', exact: true }).first().click();
+  await page.getByRole('link', { name: /Register on official site/i }).first().click();
   const guestPopup = await guestPopupPromise;
   await guestPopup.waitForURL('https://organizer.example/ai');
-  check('guest Interested records the click and opens the official URL', interestRequests.at(-1)?.body.context === 'web');
+  check('guest Register records the click and opens the official URL', interestRequests.at(-1)?.body.context === 'web');
   check('guest handoff has no window opener', await guestPopup.evaluate(() => window.opener === null));
   await closePopup(guestPopup);
   check('guest receives a non-blocking sign-in suggestion', await page.getByText(/Sign in to keep Interested hackathons/).isVisible());
@@ -151,7 +152,7 @@ try {
   await page.waitForFunction(() => { try { return Boolean(JSON.parse(localStorage.getItem('knot.product.data.v1') ?? '{}').session?.userId); } catch { return false; } });
   await goto('/hackathons');
   const accountPopupPromise = context.waitForEvent('page');
-  await page.getByRole('link', { name: 'Interested', exact: true }).first().click();
+  await page.getByRole('link', { name: /Register on official site/i }).first().click();
   const accountPopup = await accountPopupPromise;
   await accountPopup.waitForURL('https://organizer.example/ai');
   await closePopup(accountPopup);

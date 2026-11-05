@@ -56,6 +56,19 @@ export async function recordHackathonInterest(id: string, context: InterestConte
   return response.json() as Promise<InterestResponse>;
 }
 
+export interface HackathonStatus {
+  lastRunAt: string | null;
+  lastStatus: string;
+  totalUpcoming: number;
+  perSource: Record<string, number>;
+}
+
+export async function getHackathonsStatus(signal?: AbortSignal): Promise<HackathonStatus> {
+  const response = await fetch('/api/hackathons/status', { headers: { Accept: 'application/json' }, signal });
+  if (!response.ok) throw new Error(await errorMessage(response));
+  return response.json() as Promise<HackathonStatus>;
+}
+
 export function reportHackathonUrl(hackathon: { id: string; title: string; sourceUrl: string }): string {
   const subject = `Knot hackathon information report: ${hackathon.title}`;
   const body = `Hackathon: ${hackathon.title}\nKnot record: ${hackathon.id}\nSource: ${hackathon.sourceUrl}\n\nWhat is incorrect?\n`;

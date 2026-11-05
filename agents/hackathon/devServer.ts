@@ -109,6 +109,53 @@ export function hackathonsDevApiPlugin(): Plugin {
       const handler = async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
         const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost:5174'}`);
 
+        if (url.pathname === '/api/hackathons/status' && req.method === 'GET') {
+          try {
+            if (process.env.DATABASE_URL?.trim()) {
+              const { createHackathonsStatusHandler } = await import('./apiHandlers');
+              const statusHandler = createHackathonsStatusHandler();
+              return await statusHandler(
+                { method: 'GET', query: {}, headers: req.headers as Record<string, string> },
+                {
+                  status: (code: number) => {
+                    res.statusCode = code;
+                    return {
+                      json: (data: unknown) => {
+                        res.setHeader('Content-Type', 'application/json');
+                        res.end(JSON.stringify(data));
+                      },
+                    };
+                  },
+                  setHeader: (k: string, v: string | number) => res.setHeader(k, v),
+                } as any
+              );
+            }
+
+            const items = await fetchLiveInternetHackathons();
+            const perSource: Record<string, number> = {};
+            for (const item of items) {
+              const platform = item.sourcePlatform || 'Devfolio';
+              perSource[platform] = (perSource[platform] || 0) + 1;
+            }
+            res.setHeader('Content-Type', 'application/json');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.end(
+              JSON.stringify({
+                lastRunAt: lastFetchedAt ? new Date(lastFetchedAt).toISOString() : new Date().toISOString(),
+                lastStatus: 'completed',
+                totalUpcoming: items.length,
+                perSource,
+              })
+            );
+            return;
+          } catch {
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ lastRunAt: null, lastStatus: 'idle', totalUpcoming: 0, perSource: {} }));
+            return;
+          }
+        }
+
         if (url.pathname === '/api/hackathons' && req.method === 'GET') {
           try {
             // If DATABASE_URL is provided, use standard DB handler

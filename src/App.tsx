@@ -16,6 +16,7 @@ const OrganizerStudioPage = lazy(() => import('./pages/OrganizerStudioPage').the
 const AdminPage = lazy(() => import('./pages/AdminPage').then((module) => ({ default: module.AdminPage })));
 const CommunityPage = lazy(() => import('./pages/CommunityPage').then((module) => ({ default: module.CommunityPage })));
 const ProfilePage = lazy(() => import('./pages/ProfilePage').then((module) => ({ default: module.ProfilePage })));
+const BotInfoPage = lazy(() => import('./pages/BotInfoPage').then((module) => ({ default: module.BotInfoPage })));
 const HackathonsPage = lazy(() => import('./features/hackathons/HackathonsPage').then((module) => ({ default: module.HackathonsPage })));
 const MyHackathonInterestsPage = lazy(() => import('./features/hackathons/MyInterestsPage').then((module) => ({ default: module.MyHackathonInterestsPage })));
 
@@ -28,6 +29,7 @@ export default function App() {
           <Route path="search" element={<SearchPage />} />
           {hackathonsEnabled && <Route path="hackathons" element={<HackathonsPage />} />}
           {hackathonsEnabled && <Route path="hackathons/interests" element={<MyHackathonInterestsPage />} />}
+          <Route path="bot" element={<BotInfoPage />} />
           <Route path="events/:eventId" element={<EventPage />} />
           <Route path="auth" element={<AuthPage />} />
           <Route path="publish" element={<QuickPostPage />} />

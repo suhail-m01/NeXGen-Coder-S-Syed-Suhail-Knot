@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import test from 'node:test';
-import { createHackathonsHandler, createAgentRunHandler, createInterestHandler, createMyInterestsHandler } from '../agents/hackathon/apiHandlers';
+import { createHackathonsHandler, createAgentRunHandler, createInterestHandler, createMyInterestsHandler, createHackathonsStatusHandler } from '../agents/hackathon/apiHandlers';
 import { buildHackathonWhere, parseHackathonListParams, type HackathonListResult } from '../agents/hackathon/apiQuery';
 import type { ApiRequest, ApiResponse } from '../agents/hackathon/apiTypes';
 import { loadAgentConfig } from '../agents/hackathon/config';
@@ -302,4 +302,71 @@ test('My Interests requires an account and uses the authenticated user selected 
   assert.equal(authenticated.statusCode, 200);
   assert.equal(selectedUser, 'user-1');
   assert.equal(authenticated.headers['Cache-Control'], 'no-store');
+});
+
+test('sharding partitions sources and sourceIds filters to specified platforms', async () => {
+  const config = agentConfig();
+  config.caps.maxSources = 10;
+  const devfolio = DEFAULT_SOURCES.find((s) => s.id === 'devfolio')!;
+  const unstop = DEFAULT_SOURCES.find((s) => s.id === 'unstop')!;
+  const mlh = DEFAULT_SOURCES.find((s) => s.id === 'mlh')!;
+  config.sources = [
+    { ...devfolio, enabled: true, permissionEvidence: 'https://devfolio.co/terms', approvedMethods: ['api'], discoveryUrls: [] },
+    { ...unstop, enabled: true, permissionEvidence: 'https://unstop.com/terms-of-use', approvedMethods: ['api'], discoveryUrls: [] },
+    { ...mlh, enabled: true, permissionEvidence: 'https://mlh.io/robots.txt', approvedMethods: ['html'], discoveryUrls: [] },
+  ];
+
+  const http = fakeHttp((url) => response(url, '[]', 'application/json'));
+  const fakeStore = {
+    createRun: async () => 'shard-run',
+    consumeCities: async () => [],
+    save: async () => ({ saved: 0, items: [], errors: [] }),
+    finishRun: async () => {},
+  };
+
+  const shardResult = await runHackathonAgent({
+    config,
+    http,
+    store: fakeStore,
+    shard: { index: 0, total: 2 },
+  });
+  assert.equal(shardResult.status, 'completed');
+  // First shard gets even indices (0 and 2: devfolio, mlh)
+  assert.deepEqual(
+    shardResult.sources.map((s) => s.source),
+    ['devfolio', 'mlh']
+  );
+
+  const filteredResult = await runHackathonAgent({
+    config,
+    http,
+    store: fakeStore,
+    sourceIds: ['unstop'],
+  });
+  assert.equal(filteredResult.status, 'completed');
+  assert.deepEqual(
+    filteredResult.sources.map((s) => s.source),
+    ['unstop']
+  );
+});
+
+test('GET /api/hackathons/status returns lastRunAt, lastStatus, totalUpcoming, and perSource counts without secrets', async () => {
+  const handler = createHackathonsStatusHandler({
+    getStatus: async () => ({
+      lastRunAt: '2026-11-05T12:00:00.000Z',
+      lastStatus: 'completed',
+      totalUpcoming: 24,
+      perSource: { Devfolio: 20, Unstop: 4 },
+    }),
+  });
+
+  const res = mockResponse();
+  await handler({ method: 'GET', query: {}, headers: {} }, res);
+  assert.equal(res.statusCode, 200);
+  const body = res.body as { lastRunAt: string; lastStatus: string; totalUpcoming: number; perSource: Record<string, number> };
+  assert.equal(body.lastRunAt, '2026-11-05T12:00:00.000Z');
+  assert.equal(body.lastStatus, 'completed');
+  assert.equal(body.totalUpcoming, 24);
+  assert.equal(body.perSource.Devfolio, 20);
+  assert.equal(body.perSource.Unstop, 4);
 });

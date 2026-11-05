@@ -25,6 +25,17 @@ export function HackathonCard({ hackathon, context = 'web', compact = false, onG
   const day = new Intl.DateTimeFormat('en-IN', { day: '2-digit', timeZone: hackathon.timezone ?? 'UTC' }).format(start);
   const month = new Intl.DateTimeFormat('en-IN', { month: 'short', timeZone: hackathon.timezone ?? 'UTC' }).format(start);
 
+  const handleSaveInterestOnly = async () => {
+    if (currentUser) {
+      saveLocalHackathonInterest(currentUser.id, hackathon.id);
+      onSaved?.(hackathon.id);
+      setMessage('Saved to your My Interests list.');
+    } else {
+      setMessage('Sign in to keep this in your My Interests list.');
+      onGuestContinue?.();
+    }
+  };
+
   const handleInterested = async (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
     if (busy) return;
@@ -76,7 +87,17 @@ export function HackathonCard({ hackathon, context = 'web', compact = false, onG
           {hackathon.teamSize && <span><Users size={15} />{hackathon.teamSize} <small>(source-reported)</small></span>}
         </div>
         {hackathon.tags.length > 0 && <div className="hackathon-card__tags">{hackathon.tags.slice(0, compact ? 2 : 4).map((tag) => <span key={tag}>{tag}</span>)}</div>}
-        <div className="hackathon-card__footer"><span className={`hackathon-card__price ${hackathon.isFree === true ? 'is-free' : ''}`}>{formatHackathonPrice(hackathon)}</span><a className="button button--primary button--small" href={hackathon.officialUrl} target="_blank" rel="noopener noreferrer" onClick={handleInterested} aria-busy={busy}>{busy ? 'Recording…' : 'Interested'}<ArrowUpRight size={15} /></a></div>
+        <div className="hackathon-card__footer">
+          <span className={`hackathon-card__price ${hackathon.isFree === true ? 'is-free' : ''}`}>{formatHackathonPrice(hackathon)}</span>
+          <div className="hackathon-card__actions" style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+            <button type="button" className="button button--ghost-light button--small" onClick={handleSaveInterestOnly} title="Save to My Interests">
+              Interested
+            </button>
+            <a className="button button--primary button--small" href={hackathon.officialUrl} target="_blank" rel="noopener noreferrer" onClick={handleInterested} aria-busy={busy}>
+              {busy ? 'Connecting…' : 'Register on official site'}<ArrowUpRight size={15} />
+            </a>
+          </div>
+        </div>
         <div className="hackathon-card__trust"><span>{hackathon.officialUrlVerified ? <><CheckCircle2 size={13} /> Organizer-domain link checked</> : <><Info size={13} /> Official site not independently verified</>}</span><a href={reportHackathonUrl(hackathon)} className="hackathon-card__report" title="Opens a draft correction email; no report is sent automatically"><Flag size={12} /> Report incorrect info</a></div>
         {(message || error || handoffUrl) && <div className={`hackathon-card__handoff ${error ? 'is-error' : ''}`} role={error ? 'alert' : 'status'}>{error || message}{handoffUrl && <a href={handoffUrl} target="_blank" rel="noopener noreferrer" onClick={handleInterested}>Open official site <ArrowUpRight size={13} /></a>}</div>}
       </div>

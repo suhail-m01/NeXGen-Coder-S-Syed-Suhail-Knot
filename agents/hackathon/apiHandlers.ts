@@ -62,6 +62,61 @@ export function createHackathonsHandler(deps: {
   };
 }
 
+export interface HackathonStatusResult {
+  lastRunAt: string | null;
+  lastStatus: string;
+  totalUpcoming: number;
+  perSource: Record<string, number>;
+}
+
+async function queryHackathonStatus(): Promise<HackathonStatusResult> {
+  const sql = getDatabase();
+  const runRows = await sql<{ finished_at: Date | null; started_at: Date; status: string }[]>`
+    select started_at, finished_at, status from public.agent_runs
+    where kind = 'run' order by created_at desc limit 1
+  `.catch(() => []);
+  const countRows = await sql<{ count: number }[]>`
+    select count(*)::int as count from public.hackathons where status in ('upcoming', 'ongoing')
+  `.catch(() => [{ count: 0 }]);
+  const sourceRows = await sql<{ source_platform: string; count: number }[]>`
+    select source_platform, count(*)::int as count from public.hackathons
+    where status in ('upcoming', 'ongoing') group by source_platform
+  `.catch(() => []);
+
+  const lastRun = runRows[0];
+  const perSource = Object.fromEntries(sourceRows.map((row) => [row.source_platform, row.count]));
+  return {
+    lastRunAt: lastRun?.finished_at?.toISOString() || lastRun?.started_at?.toISOString() || null,
+    lastStatus: lastRun?.status || 'idle',
+    totalUpcoming: countRows[0]?.count ?? 0,
+    perSource,
+  };
+}
+
+export function createHackathonsStatusHandler(deps: { getStatus?: () => Promise<HackathonStatusResult> } = {}) {
+  const getStatus = deps.getStatus ?? queryHackathonStatus;
+  return async function handler(request: ApiRequest, response: ApiResponse): Promise<void> {
+    if (request.method !== 'GET') {
+      response.setHeader('Allow', 'GET');
+      response.status(405).json({ error: 'Method not allowed.' });
+      return;
+    }
+    if (!allowRate(request, response, 'hackathons-status-read', 60, 60_000)) return;
+    try {
+      const status = await getStatus();
+      response.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+      response.status(200).json(status);
+    } catch {
+      response.status(200).json({
+        lastRunAt: null,
+        lastStatus: 'idle',
+        totalUpcoming: 0,
+        perSource: {},
+      });
+    }
+  };
+}
+
 class InterestError extends Error {
   constructor(message: string, readonly status: number) { super(message); }
 }
@@ -203,7 +258,17 @@ export function createAgentRunHandler(deps: { run?: (options: RunAgentOptions) =
     if (!secretMatches(header(request, 'authorization'), secret)) { response.status(401).json({ error: 'Unauthorized.' }); return; }
     if (!sameOrigin(request)) { response.status(403).json({ error: 'Cross-site triggers are not accepted.' }); return; }
     const trigger = header(request, 'x-vercel-cron') ? 'cron' : 'manual';
-    const result = await run({ trigger });
+
+    let shard: { index: number; total: number } | undefined;
+    const shardParam = request.query.shard ? Number(Array.isArray(request.query.shard) ? request.query.shard[0] : request.query.shard) : undefined;
+    const ofParam = request.query.of ? Number(Array.isArray(request.query.of) ? request.query.of[0] : request.query.of) : undefined;
+    if (shardParam !== undefined && ofParam !== undefined && ofParam > 0) {
+      shard = { index: Math.max(0, Math.min(shardParam, ofParam - 1)), total: ofParam };
+    }
+    const sourcesParam = request.query.sources ? (Array.isArray(request.query.sources) ? request.query.sources[0] : request.query.sources) : undefined;
+    const sourceIds = sourcesParam ? sourcesParam.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean) : undefined;
+
+    const result = await run({ trigger, shard, sourceIds });
     response.setHeader('Cache-Control', 'no-store');
     response.status(result.status === 'failed' ? 500 : 200).json(result);
   };

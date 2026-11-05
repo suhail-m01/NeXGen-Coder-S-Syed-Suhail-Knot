@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KnotBot Information &amp; Crawler Transparency</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        line-height: 1.6;
+        color: #e2e8f0;
+        background: #120e24;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 40px 20px;
+      }
+      h1 { color: #f8fafc; margin-bottom: 8px; }
+      h2 { color: #cbd5e1; margin-top: 32px; border-bottom: 1px solid #2d264f; padding-bottom: 8px; }
+      a { color: #a78bfa; text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      code { background: #1f1938; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; color: #fbbf24; }
+      pre { background: #1f1938; padding: 16px; border-radius: 8px; overflow-x: auto; color: #f1f5f9; }
+      .badge { display: inline-block; background: #22c55e22; color: #4ade80; padding: 4px 10px; border-radius: 999px; font-size: 0.85em; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <span class="badge">KnotBot Verified Crawler</span>
+    <h1>About KnotBot</h1>
+    <p>
+      <strong>KnotBot</strong> is the autonomous indexing crawler for
+      <a href="/">Knot</a> (&ldquo;Find your people. Find your next event.&rdquo;).
+    </p>
+
+    <h2>Purpose &amp; Mission</h2>
+    <p>
+      KnotBot indexes upcoming public tech events, hackathons, and developer gatherings across India and online.
+      Its sole purpose is discovery: helping developers, students, and founders find hackathons and sending participants
+      directly to the <strong>official organizer registration websites</strong> without intercepting or gating applications.
+    </p>
+
+    <h2>Crawler Identification</h2>
+    <p>KnotBot identifies itself with the following honest User-Agent string:</p>
+    <pre><code>Mozilla/5.0 (compatible; KnotBot/1.0; +https://ne-x-gen-coder-s-syed-suhail-knot.vercel.app/bot)</code></pre>
+
+    <h2>Crawler Ethics &amp; Politeness Policy</h2>
+    <ul>
+      <li><strong>Robots.txt:</strong> KnotBot strictly obeys <code>robots.txt</code> rules on every target host.</li>
+      <li><strong>Rate Limiting:</strong> Requests to any single domain are throttled with at least 1.5 seconds between fetches.</li>
+      <li><strong>No Anti-Bot Bypassing:</strong> KnotBot never bypasses CAPTCHAs, paywalls, or authentication gates.</li>
+      <li><strong>Read-Only:</strong> KnotBot performs strictly safe HTTP GET / HEAD requests.</li>
+      <li><strong>Canonical Attribution:</strong> Listings always link directly back to the original source and organizer URL.</li>
+    </ul>
+
+    <h2>How to Control or Disallow KnotBot</h2>
+    <p>To prevent KnotBot from indexing your site, add this to your <code>robots.txt</code>:</p>
+    <pre><code>User-agent: KnotBot
+Disallow: /</code></pre>
+    <p>To disallow specific directories:</p>
+    <pre><code>User-agent: KnotBot
+Disallow: /private-events/
+Disallow: /internal/</code></pre>
+
+    <h2>Contact &amp; Questions</h2>
+    <p>
+      If you are a site operator with questions, feedback, or crawl rate adjustment requests, please visit
+      <a href="https://github.com/suhail-m01/NeXGen-Coder-S-Syed-Suhail-Knot">our GitHub repository</a> or contact the team.
+    </p>
+  </body>
+</html>
