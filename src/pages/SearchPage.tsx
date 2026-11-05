@@ -78,7 +78,12 @@ export function SearchPage() {
     setSearchParams(params, { replace: true });
   }, [filters, view, initialized, setSearchParams]);
 
-  const localEvents = useMemo(() => sortEvents(filterEvents(data.events, filters), filters, currentUser), [data.events, filters, currentUser]);
+  const searchableEvents = useMemo(() => {
+    const real = data.events.filter((e) => !e.isSample);
+    return filters.query ? data.events : real.length > 0 ? real : data.events;
+  }, [data.events, filters.query]);
+
+  const localEvents = useMemo(() => sortEvents(filterEvents(searchableEvents, filters), filters, currentUser), [searchableEvents, filters, currentUser]);
   const resultPage = useMemo(() => paginateDiscovery(localEvents, page), [localEvents, page]);
   const events = isCloudProvider ? cloud.events : localEvents;
   const visibleEvents = isCloudProvider ? cloud.events : resultPage.items;

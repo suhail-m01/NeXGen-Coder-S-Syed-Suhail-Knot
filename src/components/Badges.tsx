@@ -1,9 +1,9 @@
-import { AlertCircle, Check, FlaskConical, Sparkles } from 'lucide-react';
+import { AlertCircle, Check, Sparkles } from 'lucide-react';
 import { ageRuleLabel } from '../domain/age';
 import type { AgeRule, FitLabel } from '../domain/types';
 
 export function SampleBadge() {
-  return <span className="badge badge--sample"><FlaskConical size={12} /> Sample</span>;
+  return null;
 }
 
 export function AgeBadge({ rule }: { rule: AgeRule }) {

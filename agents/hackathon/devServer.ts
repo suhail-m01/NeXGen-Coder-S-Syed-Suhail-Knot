@@ -5,9 +5,14 @@ import { createHttpClient } from './httpClient';
 import { runHackathonAgent } from './run';
 import type { HackathonDto, HackathonListResult } from './apiQuery';
 import type { NormalizedHackathon } from './types';
+import { LIVE_VERIFIED_HACKATHONS } from '../../src/features/hackathons/liveSeed';
 
-let cachedItems: NormalizedHackathon[] = [];
-let lastFetchedAt: number = 0;
+let cachedItems: NormalizedHackathon[] = LIVE_VERIFIED_HACKATHONS.map((h) => ({
+  ...h,
+  dedupeKey: h.id,
+  sources: [{ sourcePlatform: h.sourcePlatform, sourceUrl: h.sourceUrl, externalId: h.id, lastCheckedAt: h.lastCheckedAt }],
+})) as any;
+let lastFetchedAt: number = Date.now();
 let isFetching = false;
 
 async function fetchLiveInternetHackathons(): Promise<NormalizedHackathon[]> {
@@ -103,11 +108,11 @@ function normalizedToDto(item: NormalizedHackathon, index: number): HackathonDto
 }
 
 export function hackathonsDevApiPlugin(): Plugin {
-  return {
-    name: 'knot-hackathons-dev-api',
-    configureServer(server) {
-      const handler = async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
-        const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost:5174'}`);
+  const handler = async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
+    if (!req.url || !req.url.startsWith('/api/hackathons')) {
+      return next();
+    }
+    const url = new URL(req.url, `http://${req.headers.host || 'localhost:5174'}`);
 
         if (url.pathname === '/api/hackathons/status' && req.method === 'GET') {
           try {
@@ -278,7 +283,12 @@ export function hackathonsDevApiPlugin(): Plugin {
         next();
       };
 
-      // Place at the top of the stack before internal transform middleware
+  return {
+    name: 'knot-hackathons-dev-api',
+    configureServer(server) {
+      (server.middlewares.stack as Array<any>).unshift({ route: '', handle: handler });
+    },
+    configurePreviewServer(server) {
       (server.middlewares.stack as Array<any>).unshift({ route: '', handle: handler });
     },
   };

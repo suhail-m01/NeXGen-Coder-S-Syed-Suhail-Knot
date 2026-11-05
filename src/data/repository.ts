@@ -1,4 +1,5 @@
 import { buildSampleEvents } from '../domain/sample';
+import { buildLiveEvents } from '../domain/liveEvents';
 import { buildInitialSources } from '../domain/sources';
 import { createCheckInToken } from '../domain/checkin';
 import type { AppData } from '../domain/types';
@@ -8,7 +9,7 @@ const DATA_VERSION = 1;
 
 export const createInitialData = (): AppData => ({
   version: DATA_VERSION,
-  events: buildSampleEvents(),
+  events: [...buildLiveEvents(), ...buildSampleEvents()],
   users: [],
   session: null,
   registrations: [],
@@ -71,7 +72,11 @@ export function loadData(): AppData {
     const registrations = (Array.isArray(parsed.registrations) ? parsed.registrations : []).map((registration) => (
       registration.kind === 'native' && !registration.checkInToken ? { ...registration, checkInToken: createCheckInToken() } : registration
     ));
-    const events = parsed.events.map((event) => ({
+    const liveEvents = buildLiveEvents();
+    const liveIds = new Set(liveEvents.map((e) => e.id));
+    const userNonLive = (Array.isArray(parsed.events) ? parsed.events : []).filter((e) => !liveIds.has(e.id));
+    const rawEvents = [...liveEvents, ...userNonLive];
+    const events = rawEvents.map((event) => ({
       ...event,
       visibility: event.visibility ?? 'public',
       seriesId: event.seriesId ?? null,

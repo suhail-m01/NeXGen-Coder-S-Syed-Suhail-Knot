@@ -159,7 +159,15 @@ export function EventPage() {
 
       <div className="page-container event-layout">
         <div className="event-main">
-          {event.isSample && <div className="sample-callout"><FlaskIcon /><div><strong>This is sample event data</strong><p>It exists to test the product experience and is not a real event announcement.</p></div></div>}
+          {event.isSample && (
+            <div className="sample-callout">
+              <Info size={22} />
+              <div>
+                <strong>This is sample event data</strong>
+                <p>It exists to test the product experience and is not a real event announcement.</p>
+              </div>
+            </div>
+          )}
           <section className="event-section">
             <h2>Why this event</h2><p className="event-description">{event.description}</p>
             <div className="tag-list">{event.interests.map((interest) => <span key={interest}>{interest}</span>)}{event.skills.map((skill) => <span key={skill}>{skill}</span>)}</div>
@@ -233,8 +241,4 @@ function nativeRegistrationCopy(status: RegistrationStatus, position: number | n
   if (status === 'checked_in') return { title: 'Checked in', body: 'The organizer recorded your check-in.' };
   if (status === 'attended') return { title: 'Organizer check-in recorded', body: 'Attendance is verified only by this organizer check-in record.' };
   return { title: status.replaceAll('_', ' '), body: 'Your native participation record is in My Plan.' };
-}
-
-function FlaskIcon() {
-  return <Info size={22} />;
 }

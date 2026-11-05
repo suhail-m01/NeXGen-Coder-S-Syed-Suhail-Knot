@@ -53,15 +53,20 @@ export function HomePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id]);
 
-  const upcoming = useMemo(() => sortEvents(filterEvents(data.events, { ...filters, time: 'next7', sort: 'soonest' }), filters, currentUser), [data.events, filters, currentUser]);
-  const closing = useMemo(() => sortEvents(filterEvents(data.events, { ...filters, time: 'any', sort: 'closing' }).filter((event) => {
+  const publicEvents = useMemo(() => {
+    const real = data.events.filter((e) => !e.isSample);
+    return real.length > 0 ? real : data.events;
+  }, [data.events]);
+
+  const upcoming = useMemo(() => sortEvents(filterEvents(publicEvents, { ...filters, time: 'next7', sort: 'soonest' }), filters, currentUser), [publicEvents, filters, currentUser]);
+  const closing = useMemo(() => sortEvents(filterEvents(publicEvents, { ...filters, time: 'any', sort: 'closing' }).filter((event) => {
     if (!event.registrationDeadline) return false;
     const remaining = new Date(event.registrationDeadline).getTime() - Date.now();
     return remaining > 0 && remaining <= 72 * 3_600_000;
-  }), { ...filters, sort: 'closing' }, currentUser), [data.events, filters, currentUser]);
-  const online = useMemo(() => sortEvents(filterEvents(data.events, { ...filters, mode: 'online', time: 'any', sort: 'soonest' }).filter((event) => new Date(event.startAt).getTime() - Date.now() <= 14 * 86_400_000), filters, currentUser), [data.events, filters, currentUser]);
-  const fresh = useMemo(() => sortEvents(filterEvents(data.events, { ...filters, time: 'any' }).filter((event) => Date.now() - new Date(event.firstDiscoveredAt).getTime() <= 7 * 86_400_000), { ...filters, sort: 'newest' }, currentUser), [data.events, filters, currentUser]);
-  const personalized = currentUser ? sortEvents(filterEvents(data.events, { ...filters, time: 'any', sort: 'best_fit' }).filter((event) => event.interests.some((interest) => currentUser.interests.includes(interest))), { ...filters, sort: 'best_fit' }, currentUser) : [];
+  }), { ...filters, sort: 'closing' }, currentUser), [publicEvents, filters, currentUser]);
+  const online = useMemo(() => sortEvents(filterEvents(publicEvents, { ...filters, mode: 'online', time: 'any', sort: 'soonest' }).filter((event) => new Date(event.startAt).getTime() - Date.now() <= 14 * 86_400_000), filters, currentUser), [publicEvents, filters, currentUser]);
+  const fresh = useMemo(() => sortEvents(filterEvents(publicEvents, { ...filters, time: 'any' }).filter((event) => Date.now() - new Date(event.firstDiscoveredAt).getTime() <= 7 * 86_400_000), { ...filters, sort: 'newest' }, currentUser), [publicEvents, filters, currentUser]);
+  const personalized = currentUser ? sortEvents(filterEvents(publicEvents, { ...filters, time: 'any', sort: 'best_fit' }).filter((event) => event.interests.some((interest) => currentUser.interests.includes(interest))), { ...filters, sort: 'best_fit' }, currentUser) : [];
 
   const search = (event: FormEvent) => {
     event.preventDefault();
