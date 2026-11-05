@@ -49,7 +49,7 @@ export function loadAgentConfig(env: NodeJS.ProcessEnv = process.env): AgentConf
   const provider = env.SEARCH_API_PROVIDER?.trim().toLowerCase();
   return {
     publicUrl,
-    userAgent: `Mozilla/5.0 (compatible; KnotBot/1.0; +${publicUrl}/bot)`,
+    userAgent: env.HACKATHON_USER_AGENT?.trim() || `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 (compatible; KnotBot/1.0; +${publicUrl}/bot)`,
     requestTimeoutMs: boundedNumber(env.HACKATHON_HTTP_TIMEOUT_MS, 12_000, 1000, 30_000),
     retries: boundedNumber(env.HACKATHON_HTTP_RETRIES, 2, 0, 4),
     domainDelayMs: boundedNumber(env.HACKATHON_DOMAIN_DELAY_MS, 1500, 250, 10_000),
