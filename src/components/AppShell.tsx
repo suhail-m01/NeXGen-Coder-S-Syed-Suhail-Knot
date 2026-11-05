@@ -1,4 +1,4 @@
-import { Bell, Bookmark, CalendarDays, ChevronDown, CircleUserRound, Compass, Home, Info, LayoutDashboard, LogOut, Map, Menu, Plus, Search, ShieldCheck, X } from 'lucide-react';
+import { Bell, Bookmark, CalendarDays, ChevronDown, CircleUserRound, Compass, Home, Info, LayoutDashboard, LogOut, Map, Menu, Plus, Search, ShieldCheck, Users, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useApp } from '../state/AppContext';
@@ -44,6 +44,7 @@ export function AppShell() {
           <nav className="desktop-nav" aria-label="Main navigation">
             <NavLink to="/search">Discover</NavLink>
             {hackathonsEnabled && <NavLink to="/hackathons">Hackathons</NavLink>}
+            <NavLink to="/communities">Communities</NavLink>
             <NavLink to="/search?view=map">Map</NavLink>
             <NavLink to="/add">Instant Add</NavLink>
             {currentUser && <NavLink to="/organizer">For organizers</NavLink>}
@@ -63,6 +64,7 @@ export function AppShell() {
         {menuOpen && <nav id="mobile-navigation" className="mobile-menu" aria-label="Mobile navigation">
           <NavLink to="/search"><Search size={18} /> Discover events</NavLink>
           {hackathonsEnabled && <NavLink to="/hackathons"><Compass size={18} /> Hackathons</NavLink>}
+          <NavLink to="/communities"><Users size={18} /> Communities</NavLink>
           <NavLink to="/search?view=map"><Map size={18} /> Map view</NavLink>
           <NavLink to="/add"><Plus size={18} /> Instant Add</NavLink>
           <NavLink to="/publish"><CalendarDays size={18} /> Publish or host</NavLink>
@@ -77,7 +79,7 @@ export function AppShell() {
       <footer className="site-footer">
         <div className="site-footer__top">
           <div><Logo inverse /><p>Find your people. Find your next event.<br />Participation with context, not just another event list.</p></div>
-          <div className="footer-links"><div><strong>Discover</strong><Link to="/search">All events</Link><Link to="/search?view=map">Map</Link><Link to="/add">Add an event</Link></div><div><strong>Participate</strong><Link to="/plan">My plan</Link><Link to="/publish">Publish or host</Link><Link to="/profile">Preferences</Link></div></div>
+          <div className="footer-links"><div><strong>Discover</strong><Link to="/search">All events</Link>{hackathonsEnabled && <Link to="/hackathons">Hackathons</Link>}<Link to="/communities">Communities</Link><Link to="/search?view=map">Map</Link><Link to="/add">Add an event</Link></div><div><strong>Participate</strong><Link to="/plan">My plan</Link><Link to="/publish">Publish or host</Link><Link to="/profile">Preferences</Link></div></div>
         </div>
         <div className="site-footer__bottom"><span>40 geocoded Bengaluru localities + 13 labelled India city anchors</span><span>{cloudStatus === 'local' ? 'Local repository v1' : `Supabase provider · ${cloudStatus}`}</span></div>
       </footer>

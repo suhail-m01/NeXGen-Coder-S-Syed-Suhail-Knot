@@ -13,6 +13,8 @@ import { hackathonsEnabled } from '../features/hackathons/flag';
 import { listHackathons } from '../features/hackathons/api';
 import type { Hackathon } from '../features/hackathons/types';
 import { LIVE_VERIFIED_HACKATHONS } from '../features/hackathons/liveSeed';
+import { communitiesFromEvents } from '../domain/communities';
+import { CommunityCard } from '../components/CommunityCard';
 
 const HomeHackathons = lazy(() => import('../features/hackathons/HomeHackathons').then((module) => ({ default: module.HomeHackathons })));
 
@@ -67,6 +69,11 @@ export function HomePage() {
   const online = useMemo(() => sortEvents(filterEvents(publicEvents, { ...filters, mode: 'online', time: 'any', sort: 'soonest' }).filter((event) => new Date(event.startAt).getTime() - Date.now() <= 14 * 86_400_000), filters, currentUser), [publicEvents, filters, currentUser]);
   const fresh = useMemo(() => sortEvents(filterEvents(publicEvents, { ...filters, time: 'any' }).filter((event) => Date.now() - new Date(event.firstDiscoveredAt).getTime() <= 7 * 86_400_000), { ...filters, sort: 'newest' }, currentUser), [publicEvents, filters, currentUser]);
   const personalized = currentUser ? sortEvents(filterEvents(publicEvents, { ...filters, time: 'any', sort: 'best_fit' }).filter((event) => event.interests.some((interest) => currentUser.interests.includes(interest))), { ...filters, sort: 'best_fit' }, currentUser) : [];
+  const communities = useMemo(() => {
+    const list = communitiesFromEvents(data.events.filter((event) => (event.visibility ?? 'public') === 'public'));
+    const real = list.filter((c) => !c.isSample);
+    return real.length > 0 ? real : list;
+  }, [data.events]);
 
   const search = (event: FormEvent) => {
     event.preventDefault();
@@ -206,6 +213,25 @@ export function HomePage() {
           <div className="section-heading"><div><span className="eyebrow"><Video size={14} /> Join from anywhere</span><h2>Online, but still worth showing up for</h2></div><Link to="/search?mode=online">Explore online <ArrowRight size={16} /></Link></div>
           <div className="event-grid">{online.slice(0, 3).map((event) => <EventCard key={event.id} event={event} />)}</div>
         </section>}
+
+        {communities.length > 0 && (
+          <section className="home-section communities-section">
+            <div className="section-heading">
+              <div>
+                <span className="eyebrow"><Users size={14} /> People worth returning to</span>
+                <h2>Active communities</h2>
+              </div>
+              <Link to="/communities">
+                Explore all communities <ArrowRight size={16} />
+              </Link>
+            </div>
+            <div className="community-grid">
+              {communities.slice(0, 3).map((item) => (
+                <CommunityCard key={item.id} community={item} />
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="how-section">
           <div className="section-heading"><div><span className="eyebrow">One connected journey</span><h2>From “maybe interested” to “see you there”</h2></div></div>
