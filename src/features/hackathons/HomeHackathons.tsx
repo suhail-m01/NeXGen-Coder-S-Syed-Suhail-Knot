@@ -33,9 +33,11 @@ export function HomeHackathons() {
           });
         }
       })
-      .catch(() => {
+      .catch((caught: unknown) => {
         import('./liveSeed').then(({ filterLiveSeedHackathons }) => {
           if (!controller.signal.aborted) setResult(filterLiveSeedHackathons({ limit: 3 }));
+        }).catch(() => {
+          if (!controller.signal.aborted) setError(caught instanceof Error ? caught.message : 'Hackathon discovery is unavailable.');
         });
       });
     return () => controller.abort();

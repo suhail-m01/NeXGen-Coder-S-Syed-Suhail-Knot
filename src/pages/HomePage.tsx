@@ -12,13 +12,14 @@ import type { KnotEvent } from '../domain/types';
 import { hackathonsEnabled } from '../features/hackathons/flag';
 import { listHackathons } from '../features/hackathons/api';
 import type { Hackathon } from '../features/hackathons/types';
+import { LIVE_VERIFIED_HACKATHONS } from '../features/hackathons/liveSeed';
 
 const HomeHackathons = lazy(() => import('../features/hackathons/HomeHackathons').then((module) => ({ default: module.HomeHackathons })));
 
 export function HomePage() {
   const { data, filters, setFilters, currentUser } = useApp();
   const [heroQuery, setHeroQuery] = useState('');
-  const [liveHackathons, setLiveHackathons] = useState<Hackathon[]>([]);
+  const [liveHackathons, setLiveHackathons] = useState<Hackathon[]>(hackathonsEnabled ? LIVE_VERIFIED_HACKATHONS.slice(0, 6) : []);
   const [heroTab, setHeroTab] = useState<'live' | 'local'>('live');
   const navigate = useNavigate();
   const locality = localityById(filters.localityId);
@@ -121,7 +122,14 @@ export function HomePage() {
             <div className="hero-panel__event-stack">
               {heroTab === 'live' && liveHackathons.length > 0 ? (
                 liveHackathons.slice(0, 3).map((hackathon, index) => (
-                  <Link to={`/hackathons?q=${encodeURIComponent(hackathon.title)}`} className={`hero-mini-event hero-mini-event--${index + 1}`} key={hackathon.id}>
+                  <a
+                    href={hackathon.officialUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`hero-mini-event hero-mini-event--${index + 1}`}
+                    key={hackathon.id}
+                    title={`Register on official site: ${hackathon.officialUrl}`}
+                  >
                     <div className="hero-mini-event__date">
                       <strong>{new Intl.DateTimeFormat('en-IN', { day: '2-digit' }).format(new Date(hackathon.startDate))}</strong>
                       <span>{new Intl.DateTimeFormat('en-IN', { month: 'short' }).format(new Date(hackathon.startDate))}</span>
@@ -133,7 +141,7 @@ export function HomePage() {
                       </span>
                     </div>
                     <ArrowRight size={17} />
-                  </Link>
+                  </a>
                 ))
               ) : (
                 <>
