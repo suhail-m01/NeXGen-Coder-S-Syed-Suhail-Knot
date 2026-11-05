@@ -22,6 +22,7 @@ import type {
   Announcement, AnnouncementInput, AppData, AttendeeQuestion, EventFilters, EventOperationsPatch,
   EventSeries, KnotEvent, MediaAsset, ParticipationCertificate, PersonalizationAction, ProjectScore, ProjectSubmission,
   ReferralCampaign, Registration, RegistrationStatus, SourceRecord, Submission, TeamInvitation, TrustReport, UserAccount,
+  KnotNotification, ParticipantProfileDetails, TeamMemberEntry,
 } from '../domain/types';
 import { createSalt, hashPassword, verifyPassword } from '../data/auth';
 import { createInitialData, loadData, makeId, saveData } from '../data/repository';
@@ -67,6 +68,41 @@ interface AppContextValue {
   toggleFollow: (communityId: string) => boolean;
   participate: (event: KnotEvent, selfDeclaredAgeRuleMet?: boolean, answers?: Record<string, string>) => MaybePromise<'auth_required' | 'opened_externally' | 'open_blocked' | 'registered' | 'pending' | 'waitlisted' | 'duplicate' | 'check_rule' | 'cannot_join' | 'needs_consent' | 'not_open_yet' | 'closed' | 'answers_required'>;
   selfConfirmExternal: (eventId: string) => MaybePromise<void>;
+  registerWithDetails: (
+    event: KnotEvent,
+    details: {
+      participationType: 'solo' | 'team';
+      participant: ParticipantProfileDetails;
+      teamName?: string;
+      teamCode?: string;
+      teamMembers?: Array<{ email: string; role?: string; name?: string }>;
+      selfDeclaredAgeRuleMet?: boolean;
+      answers?: Record<string, string>;
+    }
+  ) => MaybePromise<{
+    status: 'registered' | 'pending' | 'waitlisted' | 'duplicate' | 'closed' | 'auth_required' | 'answers_required';
+    registration?: Registration;
+    teamCode?: string;
+  }>;
+  sendTeamInviteEmail: (
+    eventId: string,
+    teamCode: string,
+    teamName: string,
+    recipientEmail: string,
+    role?: string
+  ) => { success: boolean; message: string; mailtoUrl: string };
+  joinTeamByCode: (
+    event: KnotEvent,
+    teamCode: string,
+    participant: ParticipantProfileDetails
+  ) => MaybePromise<{
+    status: 'joined' | 'team_not_found' | 'team_full' | 'already_registered' | 'auth_required';
+    registration?: Registration;
+  }>;
+  joinCommunityWithProfile: (
+    communityId: string,
+    profile?: { role?: string; skills?: string[]; bio?: string }
+  ) => void;
   publishQuickEvent: (input: QuickPostInput) => MaybePromise<KnotEvent>;
   createSubmission: (rawText: string, inputType?: 'text' | 'url') => Submission;
   importFederatedEvents: (sourceId: string, rawJson: string) => number;
@@ -590,6 +626,301 @@ export function AppProvider({ children }: { children: ReactNode }) {
       registrations: previous.registrations.map((registration) => registration.eventId === eventId && registration.userId === currentUser.id && registration.kind === 'external'
         ? { ...registration, status: 'self_confirmed_registered', updatedAt: new Date().toISOString() }
         : registration),
+    }));
+  };
+
+  const registerWithDetails: AppContextValue['registerWithDetails'] = (event, details) => {
+    if (!currentUser) {
+      requireAuth(`/events/${event.id}`, 'register for this event');
+      return { status: 'auth_required' };
+    }
+
+    const answers = details.answers ?? {};
+    if (event.registration.kind === 'native' && Object.keys(registrationAnswerErrors(event.registration.questions ?? [], answers)).length) {
+      return { status: 'answers_required' };
+    }
+
+    const existing = data.registrations.find((registration) => registration.eventId === event.id && registration.userId === currentUser.id);
+    if (existing && !['cancelled', 'rejected'].includes(existing.status)) {
+      return { status: 'duplicate', registration: existing, teamCode: existing.teamCode };
+    }
+
+    const now = new Date().toISOString();
+    const status = initialNativeRegistrationStatus(event, data.registrations);
+    if (status === 'closed') return { status: 'closed' };
+
+    let teamCode = details.teamCode;
+    let teamMembers: TeamMemberEntry[] = [];
+    if (details.participationType === 'team') {
+      if (!teamCode) {
+        teamCode = `TEAM-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
+      }
+      const leaderName = details.participant.fullName || currentUser.name;
+      teamMembers = [
+        {
+          name: leaderName,
+          email: details.participant.email || currentUser.email,
+          role: 'Team Leader',
+          status: 'leader',
+          invitedAt: now,
+        },
+        ...(details.teamMembers ?? []).map((m) => ({
+          name: m.name || m.email.split('@')[0],
+          email: m.email,
+          role: m.role || 'Member',
+          status: 'invited' as const,
+          invitedAt: now,
+        })),
+      ];
+    }
+
+    const registration: Registration = {
+      id: makeId('registration'),
+      eventId: event.id,
+      userId: currentUser.id,
+      kind: 'native',
+      status,
+      selfDeclaredAgeRuleMet: details.selfDeclaredAgeRuleMet ?? false,
+      createdAt: now,
+      updatedAt: now,
+      checkInToken: createCheckInToken(),
+      answers: Object.fromEntries((event.registration.questions ?? []).map((question) => [question.id, (answers[question.id] ?? '').trim()])),
+      participationType: details.participationType,
+      teamName: details.teamName,
+      teamCode,
+      teamMembers,
+      participantDetails: details.participant,
+    };
+
+    const position = status === 'waitlisted' ? waitlistPosition([...data.registrations, registration], registration.id) : null;
+    const title = status === 'registered' ? 'Registration confirmed · Pass issued' : status === 'pending' ? 'Registration submitted for review' : 'Waitlist joined';
+    const body = status === 'registered'
+      ? `You are registered for ${event.title}${details.participationType === 'team' ? ` with team "${details.teamName}" (Code: ${teamCode})` : ' as an individual participant'}.`
+      : status === 'pending'
+        ? `Organizer review is pending for your registration for ${event.title}.`
+        : `You are waitlisted for ${event.title}${position ? ` at position ${position}` : ''}.`;
+
+    const newNotifications: KnotNotification[] = [
+      {
+        id: makeId('notification'),
+        userId: currentUser.id,
+        eventId: event.id,
+        type: 'event' as const,
+        title,
+        body,
+        dedupeKey: `${event.id}-registration-${currentUser.id}-${registration.id}`,
+        readAt: null,
+        createdAt: now,
+      },
+    ];
+
+    if (details.participationType === 'team' && details.teamMembers) {
+      for (const teammate of details.teamMembers) {
+        const matchingUser = data.users.find((u) => u.email.toLowerCase() === teammate.email.toLowerCase());
+        if (matchingUser) {
+          newNotifications.push({
+            id: makeId('notification'),
+            userId: matchingUser.id,
+            eventId: event.id,
+            type: 'event' as const,
+            title: `Team invitation: ${details.teamName || 'New Team'}`,
+            body: `${currentUser.name} invited you to join team "${details.teamName || 'New Team'}" for ${event.title}. Team Code: ${teamCode}.`,
+            dedupeKey: `team-inv-${teamCode}-${matchingUser.id}`,
+            readAt: null,
+            createdAt: now,
+          });
+        }
+      }
+    }
+
+    setData((previous) => {
+      const next = {
+        ...previous,
+        registrations: [...previous.registrations, registration],
+        notifications: [...newNotifications, ...previous.notifications],
+        users: previous.users.map((u) => {
+          if (u.id === currentUser.id && details.participant.organizationOrCollege && !u.education) {
+            return { ...u, education: details.participant.organizationOrCollege };
+          }
+          return u;
+        }),
+      };
+      return status === 'registered' ? withInterestSignal(next, currentUser, event, 'participation') : next;
+    });
+
+    return { status, registration, teamCode };
+  };
+
+  const sendTeamInviteEmail: AppContextValue['sendTeamInviteEmail'] = (eventId, teamCode, teamName, recipientEmail, role) => {
+    const event = data.events.find((e) => e.id === eventId);
+    const eventTitle = event?.title || 'Knot Event';
+    const organizer = event?.organizerName || 'Organizer';
+    const senderName = currentUser?.name || 'A teammate';
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://knot.events';
+    const eventLink = `${origin}/events/${eventId}?teamCode=${teamCode}`;
+
+    const subject = `Invitation to join team "${teamName}" for ${eventTitle} on Knot`;
+    const emailBody = [
+      `Hi,`,
+      ``,
+      `${senderName} has invited you to join team "${teamName}" for ${eventTitle} (organized by ${organizer}) on Knot!`,
+      ``,
+      `Event: ${eventTitle}`,
+      `Team Name: ${teamName}`,
+      `Team Invite Code: ${teamCode}`,
+      role ? `Proposed Role: ${role}` : null,
+      ``,
+      `Click the link below to view the event and join this team:`,
+      `${eventLink}`,
+      ``,
+      `Or enter Team Code "${teamCode}" when registering.`,
+      ``,
+      `Best regards,`,
+      `${senderName} via Knot`,
+    ].filter(Boolean).join('\n');
+
+    const mailtoUrl = `mailto:${encodeURIComponent(recipientEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
+
+    const recipientUser = data.users.find((u) => u.email.toLowerCase() === recipientEmail.toLowerCase());
+    if (recipientUser) {
+      const now = new Date().toISOString();
+      const notif: KnotNotification = {
+        id: makeId('notification'),
+        userId: recipientUser.id,
+        eventId,
+        type: 'event',
+        title: `Team invitation: ${teamName}`,
+        body: `${senderName} invited you to join team "${teamName}" for ${eventTitle}. Use team code: ${teamCode}.`,
+        dedupeKey: `email-invite-${teamCode}-${recipientUser.id}-${Date.now()}`,
+        readAt: null,
+        createdAt: now,
+      };
+      setData((prev) => ({
+        ...prev,
+        notifications: [notif, ...prev.notifications],
+      }));
+    }
+
+    return {
+      success: true,
+      message: `Invitation email prepared for ${recipientEmail}.`,
+      mailtoUrl,
+    };
+  };
+
+  const joinTeamByCode: AppContextValue['joinTeamByCode'] = (event, teamCode, participant) => {
+    if (!currentUser) {
+      requireAuth(`/events/${event.id}?teamCode=${teamCode}`, 'join this team');
+      return { status: 'auth_required' };
+    }
+
+    const leaderReg = data.registrations.find(
+      (r) => r.eventId === event.id && r.teamCode && r.teamCode.toUpperCase() === teamCode.toUpperCase().trim() && !['cancelled', 'rejected'].includes(r.status)
+    );
+    if (!leaderReg) return { status: 'team_not_found' };
+
+    const maxSize = event.team.maxSize ?? 4;
+    const currentMembers = leaderReg.teamMembers ?? [];
+    if (currentMembers.filter((m) => m.status === 'leader' || m.status === 'accepted').length >= maxSize) {
+      return { status: 'team_full' };
+    }
+
+    const existing = data.registrations.find((r) => r.eventId === event.id && r.userId === currentUser.id && !['cancelled', 'rejected'].includes(r.status));
+    if (existing) return { status: 'already_registered', registration: existing };
+
+    const now = new Date().toISOString();
+    const updatedMembers: TeamMemberEntry[] = [
+      ...currentMembers.filter((m) => m.email.toLowerCase() !== currentUser.email.toLowerCase()),
+      {
+        name: participant.fullName || currentUser.name,
+        email: currentUser.email,
+        role: 'Team Member',
+        status: 'accepted',
+        invitedAt: now,
+      },
+    ];
+
+    const newReg: Registration = {
+      id: makeId('registration'),
+      eventId: event.id,
+      userId: currentUser.id,
+      kind: 'native',
+      status: leaderReg.status === 'waitlisted' ? 'waitlisted' : 'registered',
+      selfDeclaredAgeRuleMet: true,
+      createdAt: now,
+      updatedAt: now,
+      checkInToken: createCheckInToken(),
+      participationType: 'team',
+      teamName: leaderReg.teamName,
+      teamCode: leaderReg.teamCode,
+      teamMembers: updatedMembers,
+      participantDetails: participant,
+    };
+
+    setData((prev) => ({
+      ...prev,
+      registrations: [
+        ...prev.registrations.map((r) => (r.id === leaderReg.id ? { ...r, teamMembers: updatedMembers } : r)),
+        newReg,
+      ],
+      notifications: [
+        {
+          id: makeId('notification'),
+          userId: leaderReg.userId,
+          eventId: event.id,
+          type: 'event',
+          title: `New Teammate Joined: ${leaderReg.teamName}`,
+          body: `${participant.fullName || currentUser.name} has joined your team "${leaderReg.teamName}" for ${event.title}.`,
+          dedupeKey: `member-joined-${leaderReg.id}-${currentUser.id}`,
+          readAt: null,
+          createdAt: now,
+        },
+        {
+          id: makeId('notification'),
+          userId: currentUser.id,
+          eventId: event.id,
+          type: 'event',
+          title: `Team Joined: ${leaderReg.teamName}`,
+          body: `You joined team "${leaderReg.teamName}" for ${event.title}. Your pass is active!`,
+          dedupeKey: `team-joined-${newReg.id}`,
+          readAt: null,
+          createdAt: now,
+        },
+        ...prev.notifications,
+      ],
+    }));
+
+    return { status: 'joined', registration: newReg };
+  };
+
+  const joinCommunityWithProfile: AppContextValue['joinCommunityWithProfile'] = (communityId, profile) => {
+    if (!currentUser) {
+      requireAuth(`/communities/${communityId}`, 'join this community');
+      return;
+    }
+    const followed = data.follows.some((f) => f.userId === currentUser.id && f.communityId === communityId);
+    const now = new Date().toISOString();
+    setData((prev) => ({
+      ...prev,
+      follows: followed ? prev.follows : [...prev.follows, { userId: currentUser.id, communityId, createdAt: now }],
+      users: profile ? prev.users.map((u) => (u.id === currentUser.id ? {
+        ...u,
+        skills: profile.skills ? Array.from(new Set([...u.skills, ...profile.skills])) : u.skills,
+      } : u)) : prev.users,
+      notifications: [
+        {
+          id: makeId('notification'),
+          userId: currentUser.id,
+          eventId: null,
+          type: 'system',
+          title: 'Joined Community',
+          body: `Welcome to the community! You are now connected with members${profile?.role ? ` as ${profile.role}` : ''} and will receive updates on sessions and team formations.`,
+          dedupeKey: `community-join-${communityId}-${currentUser.id}`,
+          readAt: null,
+          createdAt: now,
+        },
+        ...prev.notifications,
+      ],
     }));
   };
 
@@ -1581,6 +1912,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     data, currentUser, filters, setFilters, cloudStatus, cloudError, cloudMutationError,
     unreadCount: currentUser ? data.notifications.filter((notification) => notification.userId === currentUser.id && !notification.readAt && (!notification.deliverAt || new Date(notification.deliverAt).getTime() <= Date.now())).length : 0,
     requireAuth, signUp, signIn, signOut, deleteAccount, updateProfile, toggleSave, recordInterestSignal, toggleFollow, participate,
+    registerWithDetails, sendTeamInviteEmail, joinTeamByCode, joinCommunityWithProfile,
     selfConfirmExternal, publishQuickEvent, createSubmission, importFederatedEvents, submitSubmission,
     approveSubmission, moderateSubmission, mergeSubmission, updateSourceRecord, updateVenue, setEventCancellation,
     reviewRegistration, cancelRegistration, scanCheckIn, checkInRegistration, sendAnnouncement, submitFeedback, createTeamPost, requestTeam, respondTeamRequest,

@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowLeft, ArrowUpRight, Bookmark, CalendarDays, Check, CheckCircle2, Clock3, Download, ExternalLink, Flag, Info, Link2, MapPin, Share2, ShieldCheck, Users, Video } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowUpRight, Bookmark, CalendarDays, Check, CheckCircle2, Clock3, Download, ExternalLink, Flag, Info, Link2, MapPin, Share2, ShieldCheck, Sparkles, Users, Video } from 'lucide-react';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { AgeBadge, FitBadge, SampleBadge } from '../components/Badges';
@@ -14,6 +14,8 @@ import type { KnotEvent, RegistrationStatus } from '../domain/types';
 import { useApp } from '../state/AppContext';
 import { isCloudProvider } from '../data/supabase/client';
 import { cloudGetEvent } from '../data/supabase/repository';
+
+import { UnstopRegistrationModal } from '../components/UnstopRegistrationModal';
 
 const EventEngagement = lazy(() => import('../components/EventEngagement').then((module) => ({ default: module.EventEngagement })));
 
@@ -32,6 +34,7 @@ export function EventPage() {
   const [answerErrors, setAnswerErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('');
   const [participationPending, setParticipationPending] = useState(false);
+  const [unstopModalOpen, setUnstopModalOpen] = useState(Boolean(searchParams.get('teamCode')));
   useEffect(() => {
     if (!isCloudProvider || snapshotEvent || !eventId) { setDirectEvent(null); setDirectLoading(false); setDirectError(''); return; }
     let active = true;
@@ -213,8 +216,11 @@ export function EventPage() {
           {event.status === 'cancelled' && <div className="eligibility-notice"><AlertTriangle size={18} /><span>This event was cancelled by its organizer. Existing records are preserved for reference.</span></div>}
           {decision === 'check_rule' && currentUser && <label className="check-rule"><input type="checkbox" checked={selfDeclared} onChange={(input) => setSelfDeclared(input.target.checked)} /><span>I confirm that I meet the age rule: <strong>{ageRuleLabel(event.ageRule)}</strong>. This is self-declared.</span></label>}
           {!registration && event.registration.kind === 'native' && (event.registration.questions?.length ?? 0) > 0 && <div className="registration-questions"><h3>Registration questions</h3><p>Your answers are private operational data for this event’s organizer, not public profile or behavioural analytics.</p>{event.registration.questions!.map((question) => <label key={question.id}>{question.label}{question.required && <em>Required</em>}{question.kind === 'long_text' ? <textarea rows={3} value={answers[question.id] ?? ''} onChange={(input) => setAnswers({ ...answers, [question.id]: input.target.value })} /> : question.kind === 'single_choice' ? <select value={answers[question.id] ?? ''} onChange={(input) => setAnswers({ ...answers, [question.id]: input.target.value })}><option value="">Choose an answer</option>{question.options.map((option) => <option key={option} value={option}>{option}</option>)}</select> : <input value={answers[question.id] ?? ''} onChange={(input) => setAnswers({ ...answers, [question.id]: input.target.value })} />}{answerErrors[question.id] && <small className="field-error">{answerErrors[question.id]}</small>}</label>)}</div>}
-          {registration ? <div className="registration-state">{['pending', 'waitlisted'].includes(registration.status) ? <Clock3 /> : <CheckCircle2 />}<div><strong>{registration.status === 'opened_externally' ? 'Registration page opened' : registration.status === 'self_confirmed_registered' ? 'Registration self-confirmed' : registration.status === 'registered' ? 'You’re registered' : nativeCopy?.title ?? registration.status}</strong><p>{registration.kind === 'external' ? 'External registration is completed on the original platform.' : nativeCopy?.body ?? 'Your native participation record is in My Plan.'}</p></div></div> : <>
-            {decision === 'cannot_join' || decision === 'needs_consent' || decision === 'not_open_yet' || decision === 'closed' ? <div className="eligibility-notice"><AlertTriangle size={18} /><span>{decision === 'cannot_join' ? 'This event’s age rule does not include your age band. You can still read its public details.' : decision === 'needs_consent' ? 'Guardian consent is required before participation.' : decision === 'not_open_yet' ? (event.registrationOpensAt && new Date(event.registrationOpensAt).getTime() > Date.now() ? `Registration opens ${formatEventDate(event.registrationOpensAt, true)}.` : 'Native minor participation is not open yet.') : 'Registration is currently closed.'}</span></div> : <button className="button button--primary button--full button--large" onClick={() => void register()} disabled={participationPending} aria-busy={participationPending}>{decision === 'auth_required' ? 'Sign in to register' : event.registration.kind === 'external' ? `Register on ${externalHost}` : decision === 'check_rule' ? 'Confirm & register' : 'Register on Knot'}<ArrowUpRight size={18} /></button>}
+          {registration ? <div className="registration-state">{['pending', 'waitlisted'].includes(registration.status) ? <Clock3 /> : <CheckCircle2 />}<div><strong>{registration.status === 'opened_externally' ? 'Registration page opened' : registration.status === 'self_confirmed_registered' ? 'Registration self-confirmed' : registration.status === 'registered' ? 'You’re registered' : nativeCopy?.title ?? registration.status}</strong><p>{registration.kind === 'external' ? 'External registration is completed on the original platform.' : nativeCopy?.body ?? 'Your native participation record is in My Plan.'}</p>{registration.teamName && <p style={{ marginTop: 6, fontWeight: 700, color: 'var(--primary-dark)', fontSize: '0.78rem' }}>Team: {registration.teamName} · Code: {registration.teamCode}</p>}<button type="button" className="button button--secondary button--full button--small" style={{ marginTop: 10 }} onClick={() => setUnstopModalOpen(true)}><Sparkles size={14} /> View Ticket & Team Dashboard</button></div></div> : <>
+            {decision === 'cannot_join' || decision === 'needs_consent' || decision === 'not_open_yet' || decision === 'closed' ? <div className="eligibility-notice"><AlertTriangle size={18} /><span>{decision === 'cannot_join' ? 'This event’s age rule does not include your age band. You can still read its public details.' : decision === 'needs_consent' ? 'Guardian consent is required before participation.' : decision === 'not_open_yet' ? (event.registrationOpensAt && new Date(event.registrationOpensAt).getTime() > Date.now() ? `Registration opens ${formatEventDate(event.registrationOpensAt, true)}.` : 'Native minor participation is not open yet.') : 'Registration is currently closed.'}</span></div> : <>
+              {event.registration.kind === 'native' && <button type="button" className="button button--accent button--full button--large" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} onClick={() => setUnstopModalOpen(true)}><Sparkles size={18} /> Register Now (Solo / Team)</button>}
+              <button className="button button--primary button--full button--large" onClick={() => void register()} disabled={participationPending} aria-busy={participationPending}>{decision === 'auth_required' ? 'Sign in to register' : event.registration.kind === 'external' ? `Register on ${externalHost}` : decision === 'check_rule' ? 'Confirm & register' : 'Register on Knot'}<ArrowUpRight size={18} /></button>
+            </>}
           </>}
           {canCancel && registration && <button className="button button--ghost button--full" disabled={participationPending} onClick={() => void cancel()}>Cancel {registration.status === 'waitlisted' ? 'waitlist entry' : registration.status === 'pending' ? 'registration request' : 'registration'}</button>}
           {registration?.kind === 'external' && registration.status === 'opened_externally' && <button className="button button--secondary button--full" disabled={participationPending} onClick={() => void confirmExternal()}>I completed external registration</button>}
@@ -230,6 +236,13 @@ export function EventPage() {
       <Suspense fallback={<div className="page-container"><p>Loading participation tools…</p></div>}><EventEngagement event={event} registration={registration} /></Suspense>
 
       {nextEvent && <section className="page-container next-event-section"><div className="section-heading"><div><span className="eyebrow">Keep the connection</span><h2>Next from {event.organizerName}</h2></div></div><div className="event-grid event-grid--single"><EventCard event={nextEvent} compact /></div></section>}
+
+      <UnstopRegistrationModal
+        event={event}
+        open={unstopModalOpen}
+        onClose={() => setUnstopModalOpen(false)}
+        initialTeamCode={searchParams.get('teamCode') || ''}
+      />
     </div>
   );
 }

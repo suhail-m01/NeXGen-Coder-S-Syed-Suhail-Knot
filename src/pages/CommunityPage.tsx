@@ -16,7 +16,7 @@ import type { TeamPost } from '../domain/types';
 
 export function CommunityPage() {
   const { communityId } = useParams();
-  const { currentUser, data, requireAuth, toggleFollow, createTeamPost, requestTeam, respondTeamRequest } = useApp();
+  const { currentUser, data, requireAuth, toggleFollow, joinCommunityWithProfile, createTeamPost, requestTeam, respondTeamRequest } = useApp();
   const communities = useMemo(() => communitiesFromEvents(data.events.filter((event) => (event.visibility ?? 'public') === 'public')), [data.events]);
   const community = communities.find((item) => item.id === communityId);
   const [tab, setTab] = useState<'events' | 'teams'>('events');
@@ -29,6 +29,10 @@ export function CommunityPage() {
   const [requestPost, setRequestPost] = useState<TeamPost | null>(null);
   const [requestNote, setRequestNote] = useState('');
   const [error, setError] = useState('');
+  const [joinModalOpen, setJoinModalOpen] = useState(false);
+  const [joinRole, setJoinRole] = useState('');
+  const [joinSkills, setJoinSkills] = useState<string[]>([]);
+  const [joinBio, setJoinBio] = useState('');
 
   if (!communityId) return <div className="page-container community-directory"><div className="page-heading"><div><span className="eyebrow">People worth returning to</span><h1>Communities on Knot</h1><p>Follow the organizers and groups behind events, then return for what they do next.</p></div><Link to="/search" className="button button--secondary">Explore all events <ArrowRight size={17} /></Link></div><div className="community-grid">{communities.map((item) => <CommunityCard key={item.id} community={item} />)}</div></div>;
   if (!community) return <div className="page-container"><EmptyState title="Community not found" body="It may have been removed, or the link may be incomplete." action={<Link className="button button--primary" to="/communities">Browse communities</Link>} /></div>;
@@ -52,7 +56,7 @@ export function CommunityPage() {
   };
 
   return <div className="community-page">
-    <div className="community-hero"><div className="page-container"><Link to="/communities" className="back-link"><ArrowLeft /> All communities</Link><div className="community-hero__layout"><div className="community-hero__avatar">{community.name.slice(0, 1)}</div><div><div className="community-hero__badges">{community.isSample && <SampleBadge />}<span>{locality?.name ?? 'Online & Bengaluru'}</span></div><h1>{community.name}</h1><p>{community.description}</p><div className="community-card__tags">{community.interests.map((interest) => <span key={interest}>{interest}</span>)}</div></div><button className={`button ${followed ? 'button--secondary' : 'button--accent'}`} onClick={() => toggleFollow(community.id)}>{followed ? <><Check /> Following</> : <><UserPlus /> Follow community</>}</button></div></div></div>
+    <div className="community-hero"><div className="page-container"><Link to="/communities" className="back-link"><ArrowLeft /> All communities</Link><div className="community-hero__layout"><div className="community-hero__avatar">{community.name.slice(0, 1)}</div><div><div className="community-hero__badges">{community.isSample && <SampleBadge />}<span>{locality?.name ?? 'Online & Bengaluru'}</span></div><h1>{community.name}</h1><p>{community.description}</p><div className="community-card__tags">{community.interests.map((interest) => <span key={interest}>{interest}</span>)}</div></div><button className={`button ${followed ? 'button--secondary' : 'button--accent'}`} onClick={() => { if (!followed) { if (!currentUser) { requireAuth(`/communities/${community.id}`, 'join this community'); return; } setJoinModalOpen(true); } else { toggleFollow(community.id); } }}>{followed ? <><Check /> Community Member</> : <><UserPlus /> Join Community</>}</button></div></div></div>
     <div className="page-container community-content"><div className="community-tabs"><button className={tab === 'events' ? 'active' : ''} onClick={() => setTab('events')}>Events <span>{upcoming.length}</span></button><button className={tab === 'teams' ? 'active' : ''} onClick={() => setTab('teams')}>Team formation <span>{teamEvents.length}</span></button></div>
       {tab === 'events' && (upcoming.length ? <div className="event-grid">{upcoming.map((event) => <EventCard key={event.id} event={event} />)}</div> : <EmptyState title="No upcoming events" body="Follow this community and check back when a new event is published." action={<Link className="button button--primary" to="/search">Explore other events</Link>} />)}
       {tab === 'teams' && <div className="teams-layout"><section><div className="section-mini-heading"><div><h2>Find teammates with intent</h2><p>Team posts are public to adults. Contact details are shared only with the counterpart after acceptance.</p></div>{activeTeamEvent && <button className="button button--primary button--small" onClick={openTeamForm}><Plus /> Create team post</button>}</div>
@@ -77,5 +81,66 @@ export function CommunityPage() {
       </div>}
     </div>
     {requestPost && <div className="modal-backdrop" role="presentation" onMouseDown={() => setRequestPost(null)}><div className="modal-card" role="dialog" aria-modal="true" aria-labelledby="team-request-title" onMouseDown={(event) => event.stopPropagation()}><span className="eyebrow">Join request</span><h2 id="team-request-title">Introduce yourself to {requestPost.displayName}</h2><p>Your note is visible to the team owner. Contact details stay private unless they accept.</p><textarea rows={4} value={requestNote} onChange={(event) => setRequestNote(event.target.value)} placeholder="What can you contribute, and what would you like to build?" />{error && <div className="form-error">{error}</div>}<div className="button-row"><button className="button button--primary" onClick={() => { try { requestTeam(requestPost.id, requestNote); setRequestPost(null); setRequestNote(''); setError(''); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not send request.'); } }}>Send request <ArrowRight /></button><button className="button button--ghost" onClick={() => setRequestPost(null)}>Cancel</button></div></div></div>}
+    {joinModalOpen && (
+      <div className="modal-backdrop" role="presentation" onMouseDown={() => setJoinModalOpen(false)}>
+        <div className="modal-card" role="dialog" aria-modal="true" aria-labelledby="join-community-title" onMouseDown={(e) => e.stopPropagation()}>
+          <span className="eyebrow">Community Membership</span>
+          <h2 id="join-community-title">Join {community.name}</h2>
+          <p>Connect with local builders, participate in community sessions, and find teammates for upcoming hackathons and events.</p>
+          <div className="form-grid" style={{ marginBottom: '1rem' }}>
+            <label>
+              Your Role / Headline
+              <input
+                value={joinRole}
+                onChange={(e) => setJoinRole(e.target.value)}
+                placeholder="e.g. Full-Stack Engineer, Product Designer, Student"
+              />
+            </label>
+          </div>
+          <fieldset className="interest-field">
+            <legend>Your Skills &amp; Interests</legend>
+            <div className="choice-chips">
+              {SKILLS.map((skill) => (
+                <button
+                  type="button"
+                  key={skill}
+                  className={joinSkills.includes(skill) ? 'selected' : ''}
+                  onClick={() => setJoinSkills((prev) => (prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill]))}
+                >
+                  {skill}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+          <label style={{ display: 'block', marginTop: '1rem' }}>
+            Bio / What you hope to collaborate on <span>Optional</span>
+            <textarea
+              rows={3}
+              value={joinBio}
+              onChange={(e) => setJoinBio(e.target.value)}
+              placeholder="Tell other community members what projects you're interested in building..."
+            />
+          </label>
+          <div className="button-row" style={{ marginTop: '1.25rem' }}>
+            <button
+              className="button button--primary"
+              onClick={() => {
+                joinCommunityWithProfile(community.id, {
+                  role: joinRole.trim() || undefined,
+                  skills: joinSkills.length ? joinSkills : undefined,
+                  bio: joinBio.trim() || undefined,
+                });
+                setJoinModalOpen(false);
+              }}
+            >
+              <Check size={16} /> Confirm &amp; Join Community
+            </button>
+            <button className="button button--ghost" onClick={() => setJoinModalOpen(false)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
   </div>;
 }

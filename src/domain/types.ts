@@ -289,6 +289,23 @@ export interface Session {
 
 export type RegistrationStatus = 'opened_externally' | 'self_confirmed_registered' | 'registered' | 'pending' | 'approved' | 'waitlisted' | 'rejected' | 'cancelled' | 'checked_in' | 'attended';
 
+export interface TeamMemberEntry {
+  name?: string;
+  email: string;
+  role?: string;
+  status: 'leader' | 'invited' | 'accepted' | 'declined';
+  invitedAt?: string;
+}
+
+export interface ParticipantProfileDetails {
+  fullName: string;
+  email: string;
+  phone?: string;
+  organizationOrCollege?: string;
+  graduationYearOrRole?: string;
+  city?: string;
+}
+
 export interface Registration {
   id: string;
   eventId: string;
@@ -305,6 +322,12 @@ export interface Registration {
   answers?: Record<string, string>;
   /** Aggregate referral-channel conversion; not an external registration proof. */
   referralCampaignId?: string | null;
+  /** Unstop-style registration metadata */
+  participationType?: 'solo' | 'team';
+  teamName?: string;
+  teamCode?: string;
+  teamMembers?: TeamMemberEntry[];
+  participantDetails?: ParticipantProfileDetails;
 }
 
 export interface SavedEvent {
