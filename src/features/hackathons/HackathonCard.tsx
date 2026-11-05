@@ -42,30 +42,60 @@ export function HackathonCard({ hackathon, context = 'web', compact = false, onG
     setError('');
     setMessage('');
     setHandoffUrl(null);
-    // Open in the user gesture before the network request so popup blockers do not block a valid handoff.
+
+    const targetUrl = hackathon.officialUrl;
+    if (!targetUrl) {
+      setError('Official website link is not available for this listing.');
+      return;
+    }
+
+    // Open in the user gesture before any async task so browser popup blockers do not block handoff.
     const popup = window.open('about:blank', '_blank');
     if (popup) popup.opener = null;
     setBusy(true);
+
     try {
-      const result = await recordHackathonInterest(hackathon.id, context);
-      if (currentUser && !result.saved) {
-        saveLocalHackathonInterest(currentUser.id, hackathon.id);
-        onSaved?.(hackathon.id);
+      let resolvedOfficialUrl = targetUrl;
+      try {
+        const result = await recordHackathonInterest(hackathon.id, context);
+        if (result?.officialUrl) {
+          resolvedOfficialUrl = result.officialUrl;
+        }
+        if (currentUser && !result?.saved) {
+          saveLocalHackathonInterest(currentUser.id, hackathon.id);
+          onSaved?.(hackathon.id);
+        }
+      } catch {
+        // Resilient fallback: if server interest tracking encounters a network or DB issue,
+        // persist interest locally on this device so the user registration handoff is never blocked.
+        if (currentUser) {
+          saveLocalHackathonInterest(currentUser.id, hackathon.id);
+          onSaved?.(hackathon.id);
+        }
       }
+
+      // Always deliver the user to the official site!
       if (popup && !popup.closed) {
-        popup.location.href = result.officialUrl;
+        popup.location.href = resolvedOfficialUrl;
         popup.focus();
       } else {
-        setHandoffUrl(result.officialUrl);
+        setHandoffUrl(resolvedOfficialUrl);
       }
-      if (currentUser) setMessage(result.saved ? 'Interested saved. Opening the official site.' : 'Interested saved on this device. Opening the official site.');
-      else {
+
+      if (currentUser) {
+        setMessage('Opening the official site. Interested saved to My Interests.');
+      } else {
         setMessage('Opening the official site. Sign in to keep this in My Interests.');
         onGuestContinue?.();
       }
-    } catch (caught) {
-      popup?.close();
-      setError(caught instanceof Error ? caught.message : 'Interest could not be recorded. Please retry.');
+    } catch {
+      // In case of unexpected interruption, guarantee handoff to targetUrl
+      if (popup && !popup.closed) {
+        popup.location.href = targetUrl;
+        popup.focus();
+      } else {
+        setHandoffUrl(targetUrl);
+      }
     } finally {
       setBusy(false);
     }
