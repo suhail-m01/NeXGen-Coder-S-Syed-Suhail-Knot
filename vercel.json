@@ -4,10 +4,10 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "crons": [
-    { "path": "/api/hackathons/run", "schedule": "0 */6 * * *" }
+    { "path": "/api/hackathons/run", "schedule": "0 0 * * *" }
   ],
   "headers": [
     {

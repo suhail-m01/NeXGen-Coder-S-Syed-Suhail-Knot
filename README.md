@@ -344,7 +344,7 @@ curl -X POST https://your-app.example/api/hackathons/run \\
   -H "Authorization: Bearer $CRON_SECRET"
 ```
 
-`vercel.json` schedules `/api/hackathons/run` every six hours. Vercel Cron runs on production deployments and supplies the configured secret as a Bearer token. The handler also rejects missing/incorrect secrets and cross-site triggers.
+`vercel.json` schedules `/api/hackathons/run` daily (`0 0 * * *`) for Vercel Hobby compatibility (can be set to `0 */6 * * *` on Pro). Vercel Cron runs on production deployments and supplies the configured secret as a Bearer token. The handler also rejects missing/incorrect secrets and cross-site triggers.
 
 Public API endpoints:
 
