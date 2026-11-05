@@ -37,7 +37,7 @@ export function hackathonQuery(filters: Partial<HackathonFilters>): string {
 export async function listHackathons(filters: Partial<HackathonFilters>, signal?: AbortSignal): Promise<HackathonListResponse> {
   const response = await fetch(`/api/hackathons${hackathonQuery(filters)}`, { headers: { Accept: 'application/json' }, signal });
   if (!response.ok) throw new Error(await errorMessage(response));
-  return response.json() as Promise<HackathonListResponse>;
+  return (await response.json()) as HackathonListResponse;
 }
 
 export async function listMyHackathonInterests(signal?: AbortSignal): Promise<Hackathon[]> {
@@ -66,7 +66,7 @@ export interface HackathonStatus {
 export async function getHackathonsStatus(signal?: AbortSignal): Promise<HackathonStatus> {
   const response = await fetch('/api/hackathons/status', { headers: { Accept: 'application/json' }, signal });
   if (!response.ok) throw new Error(await errorMessage(response));
-  return response.json() as Promise<HackathonStatus>;
+  return (await response.json()) as HackathonStatus;
 }
 
 export function reportHackathonUrl(hackathon: { id: string; title: string; sourceUrl: string }): string {

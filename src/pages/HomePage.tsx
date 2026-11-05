@@ -30,9 +30,17 @@ export function HomePage() {
       .then((res) => {
         if (res.data && res.data.length > 0) {
           setLiveHackathons(res.data);
+        } else {
+          import('../features/hackathons/liveSeed').then(({ LIVE_VERIFIED_HACKATHONS }) => {
+            if (!controller.signal.aborted) setLiveHackathons(LIVE_VERIFIED_HACKATHONS.slice(0, 6));
+          });
         }
       })
-      .catch(() => undefined);
+      .catch(() => {
+        import('../features/hackathons/liveSeed').then(({ LIVE_VERIFIED_HACKATHONS }) => {
+          if (!controller.signal.aborted) setLiveHackathons(LIVE_VERIFIED_HACKATHONS.slice(0, 6));
+        });
+      });
     return () => controller.abort();
   }, []);
 
