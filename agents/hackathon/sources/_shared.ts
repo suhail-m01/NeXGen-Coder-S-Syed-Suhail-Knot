@@ -183,9 +183,23 @@ export function mapApiRecord(record: Record<string, unknown>, document: SourceDo
   candidate.tags = Array.isArray(tags) ? tags.map(textValue).filter((tag): tag is string => Boolean(tag)) : textValue(tags)?.split(',').map((tag) => tag.trim()).filter(Boolean) ?? [];
   candidate.eligibility = textValue(firstValue(record, ['eligibility', 'who_can_join', 'whoCanJoin', 'audience']));
   candidate.teamSize = textValue(firstValue(record, ['teamSize', 'team_size', 'team']));
-  candidate.imageUrl = absolute(firstValue(record, ['imageUrl', 'image_url', 'image', 'banner', 'logo']), document.finalUrl);
-  candidate.officialUrl = absolute(firstValue(record, ['officialUrl', 'official_url', 'registrationUrl', 'registration_url', 'url', 'link']), document.finalUrl);
-  candidate.sourceUrl = absolute(firstValue(record, ['sourceUrl', 'source_url', 'url', 'link']), document.finalUrl) ?? document.finalUrl;
+  candidate.imageUrl = absolute(firstValue(record, ['imageUrl', 'image_url', 'image', 'banner', 'logo', 'cover_img', 'thumbnail_url', 'banner_image']), document.finalUrl);
+  let officialCandidate = firstValue(record, ['officialUrl', 'official_url', 'registrationUrl', 'registration_url', 'apply_url', 'website', 'website_url', 'event_url', 'url', 'link']);
+  let sourceCandidate = firstValue(record, ['sourceUrl', 'source_url', 'public_url', 'url', 'link']);
+  if (!officialCandidate && record.slug && typeof record.slug === 'string') {
+    if (document.sourcePlatform === 'Devfolio') officialCandidate = `https://${record.slug}.devfolio.co`;
+  }
+  if (!officialCandidate && record.public_url && typeof record.public_url === 'string') {
+    if (document.sourcePlatform === 'Unstop') officialCandidate = `https://unstop.com/${record.public_url}`;
+  }
+  if (sourceCandidate && typeof sourceCandidate === 'string' && !/^https?:\/\//i.test(sourceCandidate)) {
+    if (document.sourcePlatform === 'Unstop') sourceCandidate = `https://unstop.com/${sourceCandidate}`;
+  }
+  if (!sourceCandidate && record.slug && typeof record.slug === 'string') {
+    if (document.sourcePlatform === 'Devfolio') sourceCandidate = `https://devfolio.co/hackathons/${record.slug}`;
+  }
+  candidate.officialUrl = absolute(officialCandidate, document.finalUrl);
+  candidate.sourceUrl = absolute(sourceCandidate, document.finalUrl) ?? document.finalUrl;
   return validateRawHackathon(candidate);
 }
 
