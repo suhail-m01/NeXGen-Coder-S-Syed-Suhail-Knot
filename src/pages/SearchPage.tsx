@@ -1,4 +1,4 @@
-import { List, Map, MessageSquare, SlidersHorizontal, Sparkles } from 'lucide-react';
+import { List, Map, MessageSquare, SlidersHorizontal, Sparkles, X } from 'lucide-react';
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { DiscoveryInsights } from '../components/DiscoveryInsights';
 import { useSearchParams } from 'react-router-dom';
@@ -8,6 +8,7 @@ import { FilterBar } from '../components/FilterBar';
 import { LoadingButton } from '../components/LoadingButton';
 import { LocationControls } from '../components/LocationControls';
 import { SmartWhatsAppImporterModal } from '../components/SmartWhatsAppImporterModal';
+import { CategoryRibbon } from '../components/CategoryRibbon';
 import { ageBandLabel } from '../domain/age';
 import { defaultFilters } from '../domain/defaults';
 import { paginateDiscovery } from '../domain/discovery';
@@ -114,6 +115,38 @@ export function SearchPage() {
         <div><span className="eyebrow">Your event guide</span><h1>Discover what’s worth showing up for</h1><p>Public browsing, practical filters, original sources and no login wall.</p></div>
         <div className="view-toggle" aria-label="Results view"><button className={view === 'list' ? 'active' : ''} onClick={() => setView('list')}><List size={17} /> List</button><button className={view === 'map' ? 'active' : ''} onClick={() => setView('map')}><Map size={17} /> Map</button></div>
       </div>
+      <CategoryRibbon 
+        activeCategory={filters.eventType} 
+        onSelectCategory={(cat) => setFilters({ ...filters, eventType: cat })} 
+        className="search-category-ribbon" 
+      />
+      {filters.eventType !== 'all' && (
+        <div className="search-category-spotlight">
+          <div className="search-category-spotlight__info">
+            <span className="search-category-spotlight__badge">
+              Active Format: {filters.eventType.toUpperCase()}
+            </span>
+            <h3>
+              {filters.eventType === 'workshop' ? '🛠️ Hands-on Workshops & Masterclasses' :
+               filters.eventType === 'meetup' ? '☕ Tech Meetups & Developer Circles' :
+               filters.eventType === 'summit' ? '🌐 Leadership & Tech Summits' :
+               filters.eventType === 'conference' ? '🎤 Conferences & Keynotes' :
+               filters.eventType === 'hackathon' ? '🏆 Build Hackathons & Sprints' :
+               `${filters.eventType} Events`}
+            </h3>
+            <p>
+              Showing verified events in this format happening across Bengaluru and online.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="button button--secondary button--small"
+            onClick={() => setFilters({ ...filters, eventType: 'all' })}
+          >
+            <X size={14} /> Clear format filter
+          </button>
+        </div>
+      )}
       <LocationControls />
       <FilterBar detailed />
       <DiscoveryInsights />

@@ -38,10 +38,11 @@ interface ChatMessage {
 }
 
 const QUICK_PROMPTS = [
-  '🔥 Top Hackathons with Cash Prizes',
+  '🏆 Hackathons with Cash Prizes',
+  '🛠️ Hands-on Tech Workshops',
+  '☕ Developer Meetups & Coffee',
+  '🌐 Leadership Summits & Confs',
   '📍 Events near Koramangala & Indiranagar',
-  '🚀 Free AI & Builder Workshops',
-  '👥 Events with Open Team Formation',
 ];
 
 export function AIEventConcierge() {
@@ -78,6 +79,10 @@ export function AIEventConcierge() {
     const scoredResults: Array<{ item: ConciergeResultItem; score: number }> = [];
 
     const wantsHackathons = q.includes('hackathon') || q.includes('hack') || q.includes('coding');
+    const wantsWorkshops = q.includes('workshop') || q.includes('lab') || q.includes('class') || q.includes('bootcamp') || q.includes('masterclass');
+    const wantsMeetups = q.includes('meetup') || q.includes('coffee') || q.includes('circle') || q.includes('roundtable') || q.includes('discussion');
+    const wantsSummits = q.includes('summit') || q.includes('leadership') || q.includes('keynote');
+    const wantsConferences = q.includes('conference') || q.includes('conf') || q.includes('expo') || q.includes('forum');
     const wantsAI = q.includes('ai') || q.includes('ml') || q.includes('machine learning') || q.includes('intelligence') || q.includes('gemini');
     const wantsFree = q.includes('free') || q.includes('zero') || q.includes('no cost');
     const wantsPrizes = q.includes('prize') || q.includes('cash') || q.includes('award') || q.includes('money');
@@ -161,8 +166,24 @@ export function AIEventConcierge() {
       const metro = nearestMetroOrLandmark(event.venue?.localityId);
 
       if (wantsHackathons && event.eventType === 'hackathon') {
-        score += 30;
-        reasons.push('Hackathon format');
+        score += 35;
+        reasons.push('Hackathon build sprint');
+      }
+      if (wantsWorkshops && event.eventType === 'workshop') {
+        score += 45;
+        reasons.push('Hands-on technical workshop');
+      }
+      if (wantsMeetups && event.eventType === 'meetup') {
+        score += 45;
+        reasons.push('Local community meetup');
+      }
+      if (wantsSummits && event.eventType === 'summit') {
+        score += 45;
+        reasons.push('Leadership & tech summit');
+      }
+      if (wantsConferences && event.eventType === 'conference') {
+        score += 45;
+        reasons.push('Multi-track technical conference');
       }
       if (wantsFree && event.price.kind === 'free') {
         score += 20;

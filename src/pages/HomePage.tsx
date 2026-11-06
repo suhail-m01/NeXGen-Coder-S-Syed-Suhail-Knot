@@ -15,6 +15,7 @@ import type { Hackathon } from '../features/hackathons/types';
 import { LIVE_VERIFIED_HACKATHONS } from '../features/hackathons/liveSeed';
 import { communitiesFromEvents } from '../domain/communities';
 import { CommunityCard } from '../components/CommunityCard';
+import { CategoryRibbon } from '../components/CategoryRibbon';
 
 const HomeHackathons = lazy(() => import('../features/hackathons/HomeHackathons').then((module) => ({ default: module.HomeHackathons })));
 
@@ -69,6 +70,9 @@ export function HomePage() {
   const online = useMemo(() => sortEvents(filterEvents(publicEvents, { ...filters, mode: 'online', time: 'any', sort: 'soonest' }).filter((event) => new Date(event.startAt).getTime() - Date.now() <= 14 * 86_400_000), filters, currentUser), [publicEvents, filters, currentUser]);
   const fresh = useMemo(() => sortEvents(filterEvents(publicEvents, { ...filters, time: 'any' }).filter((event) => Date.now() - new Date(event.firstDiscoveredAt).getTime() <= 7 * 86_400_000), { ...filters, sort: 'newest' }, currentUser), [publicEvents, filters, currentUser]);
   const personalized = currentUser ? sortEvents(filterEvents(publicEvents, { ...filters, time: 'any', sort: 'best_fit' }).filter((event) => event.interests.some((interest) => currentUser.interests.includes(interest))), { ...filters, sort: 'best_fit' }, currentUser) : [];
+  const workshops = useMemo(() => sortEvents(publicEvents.filter((e) => e.eventType === 'workshop'), filters, currentUser), [publicEvents, filters, currentUser]);
+  const meetups = useMemo(() => sortEvents(publicEvents.filter((e) => e.eventType === 'meetup'), filters, currentUser), [publicEvents, filters, currentUser]);
+  const summitsAndConfs = useMemo(() => sortEvents(publicEvents.filter((e) => e.eventType === 'summit' || e.eventType === 'conference'), filters, currentUser), [publicEvents, filters, currentUser]);
   const communities = useMemo(() => {
     const list = communitiesFromEvents(data.events.filter((event) => (event.visibility ?? 'public') === 'public'));
     const real = list.filter((c) => !c.isSample);
@@ -202,9 +206,13 @@ export function HomePage() {
       </section>
 
       <div className="home-content">
+        <CategoryRibbon className="home-category-ribbon" />
         <FilterBar />
         {hackathonsEnabled && <Suspense fallback={null}><HomeHackathons /></Suspense>}
         {section('Happening soon near you', `Within ${filters.radiusKm} km of ${locality?.name ?? 'you'}`, upcoming)}
+        {workshops.length > 0 && section('Hands-on Workshops & Masterclasses', 'Build practical skills with real engineers', workshops, '/search?type=workshop')}
+        {meetups.length > 0 && section('Tech Meetups & Builder Circles', 'Neighborhood coffee, code & conversations', meetups, '/search?type=meetup')}
+        {summitsAndConfs.length > 0 && section('Conferences & Leadership Summits', 'Keynotes, executive panels & annual gatherings', summitsAndConfs, '/search?type=summit')}
         {section('Registration closing soon', 'Decide before the door closes', closing, '/search?sort=closing')}
         {currentUser && personalized.length > 0 && section(`Because you like ${currentUser.interests[0] ?? 'these topics'}`, 'Shaped by your explicit interests', personalized, '/search?sort=best_fit')}
         {section('New to Knot this week', 'Freshly discovered and published', fresh, '/search?sort=newest')}

@@ -4315,3 +4315,201 @@ input[type="range"] { width: 100%; accent-color: var(--primary); }
   margin-top: 2px;
 }
 
+/* ==========================================================================
+   PROBLEM STATEMENT CATEGORY DISCOVERY RIBBON & SPOTLIGHT
+   (Hackathons, Workshops, Meetups, Conferences, Summits, Communities)
+   ========================================================================== */
+.category-ribbon-container {
+  margin: 1rem 0 1.5rem 0;
+}
+
+.home-category-ribbon {
+  margin-top: 1.5rem;
+}
+
+.search-category-ribbon {
+  margin: 0.75rem 0 1.25rem 0;
+}
+
+.category-ribbon-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.65rem;
+  padding: 0 0.25rem;
+}
+
+.category-ribbon-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--primary);
+}
+
+.category-sparkle-icon {
+  color: var(--primary);
+}
+
+.category-ribbon-hint {
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.category-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  overflow-x: auto;
+  padding: 0.25rem 0.25rem 0.65rem 0.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.category-ribbon::-webkit-scrollbar {
+  height: 4px;
+}
+
+.category-ribbon::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+.category-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.95rem;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(39, 28, 66, 0.04);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+}
+
+.category-chip:hover {
+  transform: translateY(-1px);
+  border-color: var(--primary);
+  color: var(--primary);
+  box-shadow: 0 4px 12px rgba(103, 80, 199, 0.12);
+}
+
+.category-chip__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  transition: color 0.18s ease;
+}
+
+.category-chip:hover .category-chip__icon {
+  color: var(--primary);
+}
+
+.category-chip__count {
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  transition: all 0.18s ease;
+}
+
+/* Category Active State */
+.category-chip.is-active {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 6px 18px rgba(103, 80, 199, 0.28);
+}
+
+.category-chip.is-active .category-chip__icon {
+  color: #ffffff;
+}
+
+.category-chip.is-active .category-chip__count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+/* Color Accent Variations for Visual Depth */
+.category-item--hackathon.is-active {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  border-color: #4f46e5;
+}
+
+.category-item--workshop.is-active {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  border-color: #0369a1;
+}
+
+.category-item--meetup.is-active {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  border-color: #b45309;
+}
+
+.category-item--summit.is-active {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  border-color: #6d28d9;
+}
+
+.category-item--conference.is-active {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  border-color: #047857;
+}
+
+.category-item--community.is-active {
+  background: linear-gradient(135deg, #db2777 0%, #be185d 100%);
+  border-color: #be185d;
+}
+
+/* Search Category Spotlight */
+.search-category-spotlight {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #f8f6fd 0%, #f1ecfa 100%);
+  border: 1px solid #ddd6fe;
+  border-radius: var(--radius-sm);
+  padding: 1.15rem 1.35rem;
+  margin-bottom: 1.25rem;
+  gap: 1rem;
+}
+
+.search-category-spotlight__info h3 {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0.25rem 0 0.15rem 0;
+}
+
+.search-category-spotlight__info p {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+.search-category-spotlight__badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--primary);
+  background: #ffffff;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #e2d9f3;
+}
+
+

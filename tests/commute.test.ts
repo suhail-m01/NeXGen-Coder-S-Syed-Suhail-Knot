@@ -73,3 +73,4 @@ test('addSquad prepends custom organizer/attendee squads', () => {
   const squads = addSquad(eventId, newSquad);
   assert.equal(squads[0].id, 'squad-custom-test');
 });
+

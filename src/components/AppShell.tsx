@@ -1,4 +1,4 @@
-import { Bell, Bookmark, CalendarDays, ChevronDown, CircleUserRound, Compass, Home, Info, LayoutDashboard, LogOut, Map, Menu, Plus, Search, ShieldCheck, Sparkles, Users, X } from 'lucide-react';
+import { Bell, Bookmark, CalendarDays, ChevronDown, CircleUserRound, Coffee, Compass, Globe2, Home, Info, LayoutDashboard, LogOut, Map, Menu, Plus, Search, ShieldCheck, Sparkles, Users, Wrench, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useApp } from '../state/AppContext';
@@ -45,8 +45,11 @@ export function AppShell() {
         <div className="site-header__inner">
           <Logo />
           <nav className="desktop-nav" aria-label="Main navigation">
-            <NavLink to="/search">Discover</NavLink>
+            <NavLink to="/search" end>Discover</NavLink>
             {hackathonsEnabled && <NavLink to="/hackathons">Hackathons</NavLink>}
+            <NavLink to="/search?type=workshop">Workshops</NavLink>
+            <NavLink to="/search?type=meetup">Meetups</NavLink>
+            <NavLink to="/search?type=summit">Summits</NavLink>
             <NavLink to="/communities">Communities</NavLink>
             <NavLink to="/search?view=map">Map</NavLink>
             <NavLink to="/add">Instant Add</NavLink>
@@ -76,8 +79,11 @@ export function AppShell() {
           <button type="button" className="mobile-menu-link-btn" onClick={() => { setMenuOpen(false); setWhatsappModalOpen(true); }}>
             <Sparkles size={18} /> WhatsApp / Flyer Importer
           </button>
-          <NavLink to="/search"><Search size={18} /> Discover events</NavLink>
+          <NavLink to="/search"><Search size={18} /> Discover all</NavLink>
           {hackathonsEnabled && <NavLink to="/hackathons"><Compass size={18} /> Hackathons</NavLink>}
+          <NavLink to="/search?type=workshop"><Wrench size={18} /> Workshops</NavLink>
+          <NavLink to="/search?type=meetup"><Coffee size={18} /> Meetups</NavLink>
+          <NavLink to="/search?type=summit"><Globe2 size={18} /> Summits &amp; Confs</NavLink>
           <NavLink to="/communities"><Users size={18} /> Communities</NavLink>
           <NavLink to="/search?view=map"><Map size={18} /> Map view</NavLink>
           <NavLink to="/add"><Plus size={18} /> Instant Add</NavLink>
