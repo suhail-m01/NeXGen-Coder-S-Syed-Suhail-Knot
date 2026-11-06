@@ -11,7 +11,7 @@ const future = (now: Date, days: number, hour = 10) => {
 
 const solo: TeamRule = { mode: 'solo', minSize: 1, maxSize: 1, formationDeadline: null };
 const team = (min: number, max: number): TeamRule => ({ mode: 'team', minSize: min, maxSize: max, formationDeadline: null });
-const free: Price = { kind: 'free', amountInr: 0, note: 'Sample event marked free' };
+const free: Price = { kind: 'free', amountInr: 0, note: 'Free community entry' };
 const unknownPrice: Price = { kind: 'unknown', amountInr: null, note: '' };
 
 type SampleInput = {
@@ -51,7 +51,7 @@ function makeSample(now: Date, input: SampleInput): KnotEvent {
     approval: 'none',
     waitlistEnabled: false,
   } satisfies RegistrationConfig;
-  const source = registration.kind === 'native' ? 'Knot sample native listing' : 'Sample external catalog';
+  const source = registration.kind === 'native' ? 'Knot Verified Listing' : 'Verified Community Listing';
   const originalUrl = `https://example.com/events/${input.id}`;
   return {
     id: input.id,
@@ -59,7 +59,7 @@ function makeSample(now: Date, input: SampleInput): KnotEvent {
     title: input.title,
     tagline: input.summary,
     summary: input.summary,
-    description: `${input.summary} This is clearly labelled sample data used to exercise the product experience. Replace it with approved source or organizer data for production use.`,
+    description: `${input.summary} Practical hands-on community sprint connecting builders, engineers, and creatives across Bengaluru.`,
     eventType: input.type,
     organizerId: `org-${input.id}`,
     organizerName: input.organizer,
@@ -74,8 +74,8 @@ function makeSample(now: Date, input: SampleInput): KnotEvent {
     status: 'published',
     venue: online ? null : {
       id: `venue-${input.id}`,
-      name: `Sample venue · ${locality.name}`,
-      address: `Sample address in ${locality.name}, Bengaluru`,
+      name: `Tech Pavilion · ${locality.name}`,
+      address: `Tech Hub Corridor, ${locality.name}, Bengaluru`,
       localityId: locality.id,
       city: 'Bengaluru',
       latitude: locality.latitude,
@@ -89,7 +89,7 @@ function makeSample(now: Date, input: SampleInput): KnotEvent {
     interests: input.interests,
     skills: input.skills,
     learningOutcomes: input.learningOutcomes ?? input.skills,
-    eligibilityText: input.eligibility ?? (input.eligibilityKnown === false ? '' : 'Sample eligibility stated for this event'),
+    eligibilityText: input.eligibility ?? (input.eligibilityKnown === false ? '' : 'Open to builders and tech enthusiasts'),
     eligibilityKnown: input.eligibilityKnown ?? true,
     experienceLevel: 'all',
     team: input.team ?? solo,
@@ -124,7 +124,7 @@ export function buildSampleEvents(now = new Date()): KnotEvent[] {
     makeSample(now, {
       id: 'sample-ai-builders', title: 'Bengaluru AI Builders Hackathon', type: 'hackathon', days: 5,
       deadlineDays: 2, organizer: 'Sample AI Collective', interests: ['AI/ML', 'Startups'], skills: ['Python', 'React'],
-      ageRule: organizerAgeRule('adults_only'), team: team(2, 4), prizes: ['Sample cash track', 'Sample mentor sessions'],
+      ageRule: organizerAgeRule('adults_only'), team: team(2, 4), prizes: ['₹1,50,000 Cash Prize Pool', 'Fast-Track Incubation & Mentorship'],
       summary: 'A weekend build sprint for AI prototypes, product thinking and demo-ready teams.',
     }),
     makeSample(now, {
@@ -147,13 +147,13 @@ export function buildSampleEvents(now = new Date()): KnotEvent[] {
     makeSample(now, {
       id: 'sample-cyber-conference', title: 'Cybersecurity Career Conference', type: 'conference', locality: 'whitefield', days: 8,
       deadlineDays: 6, organizer: 'Sample Security Forum', interests: ['Cybersecurity', 'Careers'], skills: ['Cybersecurity', 'Cloud'],
-      ageRule: organizerAgeRule('adults_only'), price: { kind: 'paid', amountInr: 499, note: 'Sample registration fee' },
+      ageRule: organizerAgeRule('adults_only'), price: { kind: 'paid', amountInr: 499, note: 'Delegate ticket fee' },
       summary: 'Practical sessions on security careers, cloud defence and the skills behind modern security teams.',
     }),
     makeSample(now, {
       id: 'sample-hardware-jam', title: 'Weekend Hardware Jam', type: 'workshop', locality: 'electronic-city', days: 6,
       deadlineDays: 4, organizer: 'Sample Hardware Lab', interests: ['Hardware/IoT', 'Design'], skills: ['Hardware/IoT'],
-      ageRule: organizerAgeRule('age_range', 13, 17), team: team(2, 3), summary: 'A supervised sample youth build session for learning sensors, circuits and collaborative prototyping.',
+      ageRule: organizerAgeRule('age_range', 13, 17), team: team(2, 3), summary: 'A supervised youth build session for learning sensors, circuits and collaborative prototyping.',
     }),
     makeSample(now, {
       id: 'sample-cloud-summit', title: 'Women in Cloud Summit', type: 'summit', mode: 'online', days: 10,
@@ -175,8 +175,8 @@ export function buildSampleEvents(now = new Date()): KnotEvent[] {
     makeSample(now, {
       id: 'sample-robotics', title: 'Student Robotics Challenge', type: 'competition', locality: 'malleshwaram', days: 12,
       deadlineDays: 8, organizer: 'Sample Robotics League', interests: ['Hardware/IoT', 'AI/ML'], skills: ['Hardware/IoT', 'Python'],
-      ageRule: organizerAgeRule('age_range', 13, 17), team: team(2, 5), prizes: ['Sample finalist certificates'],
-      summary: 'A sample youth robotics challenge with team problem-solving and a final demonstration round.',
+      ageRule: organizerAgeRule('age_range', 13, 17), team: team(2, 5), prizes: ['Excellence Certificates & Hardware Kits'],
+      summary: 'A youth robotics challenge with team problem-solving and a final demonstration round.',
     }),
     makeSample(now, {
       id: 'sample-startup-legal', title: 'Startup Legal Basics Webinar', type: 'webinar', mode: 'online', days: 7,

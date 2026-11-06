@@ -231,7 +231,7 @@ export function SmartWhatsAppImporterModal({ open, onClose }: SmartWhatsAppImpor
           {activeTab === 'text' ? (
             <div className="whatsapp-input-section">
               <div className="sample-chips-row">
-                <span>Try Realistic Samples:</span>
+                <span>Quick Test Templates:</span>
                 <button
                   type="button"
                   className="sample-chip"

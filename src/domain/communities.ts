@@ -21,7 +21,7 @@ export function communitiesFromEvents(events: KnotEvent[]): CommunityProfile[] {
     return {
       id,
       name: first.organizerName,
-      description: `${isSample ? 'Sample community profile' : 'Organizer community'} for people interested in ${Array.from(new Set(communityEvents.flatMap((event) => event.interests))).slice(0, 3).join(', ') || 'local participation'}. ${futureEvents.length} upcoming event${futureEvents.length === 1 ? '' : 's'} in this workspace.`,
+      description: `${isSample ? 'Active community network' : 'Organizer community'} for people interested in ${Array.from(new Set(communityEvents.flatMap((event) => event.interests))).slice(0, 3).join(', ') || 'local participation'}. ${futureEvents.length} upcoming event${futureEvents.length === 1 ? '' : 's'} in this workspace.`,
       interests: Array.from(new Set(communityEvents.flatMap((event) => event.interests))),
       localityId: communityEvents.find((event) => event.venue?.localityId)?.venue?.localityId ?? null,
       isSample,

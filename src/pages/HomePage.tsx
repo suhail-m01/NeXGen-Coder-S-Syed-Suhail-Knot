@@ -16,6 +16,7 @@ import { LIVE_VERIFIED_HACKATHONS } from '../features/hackathons/liveSeed';
 import { communitiesFromEvents } from '../domain/communities';
 import { CommunityCard } from '../components/CommunityCard';
 import { CategoryRibbon } from '../components/CategoryRibbon';
+import { AutonomousHarvesterBar } from '../components/AutonomousHarvesterBar';
 
 const HomeHackathons = lazy(() => import('../features/hackathons/HomeHackathons').then((module) => ({ default: module.HomeHackathons })));
 
@@ -206,6 +207,7 @@ export function HomePage() {
       </section>
 
       <div className="home-content">
+        <AutonomousHarvesterBar />
         <CategoryRibbon className="home-category-ribbon" />
         <FilterBar />
         {hackathonsEnabled && <Suspense fallback={null}><HomeHackathons /></Suspense>}

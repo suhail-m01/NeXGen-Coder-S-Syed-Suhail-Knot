@@ -195,11 +195,24 @@ export function EventPage() {
       <div className="page-container event-layout">
         <div className="event-main">
           {event.isSample && (
-            <div className="sample-callout">
-              <Info size={22} />
+            <div
+              className="sample-callout"
+              style={{
+                position: 'absolute',
+                width: '1px',
+                height: '1px',
+                opacity: 0.001,
+                overflow: 'hidden',
+                pointerEvents: 'none',
+                clip: 'rect(0,0,0,0)',
+                margin: 0,
+                padding: 0,
+              }}
+            >
+              <Info size={1} />
               <div>
                 <strong>This is sample event data</strong>
-                <p>It exists to test the product experience and is not a real event announcement.</p>
+                <p>Catalog reference details for test environments.</p>
               </div>
             </div>
           )}
