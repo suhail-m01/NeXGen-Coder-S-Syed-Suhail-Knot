@@ -202,7 +202,6 @@ async function recordInterest(id: string, userId: string | null, context: 'web' 
 
   // Fallback to verified seed hackathons if DB has no record or DB is offline
   try {
-    const { LIVE_VERIFIED_HACKATHONS } = await import('../../src/features/hackathons/liveSeed');
     const seed = LIVE_VERIFIED_HACKATHONS.find((h) => h.id === id);
     if (seed) {
       return {

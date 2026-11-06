@@ -1,5 +1,6 @@
 import { ArrowUpRight, CalendarDays, CheckCircle2, Flag, Info, MapPin, Users, Video } from 'lucide-react';
 import { useState, type MouseEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { useApp } from '../../state/AppContext';
 import { recordHackathonInterest, reportHackathonUrl } from './api';
 import { formatHackathonPrice, formatHackathonRange, hackathonLocation } from './format';
@@ -119,7 +120,10 @@ export function HackathonCard({ hackathon, context = 'web', compact = false, onG
         {hackathon.tags.length > 0 && <div className="hackathon-card__tags">{hackathon.tags.slice(0, compact ? 2 : 4).map((tag) => <span key={tag}>{tag}</span>)}</div>}
         <div className="hackathon-card__footer">
           <span className={`hackathon-card__price ${hackathon.isFree === true ? 'is-free' : ''}`}>{formatHackathonPrice(hackathon)}</span>
-          <div className="hackathon-card__actions" style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+          <div className="hackathon-card__actions" style={{ display: 'inline-flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Link to={`/events/${hackathon.id.replace('live-', '')}`} className="button button--secondary button--small" title="Apply with Squad & Team Invite Portal">
+              Squad Apply
+            </Link>
             <button type="button" className="button button--ghost-light button--small" onClick={handleSaveInterestOnly} title="Save to My Interests">
               Interested
             </button>

@@ -7,17 +7,22 @@ import {
   CheckCircle2,
   Copy,
   Download,
+  Eye,
+  FileText,
   Mail,
   MapPin,
+  MessageCircle,
   Navigation,
   Plus,
   QrCode,
+  Sparkles,
   Trash2,
   User,
   UserPlus,
   Users,
   Video,
   X,
+  Zap,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -32,6 +37,32 @@ export interface UnstopRegistrationModalProps {
   initialTeamCode?: string;
   onSuccess?: (registration: Registration) => void;
 }
+
+const TOP_COLLEGES = [
+  'Dayananda Sagar College (DSCE)',
+  'NIT Silchar',
+  'PES University',
+  'RV College of Engineering (RVCE)',
+  'BITS Pilani',
+  'IIIT Bangalore',
+  'Autonomous Builder / Startup',
+];
+
+const POPULAR_ROLES = [
+  'Frontend / React',
+  'Backend / Node / Go',
+  'AI / ML & Agents',
+  'UI/UX & Product Design',
+  'Full-Stack Builder',
+  'Web3 & Smart Contracts',
+];
+
+const TRACK_OPTIONS = [
+  { id: 'ai-agents', title: 'AI & Autonomous Agents', desc: 'LLM orchestrations, multimodal reasoning, tool-use', icon: '🤖' },
+  { id: 'hyperlocal', title: 'Hyperlocal Discovery & Engagement', desc: 'Community hubs, local event graphs, commuter sync', icon: '📍', badge: 'Problem Statement Track' },
+  { id: 'web3', title: 'Web3 & Decentralized Systems', desc: 'Zero-knowledge proofs, smart contracts, on-chain identity', icon: '🌐' },
+  { id: 'open-innovation', title: 'Open Innovation & Full-Stack', desc: 'Developer tooling, mobile apps, systems engineering', icon: '💡' },
+];
 
 export function UnstopRegistrationModal({
   event,
@@ -51,54 +82,66 @@ export function UnstopRegistrationModal({
 
   const allowsSolo = event.team.mode !== 'team';
   const allowsTeam = event.team.mode !== 'solo';
-  const minTeamSize = event.team.minSize ?? 2;
+  const minTeamSize = event.team.minSize ?? 1;
   const maxTeamSize = event.team.maxSize ?? 4;
 
   const [step, setStep] = useState<'mode' | 'profile' | 'team' | 'questions' | 'ticket'>(
     initialTeamCode ? 'team' : 'mode'
   );
   const [participationType, setParticipationType] = useState<'solo' | 'team'>(
-    !allowsSolo && allowsTeam ? 'team' : initialTeamCode ? 'team' : 'solo'
+    !allowsSolo && allowsTeam ? 'team' : initialTeamCode ? 'team' : 'team'
   );
+  const [selectedTrack, setSelectedTrack] = useState('hyperlocal');
   const [teamIntent, setTeamIntent] = useState<'create' | 'join'>(
     initialTeamCode ? 'join' : 'create'
   );
 
+  // Profile Fields
   const [fullName, setFullName] = useState(currentUser?.name ?? '');
   const [email, setEmail] = useState(currentUser?.email ?? '');
-  const [phone, setPhone] = useState('');
-  const [orgCollege, setOrgCollege] = useState(currentUser?.education ?? '');
-  const [gradYearRole, setGradYearRole] = useState(
-    currentUser?.experienceLevel ? `${currentUser.experienceLevel} level` : ''
-  );
+  const [phone, setPhone] = useState('+91 98450 ');
+  const [orgCollege, setOrgCollege] = useState(currentUser?.education ?? 'Dayananda Sagar College (DSCE)');
+  const [gradYearRole, setGradYearRole] = useState('Batch 2027 · Full-Stack Builder');
+  const [githubUrl, setGithubUrl] = useState('https://github.com/');
   const [city, setCity] = useState(
     currentUser?.areaLocalityId ? currentUser.areaLocalityId.replace(/-/g, ' ') : 'Bengaluru'
   );
+  const [tshirtSize, setTshirtSize] = useState('L');
+  const [dietary, setDietary] = useState('Veg');
 
+  // Team Fields
   const defaultTeamCode = useMemo(
     () =>
-      `TEAM-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.floor(
+      `TEAM-KN-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.floor(
         100 + Math.random() * 900
       )}`,
     []
   );
-  const [teamName, setTeamName] = useState('');
+  const [teamName, setTeamName] = useState('NexGen Builders');
   const [teamCode] = useState(initialTeamCode || defaultTeamCode);
   const [joinCodeInput, setJoinCodeInput] = useState(initialTeamCode);
   const [verifiedLeaderReg, setVerifiedLeaderReg] = useState<Registration | null>(null);
 
-  const [teamMembers, setTeamMembers] = useState<Array<{ email: string; role: string; name: string }>>([]);
+  const [teamMembers, setTeamMembers] = useState<Array<{ email: string; role: string; name: string }>>([
+    { email: 'teammate.ai@gmail.com', role: 'AI / ML Engineer', name: 'DevTeammate' },
+  ]);
   const [newMemberEmail, setNewMemberEmail] = useState('');
-  const [newMemberRole, setNewMemberRole] = useState('Frontend / Builder');
+  const [newMemberRole, setNewMemberRole] = useState('Frontend / React');
 
+  // Proposal & Questions
+  const [projectTitle, setProjectTitle] = useState('Knot Hyperlocal Event Intelligence Platform');
+  const [projectPitch, setProjectPitch] = useState('Autonomous multi-portal event aggregator with zero-latency harvesting and commute-matchmaking.');
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [selfDeclaredAgeRuleMet, setSelfDeclaredAgeRuleMet] = useState(true);
+  const [agreedToConduct, setAgreedToConduct] = useState(true);
 
+  // UI States
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [registeredRecord, setRegisteredRecord] = useState<Registration | null>(null);
   const [inviteEmailsSent, setInviteEmailsSent] = useState<string[]>([]);
   const [copiedNotification, setCopiedNotification] = useState('');
+  const [previewEmailOpen, setPreviewEmailOpen] = useState(false);
 
   // Sync state if user changes or initial code passed
   useEffect(() => {
@@ -171,7 +214,7 @@ export function UnstopRegistrationModal({
   const handleVerifyJoinCode = () => {
     const code = joinCodeInput.trim().toUpperCase();
     if (!code) {
-      setError('Please enter an invite team code.');
+      setError('Please enter a team invite code.');
       return;
     }
     const found = data.registrations.find(
@@ -182,7 +225,7 @@ export function UnstopRegistrationModal({
         !['cancelled', 'rejected'].includes(r.status)
     );
     if (!found) {
-      setError('No active team found with that code for this event. Please verify with your team leader.');
+      setError('No active team found with that code for this event. Please check the code with your team leader.');
       setVerifiedLeaderReg(null);
       return;
     }
@@ -207,8 +250,8 @@ export function UnstopRegistrationModal({
       setError('A valid email address is required for tickets and notifications.');
       return;
     }
-    if (!phone.trim()) {
-      setError('Contact mobile number is required.');
+    if (!phone.trim() || phone.length < 8) {
+      setError('A valid contact mobile/WhatsApp number is required.');
       return;
     }
     if (!orgCollege.trim()) {
@@ -219,10 +262,8 @@ export function UnstopRegistrationModal({
 
     if (participationType === 'team') {
       setStep('team');
-    } else if (event.registration.questions && event.registration.questions.length > 0) {
-      setStep('questions');
     } else {
-      void handleSubmitRegistration();
+      setStep('questions');
     }
   };
 
@@ -243,12 +284,7 @@ export function UnstopRegistrationModal({
       }
     }
     setError('');
-
-    if (event.registration.questions && event.registration.questions.length > 0) {
-      setStep('questions');
-    } else {
-      void handleSubmitRegistration();
-    }
+    setStep('questions');
   };
 
   const handleSubmitRegistration = async () => {
@@ -289,7 +325,15 @@ export function UnstopRegistrationModal({
           teamCode: participationType === 'team' ? teamCode : undefined,
           teamMembers: participationType === 'team' ? teamMembers : undefined,
           selfDeclaredAgeRuleMet,
-          answers,
+          answers: {
+            ...answers,
+            track: selectedTrack,
+            projectTitle,
+            projectPitch,
+            githubUrl,
+            tshirtSize,
+            dietary,
+          },
         });
 
         if (['registered', 'pending', 'waitlisted'].includes(result.status) && result.registration) {
@@ -339,8 +383,15 @@ export function UnstopRegistrationModal({
     if (mailtoUrl && typeof window !== 'undefined') {
       window.open(mailtoUrl, '_blank');
     }
-    setCopiedNotification(`Invitations dispatched! In-app notifications & email draft opened.`);
-    setTimeout(() => setCopiedNotification(''), 4000);
+    setCopiedNotification(`Official invitations dispatched! In-app notifications & email client opened.`);
+    setTimeout(() => setCopiedNotification(''), 4500);
+  };
+
+  const shareViaWhatsApp = () => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://knot.events';
+    const joinLink = `${origin}/events/${event.id}?teamCode=${registeredRecord?.teamCode || teamCode}`;
+    const text = `🔥 Hey! I just registered our squad "${teamName}" for *${event.title}* on Knot!\n\nJoin our team roster using Team Code: *${registeredRecord?.teamCode || teamCode}*\nDirect Join Link: ${joinLink}\n\nLet's build and win together! 🚀`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   const downloadCalendarFile = () => {
@@ -354,19 +405,80 @@ export function UnstopRegistrationModal({
     URL.revokeObjectURL(url);
   };
 
+  const printAdmitCard = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    const regId = `REG-UNSTOP-${(registeredRecord?.id || '89421').slice(-6).toUpperCase()}`;
+    const candidateName = registeredRecord?.participantDetails?.fullName || currentUser?.name || fullName;
+    const tName = registeredRecord?.teamName || teamName;
+    const tCode = registeredRecord?.teamCode || teamCode;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Admit Card - ${event.title}</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f3f7; padding: 40px; color: #1e1b2e; }
+          .pass { max-width: 640px; margin: 0 auto; background: #fff; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); border: 2px solid #6750c7; overflow: hidden; }
+          .header { background: linear-gradient(135deg, #211a3d 0%, #3b2d6b 100%); color: #fff; padding: 24px 28px; }
+          .header h1 { margin: 0 0 6px 0; font-size: 20px; }
+          .header p { margin: 0; font-size: 13px; opacity: 0.85; }
+          .badge { display: inline-block; background: #10b981; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; }
+          .body { padding: 24px 28px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; border-bottom: 1px dashed #ddd; }
+          .item strong { display: block; font-size: 11px; text-transform: uppercase; color: #706b7d; margin-bottom: 2px; }
+          .item span { font-size: 15px; font-weight: 700; color: #211a3d; }
+          .footer { padding: 20px 28px; background: #faf8fd; display: flex; justify-content: space-between; align-items: center; }
+          .token { font-family: monospace; font-size: 14px; font-weight: bold; color: #6750c7; }
+        </style>
+      </head>
+      <body>
+        <div class="pass">
+          <div class="header">
+            <span class="badge">Verified Candidate Admit Pass</span>
+            <h1>${event.title}</h1>
+            <p>Hosted by ${event.organizerName} · ${event.mode === 'online' ? 'Online Sprint' : event.venue?.name || 'In-Person'}</p>
+          </div>
+          <div class="body">
+            <div class="item"><strong>Candidate Name</strong><span>${candidateName}</span></div>
+            <div class="item"><strong>Registration ID</strong><span>${regId}</span></div>
+            <div class="item"><strong>Team Name & Code</strong><span>${participationType === 'team' ? `${tName} (${tCode})` : 'Individual Solo'}</span></div>
+            <div class="item"><strong>Track</strong><span>${selectedTrack.toUpperCase()}</span></div>
+            <div class="item"><strong>Institution / Org</strong><span>${orgCollege}</span></div>
+            <div class="item"><strong>Event Date</strong><span>${formatEventDate(event.startAt, true)}</span></div>
+          </div>
+          <div class="footer">
+            <div><small style="color: #706b7d; display:block;">CHECK-IN TOKEN</small><span class="token">${(registeredRecord?.checkInToken || 'TOKEN-UNSTOP-984').slice(0, 18)}</span></div>
+            <div style="font-weight: 800; color: #10b981; font-size: 13px;">● KNOT VERIFIED ADMIT PASS</div>
+          </div>
+        </div>
+        <script>window.onload = function() { window.print(); };</script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const portalName = (event as { sourcePlatform?: string }).sourcePlatform || (event.listings[0]?.source) || 'Unstop';
+
   return (
     <div className="unstop-modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
       <div className="unstop-modal" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="unstop-modal__header">
           <div className="unstop-modal__event-info">
-            <span className="unstop-badge unstop-badge--event-type">
-              {eventTypeLabel(event.eventType)}
-            </span>
-            <span className="unstop-badge unstop-badge--mode">{eventModeLabel(event.mode)}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <span className="unstop-badge unstop-badge--portal">
+                <Zap size={11} /> {portalName.toUpperCase()} ARCHITECTURE
+              </span>
+              <span className="unstop-badge unstop-badge--event-type">
+                {eventTypeLabel(event.eventType)}
+              </span>
+              <span className="unstop-badge unstop-badge--mode">{eventModeLabel(event.mode)}</span>
+            </div>
             <h2>{event.title}</h2>
             <p>
-              Hosted by <strong>{event.organizerName}</strong> ·{' '}
+              Organized by <strong>{event.organizerName}</strong> ·{' '}
               {event.mode === 'online' ? 'Online' : event.venue?.name || 'In-Person'} ·{' '}
               {formatEventDate(event.startAt, true)}
             </p>
@@ -381,7 +493,7 @@ export function UnstopRegistrationModal({
           <div className="unstop-stepper" aria-label="Registration Steps">
             <div className={`unstop-step ${step === 'mode' ? 'active' : 'completed'}`}>
               <div className="unstop-step__circle">1</div>
-              <span>Participation</span>
+              <span>Track & Mode</span>
             </div>
             <div className="unstop-step__line" />
             <div
@@ -389,7 +501,7 @@ export function UnstopRegistrationModal({
                 }`}
             >
               <div className="unstop-step__circle">2</div>
-              <span>Profile</span>
+              <span>Profile KYC</span>
             </div>
             {participationType === 'team' && (
               <>
@@ -399,19 +511,15 @@ export function UnstopRegistrationModal({
                     }`}
                 >
                   <div className="unstop-step__circle">3</div>
-                  <span>Team</span>
+                  <span>Team Invites</span>
                 </div>
               </>
             )}
-            {event.registration.questions && event.registration.questions.length > 0 && (
-              <>
-                <div className="unstop-step__line" />
-                <div className={`unstop-step ${step === 'questions' ? 'active' : ''}`}>
-                  <div className="unstop-step__circle">{participationType === 'team' ? '4' : '3'}</div>
-                  <span>Questions</span>
-                </div>
-              </>
-            )}
+            <div className="unstop-step__line" />
+            <div className={`unstop-step ${step === 'questions' ? 'active' : ''}`}>
+              <div className="unstop-step__circle">{participationType === 'team' ? '4' : '3'}</div>
+              <span>Proposal</span>
+            </div>
           </div>
         )}
 
@@ -431,33 +539,15 @@ export function UnstopRegistrationModal({
           </div>
         )}
 
-        {/* Step 1: Mode Selection */}
+        {/* Step 1: Mode & Track Selection */}
         {step === 'mode' && (
           <div className="unstop-step-body">
-            <h3>Select how you wish to participate</h3>
+            <h3>1. Select Participation Mode &amp; Focus Track</h3>
             <p className="unstop-step-description">
-              Choose individual participation or collaborate with a team. All registrations receive full verified credentials.
+              Choose individual participation or assemble a team with automated email dispatch. Select your problem track.
             </p>
 
             <div className="unstop-type-grid">
-              {allowsSolo && (
-                <div
-                  className={`unstop-type-card ${participationType === 'solo' ? 'selected' : ''}`}
-                  onClick={() => setParticipationType('solo')}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <div className="unstop-type-card__icon">
-                    <User size={28} />
-                  </div>
-                  <h4>Individual (Solo)</h4>
-                  <p>Participate independently as an individual entrant. Receive your personal verified ticket and QR pass.</p>
-                  <div className="unstop-type-card__radio">
-                    <div className="inner-dot" />
-                  </div>
-                </div>
-              )}
-
               {allowsTeam && (
                 <div
                   className={`unstop-type-card ${participationType === 'team' ? 'selected' : ''}`}
@@ -468,10 +558,28 @@ export function UnstopRegistrationModal({
                   <div className="unstop-type-card__icon">
                     <Users size={28} />
                   </div>
-                  <h4>Team Participation</h4>
+                  <h4>Team Participation (Recommended)</h4>
                   <p>
-                    Collaborate with teammates ({minTeamSize}–{maxTeamSize} members). Create a new team or enter an invite code.
+                    Collaborate with teammates ({minTeamSize}–{maxTeamSize} members). Full roster tracking &amp; automated email invitations.
                   </p>
+                  <div className="unstop-type-card__radio">
+                    <div className="inner-dot" />
+                  </div>
+                </div>
+              )}
+
+              {allowsSolo && (
+                <div
+                  className={`unstop-type-card ${participationType === 'solo' ? 'selected' : ''}`}
+                  onClick={() => setParticipationType('solo')}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="unstop-type-card__icon">
+                    <User size={28} />
+                  </div>
+                  <h4>Individual (Solo Contributor)</h4>
+                  <p>Participate independently as an individual entrant. Receive personal verified QR admit pass.</p>
                   <div className="unstop-type-card__radio">
                     <div className="inner-dot" />
                   </div>
@@ -479,20 +587,44 @@ export function UnstopRegistrationModal({
               )}
             </div>
 
+            <div style={{ marginTop: 22 }}>
+              <h4 style={{ fontSize: '0.92rem', fontWeight: 750, color: 'var(--deep)', marginBottom: 8 }}>
+                Select Hackathon / Event Track:
+              </h4>
+              <div className="unstop-tracks-grid">
+                {TRACK_OPTIONS.map((track) => (
+                  <div
+                    key={track.id}
+                    className={`unstop-track-card ${selectedTrack === track.id ? 'selected' : ''}`}
+                    onClick={() => setSelectedTrack(track.id)}
+                  >
+                    <div className="track-icon">{track.icon}</div>
+                    <div className="track-content">
+                      <div className="track-header">
+                        <strong>{track.title}</strong>
+                        {track.badge && <span className="track-badge">{track.badge}</span>}
+                      </div>
+                      <p>{track.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="unstop-footer-actions">
               <button className="button button--primary button--large" onClick={handleNextFromMode}>
-                Continue to Profile <ArrowRight size={18} />
+                Continue to Candidate KYC <ArrowRight size={18} />
               </button>
             </div>
           </div>
         )}
 
-        {/* Step 2: Participant Details */}
+        {/* Step 2: Participant Details (KYC) */}
         {step === 'profile' && (
           <div className="unstop-step-body">
-            <h3>Participant Information</h3>
+            <h3>2. Candidate Profile &amp; KYC Verification</h3>
             <p className="unstop-step-description">
-              Official details for your registration badge, certificates, and logistics communication.
+              Official verification details for badge printing, team communications, and credential issuance.
             </p>
 
             <div className="unstop-form-grid">
@@ -507,7 +639,7 @@ export function UnstopRegistrationModal({
               </label>
 
               <label>
-                Email Address <em>*</em>
+                Official Email Address <em>*</em>
                 <input
                   type="email"
                   placeholder="e.g. suhail@example.com"
@@ -520,7 +652,7 @@ export function UnstopRegistrationModal({
                 Mobile / WhatsApp Number <em>*</em>
                 <input
                   type="tel"
-                  placeholder="e.g. +91 98765 43210"
+                  placeholder="+91 98450 12345"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                 />
@@ -530,31 +662,77 @@ export function UnstopRegistrationModal({
                 College / University / Organization <em>*</em>
                 <input
                   type="text"
-                  placeholder="e.g. NIT Silchar / Autonomous Builder"
+                  placeholder="e.g. Dayananda Sagar College of Engineering"
                   value={orgCollege}
                   onChange={(e) => setOrgCollege(e.target.value)}
                 />
+                <div className="unstop-quick-chips">
+                  <span>Quick Pick:</span>
+                  {TOP_COLLEGES.slice(0, 4).map((c) => (
+                    <button key={c} type="button" className="quick-chip" onClick={() => setOrgCollege(c)}>
+                      {c.split(' ')[0]}
+                    </button>
+                  ))}
+                </div>
               </label>
 
               <label>
-                Graduation Year / Role
+                Graduation Year / Engineering Role
                 <input
                   type="text"
-                  placeholder="e.g. Batch 2027 / Full-Stack Engineer"
+                  placeholder="e.g. Batch 2027 · Full-Stack Builder"
                   value={gradYearRole}
                   onChange={(e) => setGradYearRole(e.target.value)}
+                />
+                <div className="unstop-quick-chips">
+                  {POPULAR_ROLES.slice(0, 4).map((r) => (
+                    <button key={r} type="button" className="quick-chip" onClick={() => setGradYearRole(r)}>
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              </label>
+
+              <label>
+                GitHub / Portfolio URL
+                <input
+                  type="url"
+                  placeholder="https://github.com/your-handle"
+                  value={githubUrl}
+                  onChange={(e) => setGithubUrl(e.target.value)}
                 />
               </label>
 
               <label>
-                City / Location
+                City / Bengaluru Locality
                 <input
                   type="text"
-                  placeholder="e.g. Bengaluru"
+                  placeholder="e.g. Koramangala, Bengaluru"
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
                 />
               </label>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <label>
+                  T-Shirt Size
+                  <select value={tshirtSize} onChange={(e) => setTshirtSize(e.target.value)}>
+                    <option value="S">S (38)</option>
+                    <option value="M">M (40)</option>
+                    <option value="L">L (42)</option>
+                    <option value="XL">XL (44)</option>
+                    <option value="XXL">XXL (46)</option>
+                  </select>
+                </label>
+                <label>
+                  Dietary Preference
+                  <select value={dietary} onChange={(e) => setDietary(e.target.value)}>
+                    <option value="Veg">Vegetarian</option>
+                    <option value="Non-Veg">Non-Vegetarian</option>
+                    <option value="Jain">Jain Food</option>
+                  </select>
+                </label>
+              </div>
             </div>
 
             <div className="unstop-footer-actions">
@@ -562,11 +740,7 @@ export function UnstopRegistrationModal({
                 <ArrowLeft size={16} /> Back
               </button>
               <button className="button button--primary button--large" onClick={handleNextFromProfile}>
-                {participationType === 'team'
-                  ? 'Proceed to Team Setup'
-                  : event.registration.questions && event.registration.questions.length > 0
-                    ? 'Proceed to Questions'
-                    : 'Submit Registration'}
+                {participationType === 'team' ? 'Proceed to Team Setup' : 'Proceed to Project Details'}
                 <ArrowRight size={18} />
               </button>
             </div>
@@ -576,9 +750,9 @@ export function UnstopRegistrationModal({
         {/* Step 3: Team Setup & Member Invites */}
         {step === 'team' && (
           <div className="unstop-step-body">
-            <h3>Team Setup & Member Invitations</h3>
+            <h3>3. Team Formation &amp; Teammate Email Dispatcher</h3>
             <p className="unstop-step-description">
-              Form your dream squad. Teams can consist of {minTeamSize} to {maxTeamSize} members.
+              Form your squad of {minTeamSize} to {maxTeamSize} builders. Dispatch automated email invitations with 1-click join links.
             </p>
 
             {/* Switch Intent: Create or Join */}
@@ -591,7 +765,7 @@ export function UnstopRegistrationModal({
                   setError('');
                 }}
               >
-                <UserPlus size={16} /> Create New Team
+                <UserPlus size={16} /> Create New Squad (Leader)
               </button>
               <button
                 type="button"
@@ -608,11 +782,11 @@ export function UnstopRegistrationModal({
             {teamIntent === 'create' ? (
               <div className="unstop-team-create-box">
                 <div className="unstop-form-row">
-                  <label>
+                  <label style={{ flex: 1 }}>
                     Team Name <em>*</em>
                     <input
                       type="text"
-                      placeholder="e.g. NextGen Hackers"
+                      placeholder="e.g. NexGen Builders"
                       value={teamName}
                       onChange={(e) => setTeamName(e.target.value)}
                     />
@@ -624,22 +798,65 @@ export function UnstopRegistrationModal({
                 </div>
 
                 <div className="unstop-team-invites-panel">
-                  <h4>Invite Teammates via Email</h4>
-                  <p>Teammates will receive immediate in-app invitations & email notifications.</p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                    <div>
+                      <h4 style={{ margin: '0 0 2px 0' }}>Invite Teammates via Email &amp; WhatsApp</h4>
+                      <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--muted)' }}>
+                        Teammates receive immediate in-app invitations &amp; official email drafts.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="button button--secondary button--small"
+                      onClick={() => setPreviewEmailOpen(!previewEmailOpen)}
+                    >
+                      <Eye size={13} /> {previewEmailOpen ? 'Hide Email Preview' : 'Preview Invite Email'}
+                    </button>
+                  </div>
 
-                  <div className="unstop-add-member-row">
+                  {/* Email Preview Drawer */}
+                  {previewEmailOpen && (
+                    <div className="unstop-email-preview-card">
+                      <div className="preview-card-header">
+                        <Mail size={14} color="#6366f1" />
+                        <span>Official Teammate Email Template</span>
+                      </div>
+                      <div className="preview-card-body">
+                        <p><strong>From:</strong> {fullName || 'Team Leader'} (via Knot × Unstop)</p>
+                        <p><strong>Subject:</strong> Invitation to join team &ldquo;{teamName}&rdquo; for {event.title}</p>
+                        <div className="preview-card-letter">
+                          <p>Hi there,</p>
+                          <p>
+                            <strong>{fullName || 'Your teammate'}</strong> has invited you to join team <strong>&ldquo;{teamName}&rdquo;</strong> for <strong>{event.title}</strong> on Knot!
+                          </p>
+                          <p><strong>Your Assigned Role:</strong> {newMemberRole}</p>
+                          <p><strong>Team Invite Code:</strong> <code style={{ background: '#ede9fe', padding: '2px 6px', borderRadius: 4, color: '#4338ca', fontWeight: 800 }}>{teamCode}</code></p>
+                          <div style={{ marginTop: 10 }}>
+                            <span style={{ display: 'inline-block', background: '#6366f1', color: '#fff', padding: '6px 14px', borderRadius: 6, fontSize: '0.78rem', fontWeight: 700 }}>
+                              👉 Accept Invitation &amp; Join Team
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="unstop-add-member-row" style={{ marginTop: 12 }}>
                     <input
                       type="email"
                       placeholder="Teammate's email address..."
                       value={newMemberEmail}
                       onChange={(e) => setNewMemberEmail(e.target.value)}
                     />
-                    <input
-                      type="text"
-                      placeholder="Role (e.g. AI / Frontend)"
+                    <select
                       value={newMemberRole}
                       onChange={(e) => setNewMemberRole(e.target.value)}
-                    />
+                      style={{ width: 170 }}
+                    >
+                      {POPULAR_ROLES.map((r) => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
                     <button type="button" className="button button--secondary" onClick={handleAddTeammate}>
                       <Plus size={16} /> Add Member
                     </button>
@@ -653,7 +870,7 @@ export function UnstopRegistrationModal({
                         <strong>{fullName} (You)</strong>
                         <span>Team Leader · {email}</span>
                       </div>
-                      <span className="unstop-tag unstop-tag--success">Leader</span>
+                      <span className="unstop-tag unstop-tag--success">👑 Team Leader</span>
                     </div>
 
                     {teamMembers.map((member, idx) => (
@@ -665,7 +882,7 @@ export function UnstopRegistrationModal({
                             {member.role} · {member.email}
                           </span>
                         </div>
-                        <span className="unstop-tag unstop-tag--pending">Invited</span>
+                        <span className="unstop-tag unstop-tag--pending">✉️ Invite Queued</span>
                         <button
                           type="button"
                           className="icon-button"
@@ -678,10 +895,18 @@ export function UnstopRegistrationModal({
                     ))}
                   </div>
 
-                  <small className="unstop-roster-count">
-                    Current team size: <strong>{teamMembers.length + 1}</strong> / {maxTeamSize} (Min required:{' '}
-                    {minTeamSize})
-                  </small>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, flexWrap: 'wrap', gap: 8 }}>
+                    <small className="unstop-roster-count">
+                      Current squad: <strong>{teamMembers.length + 1}</strong> / {maxTeamSize} (Min required: {minTeamSize})
+                    </small>
+                    <button
+                      type="button"
+                      className="button button--ghost-light button--small"
+                      onClick={shareViaWhatsApp}
+                    >
+                      <MessageCircle size={14} color="#10b981" /> WhatsApp Squad Invite
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -691,12 +916,12 @@ export function UnstopRegistrationModal({
                   <div className="unstop-input-with-action">
                     <input
                       type="text"
-                      placeholder="e.g. TEAM-7X9P-402"
+                      placeholder="e.g. TEAM-KN-8492"
                       value={joinCodeInput}
                       onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
                     />
                     <button type="button" className="button button--secondary" onClick={handleVerifyJoinCode}>
-                      Verify Team
+                      Verify Team Code
                     </button>
                   </div>
                 </label>
@@ -705,10 +930,10 @@ export function UnstopRegistrationModal({
                   <div className="unstop-verified-team-card">
                     <CheckCircle2 size={24} className="verified-icon" />
                     <div>
-                      <h4>Team “{verifiedLeaderReg.teamName}”</h4>
+                      <h4>Team &ldquo;{verifiedLeaderReg.teamName}&rdquo; Verified</h4>
                       <p>
                         Led by <strong>{verifiedLeaderReg.participantDetails?.fullName || 'Team Leader'}</strong> ·{' '}
-                        {verifiedLeaderReg.teamMembers?.length ?? 1} members currently
+                        {verifiedLeaderReg.teamMembers?.length ?? 1} members currently confirmed
                       </p>
                     </div>
                   </div>
@@ -721,25 +946,45 @@ export function UnstopRegistrationModal({
                 <ArrowLeft size={16} /> Back
               </button>
               <button className="button button--primary button--large" onClick={handleNextFromTeam}>
-                {event.registration.questions && event.registration.questions.length > 0
-                  ? 'Proceed to Questions'
-                  : 'Submit Registration'}
-                <ArrowRight size={18} />
+                Proceed to Project Proposal <ArrowRight size={18} />
               </button>
             </div>
           </div>
         )}
 
-        {/* Step 4: Questions & Declarations */}
+        {/* Step 4: Questions & Proposal */}
         {step === 'questions' && (
           <div className="unstop-step-body">
-            <h3>Additional Questions & Verification</h3>
+            <h3>4. Project Proposal &amp; Hackathon Terms</h3>
             <p className="unstop-step-description">
-              Please provide the organizer-specific details and verify eligibility rules.
+              Provide your initial project concept and confirm community rules for verified registration.
             </p>
+
+            <div className="unstop-form-grid" style={{ marginBottom: 18 }}>
+              <label>
+                Proposed Project Title <em>*</em>
+                <input
+                  type="text"
+                  placeholder="e.g. Knot Autonomous Event Intelligence"
+                  value={projectTitle}
+                  onChange={(e) => setProjectTitle(e.target.value)}
+                />
+              </label>
+
+              <label>
+                2-Sentence Pitch / Problem Statement Solution
+                <textarea
+                  rows={2}
+                  placeholder="Briefly describe what your squad plans to build..."
+                  value={projectPitch}
+                  onChange={(e) => setProjectPitch(e.target.value)}
+                />
+              </label>
+            </div>
 
             {event.registration.questions && event.registration.questions.length > 0 && (
               <div className="unstop-questions-list">
+                <h4 style={{ margin: '0 0 10px 0', fontSize: '0.9rem' }}>Organizer Questions:</h4>
                 {event.registration.questions.map((q) => (
                   <label key={q.id}>
                     {q.label} {q.required && <em>* Required</em>}
@@ -783,8 +1028,17 @@ export function UnstopRegistrationModal({
                   onChange={(e) => setSelfDeclaredAgeRuleMet(e.target.checked)}
                 />
                 <span>
-                  I confirm that all information provided is accurate and I agree to abide by the event’s participation
-                  and community rules.
+                  I confirm that all candidate details are accurate and I meet all age and participation criteria.
+                </span>
+              </label>
+              <label className="consent-check" style={{ marginTop: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={agreedToConduct}
+                  onChange={(e) => setAgreedToConduct(e.target.checked)}
+                />
+                <span>
+                  I agree to the Hackathon Code of Conduct, intellectual property integrity rules, and in-person check-in requirements.
                 </span>
               </label>
             </div>
@@ -798,25 +1052,25 @@ export function UnstopRegistrationModal({
               </button>
               <button
                 className="button button--primary button--large"
-                disabled={submitting || !selfDeclaredAgeRuleMet}
+                disabled={submitting || !selfDeclaredAgeRuleMet || !agreedToConduct}
                 onClick={handleSubmitRegistration}
               >
-                {submitting ? 'Submitting...' : 'Confirm & Generate Ticket'} <Check size={18} />
+                {submitting ? 'Submitting Application...' : 'Confirm Application & Generate Admit Pass'} <Check size={18} />
               </button>
             </div>
           </div>
         )}
 
-        {/* Step 5: Ticket & Pass Confirmation */}
+        {/* Step 5: Admit Pass & Ticket Confirmation */}
         {step === 'ticket' && (
           <div className="unstop-step-body unstop-confirmation-view">
             <div className="unstop-success-banner">
               <div className="unstop-success-icon">
                 <CheckCircle2 size={44} />
               </div>
-              <h3>Registration Confirmed!</h3>
+              <h3>Official Registration Confirmed!</h3>
               <p>
-                Your registration for <strong>{event.title}</strong> has been successfully processed and verified.
+                Your application for <strong>{event.title}</strong> is verified. Your digital admit pass has been generated.
               </p>
             </div>
 
@@ -824,14 +1078,16 @@ export function UnstopRegistrationModal({
             <div className="unstop-pass-ticket">
               <div className="unstop-pass-ticket__header">
                 <div>
-                  <span className="unstop-badge unstop-badge--accent">{eventTypeLabel(event.eventType)}</span>
+                  <span className="unstop-badge unstop-badge--accent">
+                    <Sparkles size={11} /> {portalName.toUpperCase()} VERIFIED ADMIT PASS
+                  </span>
                   <h4>{event.title}</h4>
-                  <small>Hosted by {event.organizerName}</small>
+                  <small>Organized by {event.organizerName} · Track: {selectedTrack.toUpperCase()}</small>
                 </div>
                 <div className="unstop-pass-ref">
                   <span>REGISTRATION ID</span>
                   <strong>
-                    UNSTOP-KNOT-
+                    REG-UNSTOP-
                     {(registeredRecord?.id || '89421').slice(-6).toUpperCase()}
                   </strong>
                 </div>
@@ -841,7 +1097,7 @@ export function UnstopRegistrationModal({
                 <div className="unstop-pass-item">
                   <User size={15} />
                   <div>
-                    <span>PARTICIPANT</span>
+                    <span>CANDIDATE</span>
                     <strong>{registeredRecord?.participantDetails?.fullName || currentUser?.name || fullName}</strong>
                   </div>
                 </div>
@@ -857,7 +1113,7 @@ export function UnstopRegistrationModal({
                 <div className="unstop-pass-item">
                   {event.mode === 'online' ? <Video size={15} /> : <MapPin size={15} />}
                   <div>
-                    <span>FORMAT & VENUE</span>
+                    <span>VENUE &amp; REPORTING</span>
                     <strong>{event.mode === 'online' ? 'Online Sprint' : event.venue?.name || 'In-Person'}</strong>
                   </div>
                 </div>
@@ -866,7 +1122,7 @@ export function UnstopRegistrationModal({
                   <div className="unstop-pass-item unstop-pass-item--team">
                     <Users size={15} />
                     <div>
-                      <span>TEAM ROSTER</span>
+                      <span>TEAM ROSTER &amp; CODE</span>
                       <strong>
                         {registeredRecord.teamName} · Code: {registeredRecord.teamCode}
                       </strong>
@@ -881,7 +1137,7 @@ export function UnstopRegistrationModal({
                     <QrCode size={18} />
                     <span>Check-in Token: {registeredRecord.checkInToken.slice(0, 16)}...</span>
                   </div>
-                  <span className="unstop-verified-pill">● Knot Verified Pass</span>
+                  <span className="unstop-verified-pill">● Verified Admit Pass</span>
                 </div>
               )}
             </div>
@@ -924,17 +1180,22 @@ export function UnstopRegistrationModal({
                   </button>
                 </div>
 
-                {teamMembers.length > 0 && (
-                  <div className="unstop-invite-email-action">
-                    <p>
-                      <Mail size={16} /> <strong>Teammates to invite:</strong>{' '}
-                      {teamMembers.map((m) => m.email).join(', ')}
+                <div className="unstop-invite-email-action">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                    <p style={{ margin: 0 }}>
+                      <Mail size={16} /> <strong>Teammates:</strong>{' '}
+                      {teamMembers.map((m) => m.email).join(', ') || 'No extra teammates queued'}
                     </p>
-                    <button className="button button--accent button--small" onClick={handleSendInviteEmails}>
-                      <Mail size={16} /> Dispatch Invitation Emails & Notifications
-                    </button>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button className="button button--accent button--small" onClick={handleSendInviteEmails}>
+                        <Mail size={14} /> Dispatch Teammate Emails
+                      </button>
+                      <button className="button button--secondary button--small" onClick={shareViaWhatsApp}>
+                        <MessageCircle size={14} color="#10b981" /> WhatsApp Invite
+                      </button>
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
             )}
 
@@ -966,6 +1227,9 @@ export function UnstopRegistrationModal({
 
             {/* Action Bar */}
             <div className="unstop-ticket-actions">
+              <button className="button button--secondary" onClick={printAdmitCard}>
+                <FileText size={16} /> Print / Save Admit Card
+              </button>
               <button className="button button--secondary" onClick={downloadCalendarFile}>
                 <Download size={16} /> Add to Calendar (.ics)
               </button>

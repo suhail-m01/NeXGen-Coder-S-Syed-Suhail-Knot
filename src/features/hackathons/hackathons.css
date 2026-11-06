@@ -70,6 +70,7 @@
 .hackathon-pagination { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 30px; }
 .hackathon-pagination > span { color: var(--muted); font-size: .82rem; }
 .hackathon-last-updated { margin: 14px 0 0; color: var(--muted); font-size: .75rem; }
+.home-hackathons { padding-bottom: 32px; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
 .hackathon-home-empty { padding: 20px; border: 1px dashed #cfc6df; border-radius: var(--radius); background: var(--surface); }
 .hackathon-home-empty p { margin-bottom: 10px; color: var(--muted); font-size: .86rem; }
 .hackathon-skeleton { display: flex; min-height: 280px; flex-direction: column; gap: 18px; padding: 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
