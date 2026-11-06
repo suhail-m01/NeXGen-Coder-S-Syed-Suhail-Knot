@@ -1,5 +1,7 @@
 # Knot Hackathon Discovery Agent: Live Data Diagnosis Report
 
+> **Historical diagnosis:** this document records the November 5 revision, not current activation. The current source uses `sources.approved.ts` for reviewed candidates, still requires explicit runtime opt-in, and fails a run when no selected source is runnable. See [Hackathon setup and deployment verification](HACKATHON_DEPLOYMENT.md) for current behavior.
+
 **Date:** November 5, 2026  
 **Repository:** NeXGen-Coder-S-Syed-Suhail-Knot  
 **Tooling:** `npm run agent:doctor`, `npm run agent:hackathons -- --dry-run`  

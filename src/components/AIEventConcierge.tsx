@@ -55,7 +55,7 @@ export function AIEventConcierge() {
     {
       id: 'msg-welcome',
       sender: 'ai',
-      text: 'Hey there! 👋 I am your Hyperlocal Event Concierge. Tell me what you want to build or attend—e.g. "Free AI hackathons near Koramangala" or "Weekend meetups with open teams".',
+      text: 'I am a rule-based event finder. I match keywords against the currently loaded catalog, including clearly labelled sample and curated records. Try “Free AI hackathons near Koramangala” or “Weekend meetups”.',
       timestamp: 'Just now',
     },
   ]);
@@ -100,7 +100,7 @@ export function AIEventConcierge() {
 
       if (wantsHackathons) {
         score += 30;
-        reasons.push('Live national hackathon');
+        reasons.push('Curated hackathon snapshot');
       }
       if (wantsPrizes && h.prizePool) {
         score += 35;
@@ -147,7 +147,7 @@ export function AIEventConcierge() {
             type: 'hackathon',
             dateStr: new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short' }).format(new Date(h.startDate)),
             venueOrCity: h.venue ?? h.city ?? 'Bengaluru',
-            badgeText: `${h.sourcePlatform} Hackathon`,
+            badgeText: `${h.sourcePlatform} snapshot`,
             prizeOrPrice: h.prizePool ?? (h.isFree ? 'Free Entry' : undefined),
             matchReason: reasons.join(' • ') || 'Matches your discovery criteria',
             url: `/hackathons`,
@@ -238,9 +238,9 @@ export function AIEventConcierge() {
             dateStr: formatEventDate(event.startAt),
             venueOrCity: event.mode === 'online' ? 'Online event' : (event.venue?.name ?? localityName),
             metro,
-            badgeText: event.eventType.toUpperCase(),
+            badgeText: `${event.isSample ? 'SAMPLE ' : ''}${event.eventType.toUpperCase()}`,
             prizeOrPrice: priceLabel(event),
-            matchReason: reasons.join(' • ') || 'Verified community listing',
+            matchReason: reasons.join(' • ') || (event.isSample ? 'Sample catalog keyword match' : 'Catalog keyword match'),
             url: `/events/${event.id}`,
           },
         });
@@ -251,25 +251,10 @@ export function AIEventConcierge() {
     scoredResults.sort((a, b) => b.score - a.score);
     const topResults = scoredResults.slice(0, 4).map((sr) => sr.item);
 
-    let reply = '';
-    if (topResults.length > 0) {
-      reply = `I found ${topResults.length} high-match events in Bengaluru tailored to your query:`;
-    } else {
-      // Fallback: provide top upcoming items
-      const fallbackHackathons = liveHackathons.slice(0, 2).map((h) => ({
-        id: h.id,
-        title: h.title,
-        type: 'hackathon' as const,
-        dateStr: new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short' }).format(new Date(h.startDate)),
-        venueOrCity: h.venue ?? h.city ?? 'Bengaluru',
-        badgeText: 'Trending Hackathon',
-        prizeOrPrice: h.prizePool ?? 'Free',
-        matchReason: 'Top trending event in Bengaluru right now',
-        url: `/hackathons`,
-      }));
-      topResults.push(...fallbackHackathons);
-      reply = `I didn't find an exact match for "${rawQuery}", but here are the top trending hackathons and community events happening right now:`;
-    }
+    const reply = topResults.length > 0
+      ? `I found ${topResults.length} keyword matches in the loaded catalog. Sample and curated records are labelled; confirm details on the original listing.`
+      : `No loaded catalog records matched “${rawQuery}”. Try broader keywords or clear a location/prize constraint; I will not substitute unrelated “trending” results.`;
+
 
     return { reply, results: topResults };
   };
@@ -326,19 +311,19 @@ export function AIEventConcierge() {
           type="button"
           className="ai-concierge-trigger"
           onClick={() => setIsOpen(true)}
-          aria-label="Open AI Hyperlocal Event Concierge"
+          aria-label="Open rule-based event finder"
         >
           <div className="ai-concierge-trigger__icon">
             <Sparkles size={16} />
             <span className="ai-concierge-ping" />
           </div>
-          <span className="ai-concierge-trigger__text">Ask AI Concierge</span>
+          <span className="ai-concierge-trigger__text">Find events</span>
         </button>
       )}
 
       {/* Expandable Chat Drawer */}
       {isOpen && (
-        <div className="ai-concierge-drawer" role="dialog" aria-label="AI Event Concierge Chat">
+        <div className="ai-concierge-drawer" role="dialog" aria-label="Rule-based event finder">
           {/* Header */}
           <div className="ai-concierge-header">
             <div className="ai-concierge-header__title">
@@ -347,7 +332,7 @@ export function AIEventConcierge() {
               </div>
               <div>
                 <h4>Hyperlocal Event Concierge</h4>
-                <span>AI-Powered Event Discovery</span>
+                <span>Rule-based local catalog search</span>
               </div>
             </div>
             <div className="ai-concierge-header__actions">

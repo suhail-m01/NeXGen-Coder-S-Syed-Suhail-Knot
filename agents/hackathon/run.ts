@@ -1,4 +1,4 @@
-import { loadAgentConfig, sourceIsAuthorized } from './config';
+import { loadAgentConfig, sourceIsAuthorized, sourceReadinessError } from './config';
 import { dedupeHackathons } from './dedupe';
 import { createHttpClient } from './httpClient';
 import { extractWithLlm } from './llm';
@@ -68,6 +68,19 @@ export async function runHackathonAgent(options: RunAgentOptions = {}): Promise<
       activeSources = activeSources.filter((_, idx) => idx % total === index);
       queries = queries.filter((_, idx) => idx % total === index);
     }
+
+    const readinessErrors: string[] = [];
+    const runnableSources = activeSources.filter((source) => {
+      const error = sourceReadinessError(source, config);
+      if (!error) return true;
+      readinessErrors.push(`${source.id}: ${error}`);
+      sourceStats.push({ source: source.id, discovered: 0, parsed: 0, skipped: true, error });
+      return false;
+    });
+    if (!runnableSources.length) {
+      throw new Error(`No runnable authorized sources. ${readinessErrors.slice(0, 3).join(' ') || 'Select at least one configured source.'}`);
+    }
+    activeSources = runnableSources;
 
     const collected: NormalizedHackathon[] = [];
     let llmCalls = 0;

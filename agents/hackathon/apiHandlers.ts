@@ -5,10 +5,9 @@ import { InputError, listHackathons, parseHackathonListParams, rowToHackathonDto
 import type { ApiRequest, ApiResponse } from './apiTypes';
 import { getDatabase } from './db';
 import { rateLimit } from './rateLimit';
-import { runHackathonAgent, type RunAgentOptions } from './run';
+import type { RunAgentOptions } from './run';
 import { queueRequestedCity } from './store';
 import type { AgentRunResult } from './types';
-import { filterLiveSeedHackathons, LIVE_VERIFIED_HACKATHONS } from '../../src/features/hackathons/liveSeed';
 
 const header = (request: ApiRequest, name: string): string | undefined => {
   const value = request.headers[name.toLowerCase()];
@@ -56,17 +55,8 @@ export function createHackathonsHandler(deps: {
       if (error instanceof InputError) {
         response.status(400).json({ error: error.message });
       } else {
-        try {
-          const params = parseHackathonListParams(request.query || {});
-          const fallback = filterLiveSeedHackathons(params);
-          response.setHeader('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
-          response.setHeader('X-Fallback-Source', 'live-seed');
-          response.status(200).json(fallback);
-          return;
-        } catch {
-          console.error('Hackathons read failed', error);
-          response.status(503).json({ error: 'Hackathon discovery is temporarily unavailable. Please retry.' });
-        }
+        console.error('Hackathons read failed', error);
+        response.status(503).json({ error: 'Hackathon discovery is temporarily unavailable. Curated fallback can be opened explicitly in the UI.' });
       }
     }
   };
@@ -80,42 +70,25 @@ export interface HackathonStatusResult {
 }
 
 async function queryHackathonStatus(): Promise<HackathonStatusResult> {
-  try {
-    const sql = getDatabase();
-    const runRows = await sql<{ finished_at: Date | null; started_at: Date; status: string }[]>`
-      select started_at, finished_at, status from public.agent_runs
-      where kind = 'run' order by created_at desc limit 1
-    `.catch(() => []);
-    const countRows = await sql<{ count: number }[]>`
-      select count(*)::int as count from public.hackathons where status in ('upcoming', 'ongoing')
-    `.catch(() => [{ count: 0 }]);
-    const sourceRows = await sql<{ source_platform: string; count: number }[]>`
-      select source_platform, count(*)::int as count from public.hackathons
-      where status in ('upcoming', 'ongoing') group by source_platform
-    `.catch(() => []);
+  const sql = getDatabase();
+  const runRows = await sql<{ finished_at: Date | null; started_at: Date; status: string }[]>`
+    select started_at, finished_at, status from public.agent_runs
+    where kind = 'run' order by created_at desc limit 1
+  `;
+  const countRows = await sql<{ count: number }[]>`
+    select count(*)::int as count from public.hackathons where status in ('upcoming', 'ongoing')
+  `;
+  const sourceRows = await sql<{ source_platform: string; count: number }[]>`
+    select source_platform, count(*)::int as count from public.hackathons
+    where status in ('upcoming', 'ongoing') group by source_platform
+  `;
 
-    const lastRun = runRows[0];
-    const perSource = Object.fromEntries(sourceRows.map((row) => [row.source_platform, row.count]));
-    if ((countRows[0]?.count ?? 0) > 0) {
-      return {
-        lastRunAt: lastRun?.finished_at?.toISOString() || lastRun?.started_at?.toISOString() || null,
-        lastStatus: lastRun?.status || 'idle',
-        totalUpcoming: countRows[0]?.count ?? 0,
-        perSource,
-      };
-    }
-  } catch {
-    // Database unreachable; fall back to verified live seed metrics below
-  }
-  const perSource: Record<string, number> = {};
-  for (const item of LIVE_VERIFIED_HACKATHONS) {
-    perSource[item.sourcePlatform] = (perSource[item.sourcePlatform] || 0) + 1;
-  }
+  const lastRun = runRows[0];
   return {
-    lastRunAt: new Date().toISOString(),
-    lastStatus: 'completed',
-    totalUpcoming: LIVE_VERIFIED_HACKATHONS.length,
-    perSource,
+    lastRunAt: lastRun?.finished_at?.toISOString() || lastRun?.started_at?.toISOString() || null,
+    lastStatus: lastRun?.status || 'idle',
+    totalUpcoming: countRows[0]?.count ?? 0,
+    perSource: Object.fromEntries(sourceRows.map((row) => [row.source_platform, row.count])),
   };
 }
 
@@ -132,10 +105,11 @@ export function createHackathonsStatusHandler(deps: { getStatus?: () => Promise<
       const status = await getStatus();
       response.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
       response.status(200).json(status);
-    } catch {
-      response.status(200).json({
+    } catch (error) {
+      console.error('Hackathon status unavailable', error);
+      response.status(503).json({
         lastRunAt: null,
-        lastStatus: 'idle',
+        lastStatus: 'unavailable',
         totalUpcoming: 0,
         perSource: {},
       });
@@ -196,25 +170,13 @@ async function recordInterest(id: string, userId: string | null, context: 'web' 
       }
     } catch (dbErr) {
       if (dbErr instanceof InterestError) throw dbErr;
-      console.warn('Postgres hackathon interest recording unavailable, attempting fallback:', dbErr);
+      console.warn('Postgres hackathon interest recording unavailable:', dbErr);
+      throw new InterestError('Interest recording is temporarily unavailable.', 503);
     }
   }
 
-  // Fallback to verified seed hackathons if DB has no record or DB is offline
-  try {
-    const seed = LIVE_VERIFIED_HACKATHONS.find((h) => h.id === id);
-    if (seed) {
-      return {
-        interestId: `live-interest-${Math.random().toString(36).slice(2, 9)}`,
-        officialUrl: seed.officialUrl,
-        officialUrlVerified: seed.officialUrlVerified,
-        saved: Boolean(userId),
-      };
-    }
-  } catch {
-    // Continue to not-found error
-  }
-
+  // Curated records never claim server-side interest persistence.
+  // The browser may still open the original official URL and save a local interest.
   throw new InterestError('Hackathon not found.', 404);
 }
 
@@ -299,7 +261,10 @@ function secretMatches(provided: string | undefined, expected: string): boolean 
 }
 
 export function createAgentRunHandler(deps: { run?: (options: RunAgentOptions) => Promise<AgentRunResult> } = {}) {
-  const run: (options: RunAgentOptions) => Promise<AgentRunResult> = deps.run ?? runHackathonAgent;
+  const run: (options: RunAgentOptions) => Promise<AgentRunResult> = deps.run ?? (async (options) => {
+    const { runHackathonAgent } = await import('./run');
+    return runHackathonAgent(options);
+  });
   return async function handler(request: ApiRequest, response: ApiResponse): Promise<void> {
     if (!['GET', 'POST'].includes(request.method ?? '')) {
       response.setHeader('Allow', 'GET, POST');
@@ -321,9 +286,14 @@ export function createAgentRunHandler(deps: { run?: (options: RunAgentOptions) =
     const sourcesParam = request.query.sources ? (Array.isArray(request.query.sources) ? request.query.sources[0] : request.query.sources) : undefined;
     const sourceIds = sourcesParam ? sourcesParam.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean) : undefined;
 
-    const result = await run({ trigger, shard, sourceIds });
-    response.setHeader('Cache-Control', 'no-store');
-    response.status(result.status === 'failed' ? 500 : 200).json(result);
+    try {
+      const result = await run({ trigger, shard, sourceIds });
+      response.setHeader('Cache-Control', 'no-store');
+      response.status(result.status === 'failed' ? 500 : 200).json(result);
+    } catch (error) {
+      console.error('Hackathon agent could not be started', error);
+      response.status(500).json({ error: 'The Hackathon agent could not be started. Check server configuration and function logs.' });
+    }
   };
 }
 

@@ -23,22 +23,10 @@ export function HomeHackathons() {
     const area = locality?.geocode.resultType === 'city' ? '' : locality?.name ?? '';
     listHackathons({ city, area, limit: 3, sort: 'soonest' }, controller.signal)
       .then((res) => {
-        if (res.data.length > 0) {
-          setResult(res);
-        } else {
-          // If no events match this specific city, fetch live upcoming hackathons so real-time data is always displayed
-          return listHackathons({ limit: 3, sort: 'soonest' }, controller.signal).then((fallbackRes) => {
-            if (fallbackRes.data.length > 0) setResult(fallbackRes);
-            else import('./liveSeed').then(({ filterLiveSeedHackathons }) => setResult(filterLiveSeedHackathons({ limit: 3 })));
-          });
-        }
+        if (!controller.signal.aborted) setResult(res);
       })
       .catch((caught: unknown) => {
-        import('./liveSeed').then(({ filterLiveSeedHackathons }) => {
-          if (!controller.signal.aborted) setResult(filterLiveSeedHackathons({ limit: 3 }));
-        }).catch(() => {
-          if (!controller.signal.aborted) setError(caught instanceof Error ? caught.message : 'Hackathon discovery is unavailable.');
-        });
+        if (!controller.signal.aborted) setError(caught instanceof Error ? caught.message : 'Hackathon discovery is unavailable.');
       });
     return () => controller.abort();
   }, [locality?.id, locality?.city, locality?.name, locality?.geocode.resultType]);

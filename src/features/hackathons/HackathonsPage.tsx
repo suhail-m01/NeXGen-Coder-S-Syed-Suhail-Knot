@@ -73,6 +73,7 @@ export function HackathonsPage() {
         if (sequence !== requestSequence.current) return;
         setResult(next);
         setFacets(next.facets);
+        setOfflineBackupActive(false);
       }).catch((caught: unknown) => {
         if (sequence === requestSequence.current && !controller.signal.aborted) setError(caught instanceof Error ? caught.message : 'Hackathon discovery is temporarily unavailable.');
       }).finally(() => { if (sequence === requestSequence.current) setLoading(false); });
@@ -112,12 +113,12 @@ export function HackathonsPage() {
 
   return (
     <div className="page-container hackathons-page">
-      <div className="page-heading"><div><span className="eyebrow">Permissioned discovery · India + Online</span><h1>Hackathons worth building for.</h1><p>Fresh, source-linked hackathon listings with conservative details. An Interested click opens the official site; it is not a registration.</p></div><div className="button-row"><Link className="button button--secondary" to="/hackathons/interests">My Interests</Link><Link className="button button--secondary" to="/search"><ArrowLeft size={16} /> All Knot events</Link></div></div>
+      <div className="page-heading"><div><span className="eyebrow">Permissioned discovery · India + Online</span><h1>Hackathons worth building for.</h1><p>Source-linked hackathon listings with conservative details and explicit snapshot states. An Interested click opens the official site; it is not a registration.</p></div><div className="button-row"><Link className="button button--secondary" to="/hackathons/interests">My Interests</Link><Link className="button button--secondary" to="/search"><ArrowLeft size={16} /> All Knot events</Link></div></div>
       <HackathonFilters value={filters} locationText={locationText} datePreset={datePreset} facets={facets} locationStatus={locationStatus} onChange={patch} onLocationTextChange={changeLocation} onDatePresetChange={changePreset} onUseLocation={useMyLocation} onReset={reset} />
       {Boolean(result?.meta.lastUpdated && Date.now() - new Date(result.meta.lastUpdated).getTime() > 24 * 3600 * 1000) && (
         <div className="hackathon-notice hackathon-notice--stale" role="status">
           <Info size={17} />
-          <span>Listing data may be stale (last verified over 24h ago). The autonomous agent runs every 6 hours to refresh upcoming hackathons.</span>
+          <span>Listing data may be stale. Confirm current details on the official site; no automatic refresh is implied.</span>
         </div>
       )}
       {guestNotice && <div className="hackathon-notice" role="status"><Info size={17} /><span>You can continue without an account. <Link to="/auth?returnTo=%2Fhackathons">Sign in to keep Interested hackathons in My Interests.</Link></span><button className="icon-button" aria-label="Dismiss sign-in suggestion" onClick={() => setGuestNotice(false)}>×</button></div>}
@@ -126,7 +127,7 @@ export function HackathonsPage() {
       {offlineBackupActive && (
         <div className="hackathon-notice" role="status" style={{ marginBottom: 16 }}>
           <Info size={17} />
-          <span>Showing verified hackathon listings. Live server sync will resume automatically when connected.</span>
+          <span>Showing a fixed curated fallback snapshot, not a live source sync. Confirm current details on the official site.</span>
         </div>
       )}
       {loading && !result && <HackathonSkeleton />}
@@ -140,7 +141,7 @@ export function HackathonsPage() {
               Try again
             </button>
             <button className="button button--secondary" onClick={loadOfflineBackup}>
-              View verified hackathons
+              View curated snapshot
             </button>
           </div>
         </div>
@@ -150,9 +151,9 @@ export function HackathonsPage() {
           <Info size={28} />
           <h2>No hackathons match these filters</h2>
           <p>
-            Hackathon listings refresh automatically via our scheduled agent{result.meta.lastUpdated ? ` (last checked ${formatLastUpdated(result.meta.lastUpdated)})` : ''}.
+            No current records match these filters{result.meta.lastUpdated ? ` (snapshot: ${formatLastUpdated(result.meta.lastUpdated)})` : ''}.
             Try exploring <strong>Online</strong> hackathons or major hubs like <strong>Bengaluru</strong>, <strong>Delhi NCR</strong>, <strong>Mumbai</strong>, or <strong>Hyderabad</strong>.
-            If you searched a new city, it will be queued for the next discovery run.
+            An empty city search may leave an aggregate request for a later authorized run. It does not start a run or guarantee results.
           </p>
           <div className="button-row" style={{ marginTop: 16 }}>
             <button className="button button--primary" onClick={() => patch({ mode: 'online', city: '', page: 1 })}>Browse Online hackathons</button>

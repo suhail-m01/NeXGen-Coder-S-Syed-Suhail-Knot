@@ -15,7 +15,7 @@ import { canCheckInEvent, canJudgeEvent, canManageEvent, certificateEligible, ma
 import { acceptedTeamMemberIds, effectiveInvitationStatus } from '../domain/growth';
 import { automationDue, cloneEventForSeries, nextSeriesDate } from '../domain/series';
 import { appendPersonalizationSignal, deriveLearnedInterests, newPersonalizationSignal } from '../domain/personalization';
-import { applySubmissionEdits, eventFromReviewedSubmission, reviewedSubmissionListing, validateSubmissionEdits, type SubmissionReviewEdits } from '../domain/review';
+import { applySubmissionEdits, eventFromReviewedSubmission, reviewedSubmissionListing, validateSubmissionEdits, type SubmissionReviewEdits, type SubmitterConfirmation } from '../domain/review';
 import type { QuickPostInput } from '../domain/validation';
 import { validWebUrl, validateQuickPost } from '../domain/validation';
 import type {
@@ -106,7 +106,7 @@ interface AppContextValue {
   publishQuickEvent: (input: QuickPostInput) => MaybePromise<KnotEvent>;
   createSubmission: (rawText: string, inputType?: 'text' | 'url') => Submission;
   importFederatedEvents: (sourceId: string, rawJson: string) => number;
-  submitSubmission: (submissionId: string, review: { title: string; startAt: string | null; venueName: string | null; registrationUrl: string | null }) => void;
+  submitSubmission: (submissionId: string, review: SubmitterConfirmation) => void;
   approveSubmission: (submissionId: string, edits: SubmissionReviewEdits, note: string) => KnotEvent;
   moderateSubmission: (submissionId: string, action: 'needs_info' | 'rejected', note: string) => void;
   mergeSubmission: (submissionId: string, targetEventId: string, edits: SubmissionReviewEdits, note: string) => void;
@@ -1016,7 +1016,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return submissions.length;
   };
 
-  const submitSubmission = (submissionId: string, review: { title: string; startAt: string | null; venueName: string | null; registrationUrl: string | null }) => {
+  const submitSubmission = (submissionId: string, review: SubmitterConfirmation) => {
     if (!currentUser) return;
     setData((previous) => ({
       ...previous,
@@ -1030,6 +1030,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
             startDatetime: { ...submission.draft.startDatetime, value: review.startAt, confidence: review.startAt ? 'high' : 'missing', evidence: review.startAt ? 'Confirmed by submitter' : '' },
             venueName: { ...submission.draft.venueName, value: review.venueName, confidence: review.venueName ? 'high' : 'missing', evidence: review.venueName ? 'Confirmed by submitter' : '' },
             registrationUrl: { ...submission.draft.registrationUrl, value: review.registrationUrl, confidence: review.registrationUrl ? 'high' : 'missing', evidence: review.registrationUrl ? 'Confirmed by submitter' : '' },
+            eventType: review.eventType === undefined ? submission.draft.eventType : { ...submission.draft.eventType, value: review.eventType, confidence: review.eventType ? 'high' : 'missing', evidence: review.eventType ? 'Confirmed by submitter' : '' },
+            mode: review.mode === undefined ? submission.draft.mode : { ...submission.draft.mode, value: review.mode, confidence: review.mode ? 'high' : 'missing', evidence: review.mode ? 'Confirmed by submitter' : '' },
+            price: review.price === undefined ? submission.draft.price : { value: review.price, confidence: review.price.kind === 'unknown' ? 'missing' : 'high', evidence: review.price.kind === 'unknown' ? '' : 'Confirmed by submitter' },
+            localityId: review.localityId === undefined ? submission.draft.localityId : { value: review.localityId, confidence: review.localityId ? 'high' : 'missing', evidence: review.localityId ? 'Confirmed by submitter' : '' },
           },
         } : submission),
     }));

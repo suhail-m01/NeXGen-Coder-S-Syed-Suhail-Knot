@@ -14,6 +14,7 @@ import { Link } from 'react-router-dom';
 import { formatEventDate } from '../domain/events';
 import { localityById } from '../domain/localities';
 import { useApp } from '../state/AppContext';
+import { isCloudProvider } from '../data/supabase/client';
 
 export function BuilderPassport() {
   const { currentUser, data } = useApp();
@@ -39,7 +40,7 @@ export function BuilderPassport() {
   if (!currentUser) return null;
 
   const sharePassport = () => {
-    const text = `🌟 Check out my Knot Builder Passport!\n• ${verifiedInPerson.length} Verified In-Person Event(s) Attended\n• ${communitiesFollowed} Communities Connected\nBuilding with the Bengaluru tech community on Knot: ${window.location.origin}/profile`;
+    const text = `🌟 Check out my Knot Builder Passport!\n• ${verifiedInPerson.length} Organizer-recorded In-Person Check-in(s)\n• ${communitiesFollowed} Communities Connected\n${isCloudProvider ? 'Cloud-backed record' : 'Browser-local record; not a public credential'} on Knot: ${window.location.origin}/profile`;
     if (navigator.share) {
       void navigator.share({ title: `${currentUser.name}'s Builder Passport`, text, url: window.location.href });
     } else {
@@ -56,15 +57,15 @@ export function BuilderPassport() {
             <ShieldCheck size={28} />
           </div>
           <div className="passport-title-wrap">
-            <span className="passport-sub">Verifiable Community Credentials</span>
+            <span className="passport-sub">{isCloudProvider ? 'Organizer-recorded participation' : 'Browser-local participation record'}</span>
             <h3>{currentUser.name}’s Builder Passport</h3>
             <span className="passport-tier">
               <Sparkles size={13} />
               {verifiedInPerson.length >= 3
-                ? 'Hyperlocal Community Champion · Tier 1'
+                ? 'Community Contributor · 3+ check-ins'
                 : verifiedInPerson.length >= 1
-                ? 'Verified Local Builder · Tier 2'
-                : 'Aspiring Community Explorer'}
+                ? 'Community Participant · Organizer check-in recorded'
+                : 'Community Explorer · No check-ins yet'}
             </span>
           </div>
           <button className="button button--secondary button--small passport-share-btn" onClick={sharePassport}>
@@ -75,7 +76,7 @@ export function BuilderPassport() {
         <div className="passport-stats-grid">
           <div className="passport-stat">
             <strong>{verifiedInPerson.length}</strong>
-            <span>Verified In-Person Check-ins</span>
+            <span>Organizer-recorded Check-ins</span>
           </div>
           <div className="passport-stat">
             <strong>{attendedRegistrations.length}</strong>
@@ -93,13 +94,13 @@ export function BuilderPassport() {
 
         <div className="passport-stamps-section">
           <h4>
-            <Award size={16} /> Verified Attendance Stamps &amp; Passes
+            <Award size={16} /> Organizer Check-ins &amp; Participation Passes
           </h4>
 
           {attendedRegistrations.length === 0 ? (
             <div className="passport-empty-stamps">
               <QrCode size={32} />
-              <p>No event passes yet. Register for an upcoming event, check in at the venue, and your verified stamp will appear here!</p>
+              <p>No event passes yet. Register for an upcoming event, check in at the venue, and your organizer-recorded check-in will appear here!</p>
               <Link to="/search" className="button button--primary button--small">
                 Explore Events
               </Link>
@@ -117,7 +118,7 @@ export function BuilderPassport() {
                     <div className="stamp-inner">
                       <div className="stamp-seal">
                         {isVerified ? <CheckCircle2 size={16} /> : <Trophy size={16} />}
-                        <span>{isVerified ? 'VERIFIED ATTENDEE' : 'ACTIVE PASS'}</span>
+                        <span>{isVerified ? 'ORGANIZER CHECK-IN' : 'ACTIVE PASS'}</span>
                       </div>
                       <h5>{event.title}</h5>
                       <span className="stamp-organizer">{event.organizerName}</span>

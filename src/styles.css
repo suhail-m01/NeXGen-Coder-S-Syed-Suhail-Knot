@@ -3592,6 +3592,11 @@ input[type="range"] { width: 100%; accent-color: var(--primary); }
   margin-bottom: 1rem;
 }
 
+.synergy-score-details {
+  flex: 1;
+  min-width: 0;
+}
+
 .synergy-radial-ring {
   width: 90px;
   height: 90px;
@@ -3880,6 +3885,51 @@ input[type="range"] { width: 100%; accent-color: var(--primary); }
   padding: 0.1rem 0.4rem;
   border-radius: 4px;
   font-size: 0.7rem;
+}
+
+@media (max-width: 640px) {
+  .team-synergy-matrix {
+    min-width: 0;
+    padding: 1rem;
+  }
+
+  .synergy-header,
+  .synergy-score-display,
+  .synergy-builder-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .synergy-header .button,
+  .synergy-score-details,
+  .synergy-team-name-input {
+    width: 100% !important;
+    max-width: 100%;
+  }
+
+  .synergy-score-display {
+    gap: 1rem;
+  }
+
+  .synergy-score-card {
+    padding: 1rem;
+  }
+
+  .synergy-status-line,
+  .synergy-builder-info,
+  .synergy-builder-meta,
+  .synergy-builder-skills,
+  .synergy-slot-card__footer .button-row {
+    flex-wrap: wrap;
+  }
+
+  .synergy-slots-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .synergy-slot-card__footer .button-row .button {
+    width: 100%;
+  }
 }
 
 /* ==========================================================================

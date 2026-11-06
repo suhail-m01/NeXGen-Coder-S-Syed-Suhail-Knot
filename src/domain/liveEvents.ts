@@ -1,7 +1,7 @@
 import { organizerAgeRule } from './defaults';
 import { localities } from './localities';
 import type { EventType, KnotEvent, Price, TeamRule } from './types';
-import { LIVE_VERIFIED_HACKATHONS } from '../features/hackathons/liveSeed';
+import { CURATED_HACKATHON_SNAPSHOT_AT, LIVE_VERIFIED_HACKATHONS } from '../features/hackathons/liveSeed';
 
 const future = (base: Date, days: number, hour = 10) => {
   const date = new Date(base);
@@ -13,7 +13,7 @@ const future = (base: Date, days: number, hour = 10) => {
 const soloRule: TeamRule = { mode: 'solo', minSize: 1, maxSize: 1, formationDeadline: null };
 const freePrice: Price = { kind: 'free', amountInr: 0, note: 'Free admission' };
 
-interface RealCommunityEventDef {
+interface SampleCommunityEventDef {
   id: string;
   title: string;
   tagline: string;
@@ -38,7 +38,7 @@ interface RealCommunityEventDef {
   sourcePlatform?: string;
 }
 
-const VERIFIED_COMMUNITY_EVENTS: RealCommunityEventDef[] = [
+const SAMPLE_COMMUNITY_EVENTS: SampleCommunityEventDef[] = [
   // ==================== WORKSHOPS ====================
   {
     id: 'live-workshop-genai',
@@ -780,96 +780,71 @@ const VERIFIED_COMMUNITY_EVENTS: RealCommunityEventDef[] = [
   },
 ];
 
-export function buildLiveEvents(now = new Date()): KnotEvent[] {
+function sourceTeamRule(teamSize: string | null): TeamRule {
+  const match = teamSize ? /(\d+)\s*(?:-|–|to)\s*(\d+)/i.exec(teamSize) : null;
+  if (!match) return { mode: 'not_stated', minSize: null, maxSize: null, formationDeadline: null };
+  const minSize = Number(match[1]);
+  const maxSize = Number(match[2]);
+  return {
+    mode: minSize === 1 && maxSize === 1 ? 'solo' : minSize === 1 ? 'solo_or_team' : 'team',
+    minSize,
+    maxSize,
+    formationDeadline: null,
+  };
+}
+
+/**
+ * Builds the deterministic local/sample catalog. This function retains its
+ * original name for repository compatibility; none of these records are a
+ * live harvest, an organizer confirmation, or an independently verified URL.
+ */
+export function buildLiveEvents(now = new Date(CURATED_HACKATHON_SNAPSHOT_AT)): KnotEvent[] {
   const koramangala = localities.find((l) => l.id === 'koramangala') ?? localities[0];
-  const indiranagar = localities.find((l) => l.id === 'indiranagar') ?? localities[0];
-  const hsr = localities.find((l) => l.id === 'hsr-layout') ?? localities[0];
-  const whitefield = localities.find((l) => l.id === 'whitefield') ?? localities[0];
-  const mgRoad = localities.find((l) => l.id === 'mg-road') ?? localities[0];
+  const sampleTimestamp = now.toISOString();
 
-  const localityMap = [
-    koramangala,
-    koramangala,
-    indiranagar,
-    null, // online
-    hsr,
-    null, // online
-    whitefield,
-    null, // online
-    null, // online
-    mgRoad,
-  ];
-
-  const interestMap = [
-    ['Design', 'AI/ML', 'Startups'],
-    ['Web development', 'AI/ML', 'Design'],
-    ['Design', 'Mobile apps', 'Startups'],
-    ['Open Source', 'Web development', 'Python'],
-    ['Cloud', 'Cybersecurity', 'AI/ML'],
-    ['Design', 'Web development', 'Open Source'],
-    ['Mobile apps', 'Cloud', 'Web development'],
-    ['Hardware/IoT', 'Data', 'AI/ML'],
-    ['Open Source', 'AI/ML', 'Data'],
-    ['Careers', 'Data', 'Cloud'],
-  ];
-
-  const dayOffsets = [1, 2, 3, 2, 4, 5, 5, 6, 3, 6];
-
-  // 1. Build Live Hackathons with real extracted coordinates & portal venues
-  const hackathons: KnotEvent[] = LIVE_VERIFIED_HACKATHONS.map((h, i) => {
-    const loc = localityMap[i % localityMap.length];
-    const isOnline = h.mode === 'online';
-    const createdAt = new Date(now.getTime() - 2 * 86_400_000).toISOString();
+  const hackathons: KnotEvent[] = LIVE_VERIFIED_HACKATHONS.map((h) => {
     const eventId = h.id.replace('live-', '');
-    const days = dayOffsets[i % dayOffsets.length] ?? ((i % 7) + 1);
-    const startAt = future(now, days, 10);
-    const endAt = future(now, days + 2, 18);
-    const registrationDeadline = future(now, Math.max(days - 1, 0), 23);
-
-    // Resolve accurate geographic locality anchor
     const cityNorm = (h.city ?? '').toLowerCase();
     const areaNorm = (h.area ?? '').toLowerCase();
-    const matchedLocality = localities.find((l) =>
-      (h.area && (l.id === areaNorm || l.name.toLowerCase().includes(areaNorm))) ||
-      (h.city && (l.city.toLowerCase() === cityNorm || l.name.toLowerCase() === cityNorm))
-    ) ?? loc ?? koramangala;
-
-    const lat = typeof h.latitude === 'number' && !Number.isNaN(h.latitude) ? h.latitude : matchedLocality.latitude;
-    const lon = typeof h.longitude === 'number' && !Number.isNaN(h.longitude) ? h.longitude : matchedLocality.longitude;
+    const matchedLocality = localities.find((locality) =>
+      (h.area && (locality.id === areaNorm.replace(/\s+/g, '-') || locality.name.toLowerCase().includes(areaNorm))) ||
+      (h.city && (locality.city.toLowerCase() === cityNorm || locality.name.toLowerCase() === cityNorm))
+    ) ?? null;
+    const latitude = typeof h.latitude === 'number' && Number.isFinite(h.latitude) ? h.latitude : matchedLocality?.latitude ?? null;
+    const longitude = typeof h.longitude === 'number' && Number.isFinite(h.longitude) ? h.longitude : matchedLocality?.longitude ?? null;
+    const mode: KnotEvent['mode'] = h.mode === 'online' ? 'online' : h.mode === 'hybrid' ? 'hybrid' : 'in_person';
 
     return {
       id: eventId,
       slug: eventId,
       title: h.title,
-      tagline: h.description ?? `${h.title} — Real-time live hackathon on ${h.sourcePlatform}`,
-      summary: h.description ?? `${h.title} organized by ${h.organizer || h.sourcePlatform}`,
-      description: h.description ?? `${h.title} is an upcoming live hackathon on ${h.sourcePlatform}. Register on the official website to secure your spot.`,
+      tagline: h.description ?? `${h.title} — curated hackathon snapshot from ${h.sourcePlatform}`,
+      summary: h.description ?? `${h.title}; organizer not independently verified in this curated snapshot.`,
+      description: `${h.description ?? `${h.title} is listed in the curated Hackathon fallback snapshot.`} Confirm current details on the official site.`,
       eventType: 'hackathon',
-      organizerId: `org-${h.sourcePlatform.toLowerCase()}`,
-      organizerName: h.organizer || `${h.sourcePlatform} Host`,
+      organizerId: null,
+      organizerName: h.organizer ?? `${h.sourcePlatform} listing (organizer not stated)`,
       communityId: `community-${(h.organizer || h.sourcePlatform).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
-      mode: isOnline ? 'online' : 'in_person',
-      startAt,
-      endAt,
+      mode,
+      startAt: h.startDate,
+      endAt: h.endDate,
       timezone: h.timezone || 'Asia/Kolkata',
       registrationOpensAt: null,
-      registrationDeadline,
+      registrationDeadline: h.registrationDeadline,
       submissionDeadline: null,
       status: 'published',
-      venue: isOnline
-        ? null
-        : {
-            id: `venue-${eventId}`,
-            name: h.venue || `${h.title} Venue · ${h.city || matchedLocality.name}`,
-            address: `${h.venue || h.area || matchedLocality.name}, ${h.city || matchedLocality.city || 'India'}`,
-            localityId: matchedLocality.id,
-            city: h.city || matchedLocality.city || 'Bengaluru',
-            latitude: lat,
-            longitude: lon,
-            locationPrecision: 'exact',
-            confirmedBy: 'organizer',
-          },
-      onlineJoinUrl: isOnline ? h.officialUrl : null,
+      venue: mode === 'online' ? null : {
+        id: `venue-${eventId}`,
+        name: h.venue ?? `${h.city ?? matchedLocality?.city ?? 'Location not stated'} (curated snapshot)`,
+        address: [h.venue, h.area, h.city].filter(Boolean).join(', ') || 'Location not stated in curated snapshot',
+        localityId: matchedLocality?.id ?? 'unresolved',
+        city: h.city ?? matchedLocality?.city ?? 'Not stated',
+        latitude,
+        longitude,
+        locationPrecision: typeof h.latitude === 'number' ? h.locationPrecision : matchedLocality ? (h.area ? 'locality' : 'city') : 'none',
+        confirmedBy: 'unknown',
+      },
+      onlineJoinUrl: null,
       registration: {
         kind: 'external',
         externalUrl: h.officialUrl,
@@ -877,53 +852,46 @@ export function buildLiveEvents(now = new Date()): KnotEvent[] {
         approval: 'none',
         waitlistEnabled: false,
       },
-      ageRule: organizerAgeRule('all_ages'),
-      interests: (interestMap[i % interestMap.length] ?? (h.tags.length > 0 ? h.tags : ['Hackathon', 'Coding', 'Innovation'])) as any,
-      skills: ['Problem Solving', 'Prototyping', 'Software Development'],
-      learningOutcomes: ['Team Collaboration', 'Product Demo', 'Rapid Engineering'],
-      eligibilityText: h.eligibility || 'Open to all developers, builders, and students',
-      eligibilityKnown: true,
-      experienceLevel: 'all',
-      team: {
-        mode: 'solo_or_team',
-        minSize: 1,
-        maxSize: 4,
-        formationDeadline: null,
-      },
-      price: h.isFree
-        ? { kind: 'free', amountInr: 0, note: 'Free to enter' }
-        : { kind: 'paid', amountInr: h.priceAmount ?? 0, note: h.currency ? `${h.currency} ${h.priceAmount}` : '' },
+      ageRule: { ...organizerAgeRule('not_stated'), source: 'unknown', confidence: 'missing' },
+      interests: h.tags.length > 0 ? h.tags : ['Hackathon'],
+      skills: h.tags,
+      learningOutcomes: [],
+      eligibilityText: h.eligibility ?? 'Not stated in curated snapshot; confirm on the official listing',
+      eligibilityKnown: Boolean(h.eligibility),
+      experienceLevel: 'not_stated',
+      team: sourceTeamRule(h.teamSize),
+      price: h.isFree === null
+        ? { kind: 'unknown', amountInr: null, note: 'Price not stated in curated snapshot' }
+        : h.isFree
+          ? { kind: 'free', amountInr: 0, note: 'Free according to the source snapshot; confirm on the official site' }
+          : { kind: 'paid', amountInr: h.priceAmount, note: h.currency && h.priceAmount !== null ? `${h.currency} ${h.priceAmount}` : 'Paid; amount not stated' },
       prizes: h.prizePool ? [h.prizePool] : [],
-      nativeSafetyChecklistComplete: true,
-      isSample: false, // REAL-TIME EVENT
+      nativeSafetyChecklistComplete: false,
+      isSample: true,
       createdById: null,
-      createdAt,
-      updatedAt: createdAt,
-      firstDiscoveredAt: createdAt,
-      lastCheckedAt: new Date(now.getTime() - 3_600_000).toISOString(),
-      listings: [
-        {
-          id: `listing-${eventId}`,
-          source: h.sourcePlatform,
-          externalId: eventId,
-          originalUrl: h.officialUrl,
-          registrationUrl: h.officialUrl,
-          firstDiscoveredAt: createdAt,
-          lastCheckedAt: new Date(now.getTime() - 3_600_000).toISOString(),
-          lastMeaningfulChangeAt: null,
-          confidence: 'high',
-          status: 'fresh',
-          isPrimary: true,
-        },
-      ],
+      createdAt: CURATED_HACKATHON_SNAPSHOT_AT,
+      updatedAt: CURATED_HACKATHON_SNAPSHOT_AT,
+      firstDiscoveredAt: CURATED_HACKATHON_SNAPSHOT_AT,
+      lastCheckedAt: h.lastCheckedAt,
+      listings: [{
+        id: `listing-${eventId}`,
+        source: h.sourcePlatform,
+        externalId: eventId,
+        originalUrl: h.sourceUrl,
+        registrationUrl: h.officialUrl,
+        firstDiscoveredAt: CURATED_HACKATHON_SNAPSHOT_AT,
+        lastCheckedAt: h.lastCheckedAt,
+        lastMeaningfulChangeAt: null,
+        confidence: 'low',
+        status: 'stale',
+        isPrimary: true,
+      }],
       revisions: [],
     };
   });
 
-  // 2. Build Verified Real-World Workshops, Meetups, Conferences & Summits
-  const communityEvents: KnotEvent[] = VERIFIED_COMMUNITY_EVENTS.map((item) => {
+  const communityEvents: KnotEvent[] = SAMPLE_COMMUNITY_EVENTS.map((item) => {
     const locality = localities.find((l) => l.id === item.localityId) ?? koramangala;
-    const createdAt = new Date(now.getTime() - 3 * 86_400_000).toISOString();
     const startAt = future(now, item.days, item.hour);
     const endAt = new Date(new Date(startAt).getTime() + item.durationHours * 3_600_000).toISOString();
     const registrationDeadline = future(now, Math.max(item.days - 1, 0), 23);
@@ -936,7 +904,7 @@ export function buildLiveEvents(now = new Date()): KnotEvent[] {
       summary: item.summary,
       description: item.description,
       eventType: item.eventType,
-      organizerId: `org-${item.organizer.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      organizerId: null,
       organizerName: item.organizer,
       communityId: `community-${item.organizer.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
       mode: 'in_person',
@@ -955,8 +923,8 @@ export function buildLiveEvents(now = new Date()): KnotEvent[] {
         city: 'Bengaluru',
         latitude: locality.latitude,
         longitude: locality.longitude,
-        locationPrecision: 'exact',
-        confirmedBy: 'organizer',
+        locationPrecision: 'locality',
+        confirmedBy: 'unknown',
       },
       onlineJoinUrl: null,
       registration: {
@@ -970,34 +938,32 @@ export function buildLiveEvents(now = new Date()): KnotEvent[] {
       interests: item.interests,
       skills: item.skills,
       learningOutcomes: item.learningOutcomes,
-      eligibilityText: 'Open to all students, engineers, and community members',
-      eligibilityKnown: true,
-      experienceLevel: 'all',
+      eligibilityText: 'Illustrative sample eligibility; not an organizer-published rule',
+      eligibilityKnown: false,
+      experienceLevel: 'not_stated',
       team: item.team ?? soloRule,
       price: item.price ?? freePrice,
       prizes: item.prizes ?? [],
       nativeSafetyChecklistComplete: true,
-      isSample: false, // REAL-TIME EVENT
+      isSample: true,
       createdById: null,
-      createdAt,
-      updatedAt: createdAt,
-      firstDiscoveredAt: createdAt,
-      lastCheckedAt: new Date(now.getTime() - 2 * 3_600_000).toISOString(),
-      listings: [
-        {
-          id: `listing-${item.id}`,
-          source: item.sourcePlatform ?? 'Knot Community Network',
-          externalId: item.id,
-          originalUrl: item.officialUrl ?? `https://knot.community/events/${item.id}`,
-          registrationUrl: item.officialUrl ?? `https://knot.community/events/${item.id}`,
-          firstDiscoveredAt: createdAt,
-          lastCheckedAt: new Date(now.getTime() - 2 * 3_600_000).toISOString(),
-          lastMeaningfulChangeAt: null,
-          confidence: 'high',
-          status: 'fresh',
-          isPrimary: true,
-        },
-      ],
+      createdAt: sampleTimestamp,
+      updatedAt: sampleTimestamp,
+      firstDiscoveredAt: sampleTimestamp,
+      lastCheckedAt: sampleTimestamp,
+      listings: [{
+        id: `listing-${item.id}`,
+        source: 'Knot sample catalog',
+        externalId: item.id,
+        originalUrl: item.officialUrl ?? `sample:${item.id}`,
+        registrationUrl: item.officialUrl ?? null,
+        firstDiscoveredAt: sampleTimestamp,
+        lastCheckedAt: sampleTimestamp,
+        lastMeaningfulChangeAt: null,
+        confidence: 'low',
+        status: 'stale',
+        isPrimary: true,
+      }],
       revisions: [],
     };
   });

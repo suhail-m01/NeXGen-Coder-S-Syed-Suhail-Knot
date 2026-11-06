@@ -188,7 +188,9 @@ try {
   await page.getByLabel(/Message/).fill('The opening session guide is now available in event resources.');
   const scheduleInput = page.getByLabel(/Schedule for later/);
   await scheduleInput.evaluate((input) => { input.step = '1'; });
-  const future = new Date(Date.now() + 10_000);
+  const future = new Date(Date.now() + 11_000);
+  // Playwright 1.56 rejects datetime-local fill values with seconds exactly 00.
+  if (future.getSeconds() === 0) future.setSeconds(1);
   const localFuture = new Date(future.getTime() - future.getTimezoneOffset() * 60_000).toISOString().slice(0, 19);
   await scheduleInput.fill(localFuture);
   await page.getByRole('button', { name: 'Schedule in-app announcement' }).click();

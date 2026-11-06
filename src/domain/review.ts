@@ -1,6 +1,6 @@
-import { localityById } from './localities';
+import { localities, localityById } from './localities';
 import { validWebUrl } from './validation';
-import type { EventListing, EventMode, EventType, ExtractionDraft, KnotEvent, Submission } from './types';
+import type { EventListing, EventMode, EventType, ExtractionDraft, KnotEvent, Price, Submission } from './types';
 
 export interface SubmissionReviewEdits {
   title: string;
@@ -14,14 +14,30 @@ export interface SubmissionReviewEdits {
   summary: string;
 }
 
+export interface SubmitterConfirmation {
+  title: string;
+  startAt: string | null;
+  venueName: string | null;
+  registrationUrl: string | null;
+  eventType?: EventType | null;
+  mode?: EventMode | null;
+  price?: Price;
+  localityId?: string | null;
+}
+
 export function editsFromSubmission(submission: Submission): SubmissionReviewEdits {
+  const locationEvidence = `${submission.draft.venueName.value ?? ''} ${submission.draft.addressOrLocality.value ?? ''}`.toLowerCase();
+  const inferredLocality = localities.find((locality) =>
+    locationEvidence.includes(locality.name.toLowerCase()) ||
+    locality.aliases.some((alias) => alias.length > 2 && locationEvidence.includes(alias.toLowerCase()))
+  );
   return {
     title: submission.draft.title.value ?? '',
     eventType: submission.draft.eventType.value ?? 'other',
     startAt: submission.draft.startDatetime.value ?? '',
     mode: submission.draft.mode.value ?? 'in_person',
     venueName: submission.draft.venueName.value ?? '',
-    localityId: 'koramangala',
+    localityId: submission.draft.localityId?.value ?? inferredLocality?.id ?? '',
     registrationUrl: submission.draft.registrationUrl.value ?? '',
     organizerName: submission.draft.organizer.value ?? '',
     summary: submission.draft.summary.value,

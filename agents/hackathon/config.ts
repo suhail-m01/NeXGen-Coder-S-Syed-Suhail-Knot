@@ -1,4 +1,4 @@
-import approvedSources from './sources.approved.json' with { type: 'json' };
+import approvedSources from './sources.approved';
 import { DEFAULT_SOURCES } from './sources/defaults';
 import type { AgentCaps, AgentConfig, SourceConfig } from './types';
 
@@ -22,13 +22,15 @@ function loadSourceOverrides(env: NodeJS.ProcessEnv): Partial<SourceConfig>[] {
 export function loadSourceConfig(env: NodeJS.ProcessEnv = process.env): SourceConfig[] {
   const overrides = loadSourceOverrides(env);
   const enabled = new Set((env.HACKATHON_ENABLED_SOURCES ?? '').split(',').map((id) => id.trim().toLowerCase()).filter(Boolean));
-  const approvedList = Array.isArray(approvedSources) ? (approvedSources as Partial<SourceConfig>[]) : [];
+  const approvedList = Array.isArray(approvedSources) ? approvedSources : [];
 
   return DEFAULT_SOURCES.map((base) => {
     const approved = approvedList.find((candidate) => candidate.id === base.id) ?? {};
     const override = overrides.find((candidate) => candidate.id === base.id) ?? {};
     const merged = { ...base, ...approved, ...override, id: base.id, platform: base.platform };
-    if (enabled.has(base.id)) merged.enabled = true;
+    // Committed review records never activate ingestion by themselves.
+    // Runtime opt-in is required; sourceIsAuthorized still checks evidence and methods.
+    merged.enabled = enabled.has(base.id);
     merged.discoveryUrls = Array.isArray(merged.discoveryUrls) ? merged.discoveryUrls.slice(0, 100) : [];
     merged.approvedMethods = Array.isArray(merged.approvedMethods) ? merged.approvedMethods : [];
     return merged;
@@ -37,6 +39,26 @@ export function loadSourceConfig(env: NodeJS.ProcessEnv = process.env): SourceCo
 
 export function sourceIsAuthorized(config: SourceConfig): boolean {
   return config.enabled && Boolean(config.permissionEvidence && /^https:\/\//.test(config.permissionEvidence)) && config.approvedMethods.length > 0;
+}
+
+/** Configuration readiness only; a successful source response still needs runtime evidence. */
+export function sourceReadinessError(
+  source: SourceConfig,
+  config: Pick<AgentConfig, 'searchProvider' | 'searchApiKey'>,
+  env: NodeJS.ProcessEnv = process.env,
+): string | null {
+  if (!source.enabled) return 'Runtime source opt-in is not enabled.';
+  if (!source.permissionEvidence || !/^https:\/\//.test(source.permissionEvidence)) return 'Valid HTTPS permission evidence is missing.';
+  if (!source.approvedMethods.length) return 'No approved collection method is configured.';
+  if (!source.discoveryUrls.length) return 'No reviewed discovery URL is configured.';
+  if (['tavily', 'brave', 'serpapi'].includes(source.id) && config.searchProvider !== source.id) {
+    return `SEARCH_API_PROVIDER must be ${source.id}.`;
+  }
+  if (source.apiKeyEnv) {
+    const key = source.apiKeyEnv === 'SEARCH_API_KEY' ? config.searchApiKey : env[source.apiKeyEnv]?.trim() || null;
+    if (!key) return `${source.apiKeyEnv} is not configured.`;
+  }
+  return null;
 }
 
 export function loadAgentConfig(env: NodeJS.ProcessEnv = process.env): AgentConfig {

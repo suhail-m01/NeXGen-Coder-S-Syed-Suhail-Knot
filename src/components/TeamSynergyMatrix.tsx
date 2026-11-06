@@ -66,18 +66,18 @@ const CANONICAL_ROLES: Array<{
   },
 ];
 
-// Pre-seeded local builder network for instant matching in Bengaluru
+// Fictional planning aids only; these are not accounts, recommendations, or invite recipients.
 const COMMUNITY_BUILDER_ROSTER = [
-  { id: 'b-1', name: 'Zoya Khan', role: 'ui_ux' as BuilderRoleKey, locality: 'Indiranagar', skills: ['Figma', 'UI/UX', 'Design Systems'], match: '96% Fit' },
-  { id: 'b-2', name: 'Tanmay Bhatt', role: 'ai_ml' as BuilderRoleKey, locality: 'Koramangala', skills: ['Gemini API', 'PyTorch', 'Agents'], match: '94% Fit' },
-  { id: 'b-3', name: 'Naveen Kumar', role: 'backend' as BuilderRoleKey, locality: 'HSR Layout', skills: ['Node.js', 'PostgreSQL', 'Go'], match: '91% Fit' },
-  { id: 'b-4', name: 'Meera Iyer', role: 'product_pitch' as BuilderRoleKey, locality: 'Jayanagar', skills: ['Pitching', 'Product Strategy', 'Fintech'], match: '93% Fit' },
-  { id: 'b-5', name: 'Dev Sharma', role: 'frontend' as BuilderRoleKey, locality: 'Whitefield', skills: ['React', 'TypeScript', 'Tailwind'], match: '89% Fit' },
+  { id: 'sample-ui', name: 'Sample UI/UX role', role: 'ui_ux' as BuilderRoleKey, locality: 'Sample profile', skills: ['Figma', 'UI/UX', 'Design Systems'] },
+  { id: 'sample-ai', name: 'Sample AI/ML role', role: 'ai_ml' as BuilderRoleKey, locality: 'Sample profile', skills: ['Gemini API', 'PyTorch', 'Agents'] },
+  { id: 'sample-backend', name: 'Sample backend role', role: 'backend' as BuilderRoleKey, locality: 'Sample profile', skills: ['Node.js', 'PostgreSQL', 'Go'] },
+  { id: 'sample-product', name: 'Sample product role', role: 'product_pitch' as BuilderRoleKey, locality: 'Sample profile', skills: ['Pitching', 'Product Strategy', 'Fintech'] },
+  { id: 'sample-frontend', name: 'Sample frontend role', role: 'frontend' as BuilderRoleKey, locality: 'Sample profile', skills: ['React', 'TypeScript', 'Tailwind'] },
 ];
 
 export function TeamSynergyMatrix({
   event,
-  initialTeamName = 'HyperTeam Alpha',
+  initialTeamName = 'Local team draft',
   initialMembers,
   className = '',
 }: TeamSynergyMatrixProps) {
@@ -98,11 +98,11 @@ export function TeamSynergyMatrix({
       });
       return state;
     }
-    // Default initial team state: current user + a frontend teammate
+    // Start empty: never expose a signed-in/minor identity or invent teammates.
     return {
-      frontend: { filled: true, memberName: currentUser?.name ?? 'Alam Nawaz Sha', skills: ['React', 'TypeScript', 'Tailwind'] },
-      backend: { filled: true, memberName: 'Suhail Syed', skills: ['Node.js', 'Postgres', 'API Architecture'] },
-      ai_ml: { filled: true, memberName: 'Aarav Patel', skills: ['Gemini API', 'PyTorch', 'RAG'] },
+      frontend: { filled: false, skills: [] },
+      backend: { filled: false, skills: [] },
+      ai_ml: { filled: false, skills: [] },
       ui_ux: { filled: false, skills: [] },
       product_pitch: { filled: false, skills: [] },
     };
@@ -128,37 +128,32 @@ export function TeamSynergyMatrix({
     const filledCount = slots.filter((s) => s.filled).length;
     const missingRoles = slots.filter((s) => !s.filled).map((s) => s.role);
 
-    // Calculate dynamic percentage
-    let score = 0;
-    if (filledCount === 1) score = 35;
-    else if (filledCount === 2) score = 60;
-    else if (filledCount === 3) score = 82;
-    else if (filledCount === 4) score = 94;
-    else if (filledCount === 5) score = 100;
+    // Transparent role coverage only; this is not a success probability.
+    const score = Math.round((filledCount / CANONICAL_ROLES.length) * 100);
 
     const strengths: string[] = [];
     if (filledRoles.frontend.filled && filledRoles.backend.filled) {
-      strengths.push('Full-stack delivery pipeline is locked in.');
+      strengths.push('Frontend and backend roles are covered in this draft.');
     }
     if (filledRoles.ai_ml.filled) {
-      strengths.push('High-scoring technical AI/ML capability ready.');
+      strengths.push('The AI/ML planning role is covered.');
     }
     if (filledRoles.ui_ux.filled) {
-      strengths.push('Clean user interface design guarantees high demo impact.');
+      strengths.push('The UI/UX planning role is covered.');
     }
     if (filledRoles.product_pitch.filled) {
-      strengths.push('Dedicated pitch presenter ensures top jury scores.');
+      strengths.push('The product/pitch planning role is covered.');
     }
 
     const recommendations: string[] = [];
     if (!filledRoles.ui_ux.filled) {
-      recommendations.push('Add a UI/UX Designer to transform your functional code into an award-winning prototype.');
+      recommendations.push('Consider whether your team needs a UI/UX designer.');
     }
     if (!filledRoles.product_pitch.filled) {
-      recommendations.push('Add a Product / Pitch Lead. 40% of Vecnaverse judging criteria is real-world problem articulation.');
+      recommendations.push('Consider whether your team needs a product or pitch lead; judging criteria vary by event.');
     }
     if (!filledRoles.ai_ml.filled) {
-      recommendations.push('Integrate an AI / ML engineer to elevate your project from a basic CRUD app to an intelligent system.');
+      recommendations.push('Add an AI/ML role only if the project actually needs those skills.');
     }
 
     return {
@@ -188,11 +183,11 @@ export function TeamSynergyMatrix({
         ...prev,
         [roleKey]: {
           filled: true,
-          memberName: currentUser.name,
+          memberName: 'You (local draft)',
           skills: CANONICAL_ROLES.find((r) => r.key === roleKey)?.recommendedSkills.slice(0, 3) ?? [],
         },
       }));
-      setNotification(`You filled the ${CANONICAL_ROLES.find((r) => r.key === roleKey)?.label} slot!`);
+      setNotification(`You filled the ${CANONICAL_ROLES.find((r) => r.key === roleKey)?.label} slot in this local draft.`);
     }
     setTimeout(() => setNotification(null), 4000);
   };
@@ -207,18 +202,18 @@ export function TeamSynergyMatrix({
       },
     }));
     setInvitingRole(null);
-    setNotification(`Invitation dispatched to ${builder.name} (${builder.locality})! Role slot filled.`);
+    setNotification(`Added ${builder.name} to this local draft. No invitation was sent.`);
     setTimeout(() => setNotification(null), 5000);
   };
 
   const copySynergyReport = () => {
     const text = `🏆 *Hackathon Team Synergy Report: ${teamName}*
-📊 *Synergy Score:* ${synergyProfile.synergyScore}%
+📊 *Role coverage (local draft):* ${synergyProfile.synergyScore}%
 👥 *Roles Covered:* ${synergyProfile.slots.filter((s) => s.filled).map((s) => s.label).join(', ')}
 🔍 *Looking for:* ${synergyProfile.missingRoles.map((r) => CANONICAL_ROLES.find((c) => c.key === r)?.label).join(', ') || 'Team is complete!'}
-⚡ Formed on Knot: ${typeof window !== 'undefined' ? window.location.href : ''}`;
+⚡ Local planning draft: ${typeof window !== 'undefined' ? window.location.href : ''}`;
     navigator.clipboard.writeText(text);
-    setNotification('Synergy Report copied to clipboard! Share it in WhatsApp/Discord.');
+    setNotification('Local role-coverage report copied. It contains no success prediction or invitation status.');
     setTimeout(() => setNotification(null), 4000);
   };
 
@@ -228,12 +223,12 @@ export function TeamSynergyMatrix({
         <div className="synergy-title-box">
           <div className="synergy-badge">
             <Sparkles size={13} />
-            <span>AI Team Formation Arena</span>
+            <span>Local team planning worksheet</span>
           </div>
-          <h3>Hackathon Team Synergy &amp; Skill Balance Matrix</h3>
+          <h3>Hackathon Role Coverage &amp; Skill Planning</h3>
           <p>
-            Evaluate your hackathon squad across the 5 essential winning disciplines.
-            Spot missing roles early and invite local builders before registration closes.
+            Plan five common hackathon disciplines in this browser-only worksheet.
+            Sample roles are fictional; adding one does not invite a person or create a team registration.
           </p>
         </div>
 
@@ -241,9 +236,9 @@ export function TeamSynergyMatrix({
           type="button"
           className="button button--secondary button--small"
           onClick={copySynergyReport}
-          title="Share Synergy Report"
+          title="Share role-coverage draft"
         >
-          <Share2 size={14} /> Share Synergy Report
+          <Share2 size={14} /> Share role-coverage draft
         </button>
       </div>
 
@@ -259,7 +254,7 @@ export function TeamSynergyMatrix({
         <div className="synergy-score-display">
           <div className="synergy-radial-ring">
             <span className="synergy-percentage">{synergyProfile.synergyScore}%</span>
-            <span className="synergy-percentage-label">Synergy</span>
+            <span className="synergy-percentage-label">Role coverage</span>
           </div>
           <div className="synergy-score-details">
             <div className="synergy-status-line">
@@ -272,13 +267,13 @@ export function TeamSynergyMatrix({
                 aria-label="Squad name"
               />
               <span className={`synergy-grade-pill ${synergyProfile.synergyScore >= 90 ? 'synergy-grade-pill--high' : synergyProfile.synergyScore >= 75 ? 'synergy-grade-pill--mid' : 'synergy-grade-pill--low'}`}>
-                {synergyProfile.synergyScore >= 95 ? '🔥 High Winning Probability' : synergyProfile.synergyScore >= 80 ? '⚡ Solid Balanced Squad' : '⚠️ Missing Key Disciplines'}
+                {synergyProfile.synergyScore >= 95 ? 'All planning roles covered' : synergyProfile.synergyScore >= 80 ? 'Most planning roles covered' : 'Roles still open'}
               </span>
             </div>
             <p className="synergy-score-summary">
               {synergyProfile.missingRoles.length === 0
-                ? 'Your squad possesses all 5 core disciplines! You are well prepared for technical implementation, UX, and jury evaluation.'
-                : `Your team has ${5 - synergyProfile.missingRoles.length} of 5 disciplines covered. Adding ${synergyProfile.missingRoles.map((r) => CANONICAL_ROLES.find((c) => c.key === r)?.label).join(' & ')} will maximize your chances.`}
+                ? 'All five planning roles are covered in this local draft. This is not a prediction of event outcomes.'
+                : `Your team has ${5 - synergyProfile.missingRoles.length} of 5 disciplines covered. Adding ${synergyProfile.missingRoles.map((r) => CANONICAL_ROLES.find((c) => c.key === r)?.label).join(' & ')} remain open in this draft.`}
             </p>
           </div>
         </div>
@@ -286,7 +281,7 @@ export function TeamSynergyMatrix({
         {/* Actionable recommendations */}
         {synergyProfile.recommendations.length > 0 && (
           <div className="synergy-recommendations-box">
-            <strong>Key Recommendations to Reach 100%:</strong>
+            <strong>Suggested planning gaps:</strong>
             <ul>
               {synergyProfile.recommendations.map((rec, i) => (
                 <li key={i}>{rec}</li>
@@ -355,7 +350,7 @@ export function TeamSynergyMatrix({
                       className="button button--secondary button--small button--full"
                       onClick={() => setInvitingRole(roleDef.key)}
                     >
-                      <UserPlus size={14} /> Find Local Builder
+                      <UserPlus size={14} /> Add sample role
                     </button>
                     <button
                       type="button"
@@ -377,12 +372,12 @@ export function TeamSynergyMatrix({
       {invitingRole && (
         <div className="modal-backdrop" role="presentation" onMouseDown={() => setInvitingRole(null)}>
           <div className="modal-card" role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}>
-            <span className="eyebrow">Hyperlocal Builder Radar</span>
+            <span className="eyebrow">Sample role library</span>
             <h3>
-              Invite {CANONICAL_ROLES.find((r) => r.key === invitingRole)?.label}
+              Add sample {CANONICAL_ROLES.find((r) => r.key === invitingRole)?.label}
             </h3>
             <p>
-              Verified builders in nearby Bengaluru localities with matching skills available for hackathon teams:
+              Fictional role profiles for local planning only. These are not verified people and cannot receive invitations:
             </p>
 
             <div className="synergy-builder-recommendations-list">
@@ -399,7 +394,7 @@ export function TeamSynergyMatrix({
                       <div className="synergy-builder-meta">
                         <span>📍 {builder.locality}</span>
                         <span>•</span>
-                        <span className="synergy-match-badge">{builder.match}</span>
+                        <span className="synergy-match-badge">Sample profile</span>
                       </div>
                       <div className="synergy-builder-skills">
                         {builder.skills.map((s) => (
@@ -414,7 +409,7 @@ export function TeamSynergyMatrix({
                     className="button button--primary button--small"
                     onClick={() => handleInviteBuilder(builder)}
                   >
-                    <PlusCircle size={14} /> Invite to Squad
+                    <PlusCircle size={14} /> Add to local draft
                   </button>
                 </div>
               ))}

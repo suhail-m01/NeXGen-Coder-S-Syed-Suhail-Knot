@@ -176,7 +176,7 @@ export function UnstopRegistrationModal({
     }
   }, [existingReg, open, registeredRecord]);
 
-  if (!open) return null;
+  if (!open || event.registration.kind !== 'native') return null;
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard?.writeText(text);
@@ -364,7 +364,7 @@ export function UnstopRegistrationModal({
     if (!registeredRecord || !registeredRecord.teamCode || !registeredRecord.teamName) return;
     const pendingInvites = teamMembers.filter((m) => !inviteEmailsSent.includes(m.email));
     if (pendingInvites.length === 0 && teamMembers.length > 0) {
-      setCopiedNotification('Invite emails already sent to all teammates.');
+      setCopiedNotification('Invite drafts were already prepared for all teammates.');
       return;
     }
     const recipients = pendingInvites.length > 0 ? pendingInvites : teamMembers;
@@ -383,7 +383,7 @@ export function UnstopRegistrationModal({
     if (mailtoUrl && typeof window !== 'undefined') {
       window.open(mailtoUrl, '_blank');
     }
-    setCopiedNotification(`Official invitations dispatched! In-app notifications & email client opened.`);
+    setCopiedNotification('Invite drafts prepared. In-app invitations were created only for matching existing accounts; your email client was opened to send the drafts.');
     setTimeout(() => setCopiedNotification(''), 4500);
   };
 
@@ -544,7 +544,7 @@ export function UnstopRegistrationModal({
           <div className="unstop-step-body">
             <h3>1. Select Participation Mode &amp; Focus Track</h3>
             <p className="unstop-step-description">
-              Choose individual participation or assemble a team with automated email dispatch. Select your problem track.
+              Choose individual participation or assemble a team. Email invites are drafts you review and send; select your problem track.
             </p>
 
             <div className="unstop-type-grid">
@@ -560,7 +560,7 @@ export function UnstopRegistrationModal({
                   </div>
                   <h4>Team Participation (Recommended)</h4>
                   <p>
-                    Collaborate with teammates ({minTeamSize}–{maxTeamSize} members). Full roster tracking &amp; automated email invitations.
+                    Collaborate with teammates ({minTeamSize}–{maxTeamSize} members). Local roster tracking &amp; reviewable email drafts.
                   </p>
                   <div className="unstop-type-card__radio">
                     <div className="inner-dot" />
@@ -752,7 +752,7 @@ export function UnstopRegistrationModal({
           <div className="unstop-step-body">
             <h3>3. Team Formation &amp; Teammate Email Dispatcher</h3>
             <p className="unstop-step-description">
-              Form your squad of {minTeamSize} to {maxTeamSize} builders. Dispatch automated email invitations with 1-click join links.
+              Form your squad of {minTeamSize} to {maxTeamSize} builders. Prepare in-app invites and email drafts with join links.
             </p>
 
             {/* Switch Intent: Create or Join */}
@@ -802,7 +802,7 @@ export function UnstopRegistrationModal({
                     <div>
                       <h4 style={{ margin: '0 0 2px 0' }}>Invite Teammates via Email &amp; WhatsApp</h4>
                       <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--muted)' }}>
-                        Teammates receive immediate in-app invitations &amp; official email drafts.
+                        Existing Knot accounts can receive in-app invitations. Email opens as a draft and is not delivered until you send it.
                       </p>
                     </div>
                     <button

@@ -51,7 +51,7 @@ function makeSample(now: Date, input: SampleInput): KnotEvent {
     approval: 'none',
     waitlistEnabled: false,
   } satisfies RegistrationConfig;
-  const source = registration.kind === 'native' ? 'Knot Verified Listing' : 'Verified Community Listing';
+  const source = registration.kind === 'native' ? 'Knot sample listing' : 'Community source sample';
   const originalUrl = `https://example.com/events/${input.id}`;
   return {
     id: input.id,

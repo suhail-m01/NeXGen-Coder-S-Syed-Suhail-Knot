@@ -72,7 +72,7 @@ try {
 
   await goto('/events/sample-ai-builders');
   check('event source ledger is visible', await page.getByRole('heading', { name: 'Source & freshness' }).isVisible());
-  check('sample event is explicitly labelled', await page.getByText('This is sample event data').isVisible());
+  check('sample event is explicitly labelled', await page.getByText('Sample event — not a verified live listing', { exact: true }).isVisible());
   await page.screenshot({ path: 'artifacts/event-desktop.png' });
   await page.getByRole('button', { name: 'Sign in to register' }).click();
   await page.waitForURL(/\/auth\?/);

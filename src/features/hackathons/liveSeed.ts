@@ -1,5 +1,8 @@
 import type { Hackathon, HackathonListResponse } from './types';
 
+/** Fixed snapshot time for bundled fallback data; never a live source-check time. */
+export const CURATED_HACKATHON_SNAPSHOT_AT = '2026-11-06T00:00:00.000Z';
+
 export const LIVE_VERIFIED_HACKATHONS: Hackathon[] = [
   {
     id: 'live-unstop-nits-hacks-9',
@@ -30,11 +33,11 @@ export const LIVE_VERIFIED_HACKATHONS: Hackathon[] = [
     teamSize: '2-4 members',
     imageUrl: null,
     officialUrl: 'https://unstop.com/college-fests/nits-hacks-90-national-institute-of-technology-nit-silchar-541618',
-    officialUrlVerified: true,
+    officialUrlVerified: false,
     sourceUrl: 'https://unstop.com/college-fests/nits-hacks-90-national-institute-of-technology-nit-silchar-541618',
     sourcePlatform: 'Unstop',
     status: 'upcoming',
-    lastCheckedAt: new Date().toISOString(),
+    lastCheckedAt: CURATED_HACKATHON_SNAPSHOT_AT,
   },
   {
     id: 'live-devfolio-coderave-2',
@@ -65,11 +68,11 @@ export const LIVE_VERIFIED_HACKATHONS: Hackathon[] = [
     teamSize: '2-4 members',
     imageUrl: null,
     officialUrl: 'https://coderave-2.devfolio.co/',
-    officialUrlVerified: true,
+    officialUrlVerified: false,
     sourceUrl: 'https://coderave-2.devfolio.co/',
     sourcePlatform: 'Devfolio',
     status: 'upcoming',
-    lastCheckedAt: new Date().toISOString(),
+    lastCheckedAt: CURATED_HACKATHON_SNAPSHOT_AT,
   },
   {
     id: 'live-devfolio-eclipse-7',
@@ -100,11 +103,11 @@ export const LIVE_VERIFIED_HACKATHONS: Hackathon[] = [
     teamSize: '2-4 members',
     imageUrl: null,
     officialUrl: 'https://eclipse.devfolio.co/',
-    officialUrlVerified: true,
+    officialUrlVerified: false,
     sourceUrl: 'https://eclipse.devfolio.co/',
     sourcePlatform: 'Devfolio',
     status: 'upcoming',
-    lastCheckedAt: new Date().toISOString(),
+    lastCheckedAt: CURATED_HACKATHON_SNAPSHOT_AT,
   },
   {
     id: 'live-devfolio-diversion-2k27',
@@ -135,11 +138,11 @@ export const LIVE_VERIFIED_HACKATHONS: Hackathon[] = [
     teamSize: '1-4 members',
     imageUrl: null,
     officialUrl: 'https://diversion2k27.devfolio.co/',
-    officialUrlVerified: true,
+    officialUrlVerified: false,
     sourceUrl: 'https://diversion2k27.devfolio.co/',
     sourcePlatform: 'Devfolio',
     status: 'upcoming',
-    lastCheckedAt: new Date().toISOString(),
+    lastCheckedAt: CURATED_HACKATHON_SNAPSHOT_AT,
   },
   {
     id: 'live-devfolio-hack-nexus-2027',
@@ -170,11 +173,11 @@ export const LIVE_VERIFIED_HACKATHONS: Hackathon[] = [
     teamSize: '2-4 members',
     imageUrl: null,
     officialUrl: 'https://hack-nexus.devfolio.co/',
-    officialUrlVerified: true,
+    officialUrlVerified: false,
     sourceUrl: 'https://hack-nexus.devfolio.co/',
     sourcePlatform: 'Devfolio',
     status: 'upcoming',
-    lastCheckedAt: new Date().toISOString(),
+    lastCheckedAt: CURATED_HACKATHON_SNAPSHOT_AT,
   },
   {
     id: 'live-devfolio-innerve-11',
@@ -205,11 +208,11 @@ export const LIVE_VERIFIED_HACKATHONS: Hackathon[] = [
     teamSize: '2-4 members',
     imageUrl: null,
     officialUrl: 'https://innerve-11.devfolio.co/',
-    officialUrlVerified: true,
+    officialUrlVerified: false,
     sourceUrl: 'https://innerve-11.devfolio.co/',
     sourcePlatform: 'Devfolio',
     status: 'upcoming',
-    lastCheckedAt: new Date().toISOString(),
+    lastCheckedAt: CURATED_HACKATHON_SNAPSHOT_AT,
   },
   {
     id: 'live-devfolio-hacksprint-3',
@@ -240,11 +243,11 @@ export const LIVE_VERIFIED_HACKATHONS: Hackathon[] = [
     teamSize: '1-4 members',
     imageUrl: null,
     officialUrl: 'https://hacksprint-3.devfolio.co/',
-    officialUrlVerified: true,
+    officialUrlVerified: false,
     sourceUrl: 'https://hacksprint-3.devfolio.co/',
     sourcePlatform: 'Devfolio',
     status: 'upcoming',
-    lastCheckedAt: new Date().toISOString(),
+    lastCheckedAt: CURATED_HACKATHON_SNAPSHOT_AT,
   },
   {
     id: 'live-devfolio-hack-gdg-s4',
@@ -275,11 +278,11 @@ export const LIVE_VERIFIED_HACKATHONS: Hackathon[] = [
     teamSize: '2-4 members',
     imageUrl: null,
     officialUrl: 'https://hack-with-gdg-s4.devfolio.co/',
-    officialUrlVerified: true,
+    officialUrlVerified: false,
     sourceUrl: 'https://hack-with-gdg-s4.devfolio.co/',
     sourcePlatform: 'Devfolio',
     status: 'upcoming',
-    lastCheckedAt: new Date().toISOString(),
+    lastCheckedAt: CURATED_HACKATHON_SNAPSHOT_AT,
   },
   {
     id: 'live-devfolio-hack-6',
@@ -310,11 +313,11 @@ export const LIVE_VERIFIED_HACKATHONS: Hackathon[] = [
     teamSize: '2-4 members',
     imageUrl: null,
     officialUrl: 'https://hack-1736.devfolio.co/',
-    officialUrlVerified: true,
+    officialUrlVerified: false,
     sourceUrl: 'https://hack-1736.devfolio.co/',
     sourcePlatform: 'Devfolio',
     status: 'upcoming',
-    lastCheckedAt: new Date().toISOString(),
+    lastCheckedAt: CURATED_HACKATHON_SNAPSHOT_AT,
   },
   {
     id: 'live-devfolio-convergence-1',
@@ -345,11 +348,11 @@ export const LIVE_VERIFIED_HACKATHONS: Hackathon[] = [
     teamSize: '2-4 members',
     imageUrl: null,
     officialUrl: 'https://convergence1.devfolio.co/',
-    officialUrlVerified: true,
+    officialUrlVerified: false,
     sourceUrl: 'https://convergence1.devfolio.co/',
     sourcePlatform: 'Devfolio',
     status: 'upcoming',
-    lastCheckedAt: new Date().toISOString(),
+    lastCheckedAt: CURATED_HACKATHON_SNAPSHOT_AT,
   },
   {
     id: 'live-unstop-vecnaverse-2026',
@@ -380,11 +383,11 @@ export const LIVE_VERIFIED_HACKATHONS: Hackathon[] = [
     teamSize: '2-4 members',
     imageUrl: null,
     officialUrl: 'https://unstop.com/hackathons/vecnaverse-national-level-hackathon-2026',
-    officialUrlVerified: true,
+    officialUrlVerified: false,
     sourceUrl: 'https://unstop.com/hackathons/vecnaverse-national-level-hackathon-2026',
     sourcePlatform: 'Unstop',
     status: 'upcoming',
-    lastCheckedAt: new Date().toISOString(),
+    lastCheckedAt: CURATED_HACKATHON_SNAPSHOT_AT,
   },
   {
     id: 'live-devfolio-hack-bengaluru-2027',
@@ -415,11 +418,11 @@ export const LIVE_VERIFIED_HACKATHONS: Hackathon[] = [
     teamSize: '2-4 members',
     imageUrl: null,
     officialUrl: 'https://hackblr2027.devfolio.co/',
-    officialUrlVerified: true,
+    officialUrlVerified: false,
     sourceUrl: 'https://hackblr2027.devfolio.co/',
     sourcePlatform: 'Devfolio',
     status: 'upcoming',
-    lastCheckedAt: new Date().toISOString(),
+    lastCheckedAt: CURATED_HACKATHON_SNAPSHOT_AT,
   },
   {
     id: 'live-mlh-local-hack-day-blr',
@@ -450,11 +453,11 @@ export const LIVE_VERIFIED_HACKATHONS: Hackathon[] = [
     teamSize: '1-4 members',
     imageUrl: null,
     officialUrl: 'https://localhackday.mlh.io/bengaluru',
-    officialUrlVerified: true,
+    officialUrlVerified: false,
     sourceUrl: 'https://localhackday.mlh.io/bengaluru',
     sourcePlatform: 'MLH',
     status: 'upcoming',
-    lastCheckedAt: new Date().toISOString(),
+    lastCheckedAt: CURATED_HACKATHON_SNAPSHOT_AT,
   },
   {
     id: 'live-devfolio-ethindia-builders-blr',
@@ -485,11 +488,11 @@ export const LIVE_VERIFIED_HACKATHONS: Hackathon[] = [
     teamSize: '2-4 members',
     imageUrl: null,
     officialUrl: 'https://ethindiabuilders.devfolio.co/',
-    officialUrlVerified: true,
+    officialUrlVerified: false,
     sourceUrl: 'https://ethindiabuilders.devfolio.co/',
     sourcePlatform: 'Devfolio',
     status: 'upcoming',
-    lastCheckedAt: new Date().toISOString(),
+    lastCheckedAt: CURATED_HACKATHON_SNAPSHOT_AT,
   },
 ];
 
@@ -497,6 +500,9 @@ export function filterLiveSeedHackathons(params: {
   city?: string | null;
   area?: string | null;
   mode?: string;
+  from?: string | null;
+  to?: string | null;
+  sort?: string;
   price?: string;
   q?: string | null;
   limit?: number;
@@ -507,10 +513,12 @@ export function filterLiveSeedHackathons(params: {
   if (params.city?.trim()) {
     const searchCity = params.city.trim().toLowerCase();
     const cityMatches = filtered.filter((h) => h.city?.toLowerCase().includes(searchCity));
-    // If exact city matches exist, show them; otherwise keep all so user always sees live events
-    if (cityMatches.length > 0) {
-      filtered = cityMatches;
-    }
+    filtered = cityMatches;
+  }
+
+  if (params.area?.trim()) {
+    const searchArea = params.area.trim().toLowerCase();
+    filtered = filtered.filter((h) => h.area?.toLowerCase().includes(searchArea));
   }
 
   if (params.mode && params.mode !== 'all') {
@@ -532,6 +540,20 @@ export function filterLiveSeedHackathons(params: {
     );
   }
 
+  if (params.from) {
+    const from = new Date(params.from).getTime();
+    if (Number.isFinite(from)) filtered = filtered.filter((h) => new Date(h.endDate ?? h.startDate).getTime() >= from);
+  }
+  if (params.to) {
+    const to = new Date(params.to).getTime();
+    if (Number.isFinite(to)) filtered = filtered.filter((h) => new Date(h.startDate).getTime() <= to);
+  }
+  if (params.sort !== 'relevance') {
+    filtered.sort((a, b) => params.sort === 'latest'
+      ? b.startDate.localeCompare(a.startDate)
+      : a.startDate.localeCompare(b.startDate));
+  }
+
   const limit = Math.max(1, params.limit ?? 12);
   const page = Math.max(1, params.page ?? 1);
   const total = filtered.length;
@@ -544,7 +566,9 @@ export function filterLiveSeedHackathons(params: {
       limit,
       total,
       totalPages: Math.ceil(total / limit),
-      lastUpdated: new Date().toISOString(),
+      lastUpdated: CURATED_HACKATHON_SNAPSHOT_AT,
+      dataMode: 'curated_fallback',
+      notice: 'Curated fallback snapshot, not a live source sync. Confirm current details on the official site.',
     },
     facets: {
       locations: Array.from(new Set(LIVE_VERIFIED_HACKATHONS.map((h) => h.city).filter(Boolean))).map((c) => ({

@@ -30,7 +30,7 @@ export function HackathonCard({ hackathon, context = 'web', compact = false, onG
     if (currentUser) {
       saveLocalHackathonInterest(currentUser.id, hackathon.id);
       onSaved?.(hackathon.id);
-      setMessage('Saved to your My Interests list.');
+      setMessage('Saved to My Interests on this device.');
     } else {
       setMessage('Sign in to keep this in your My Interests list.');
       onGuestContinue?.();
@@ -90,7 +90,7 @@ export function HackathonCard({ hackathon, context = 'web', compact = false, onG
         onGuestContinue?.();
       }
     } catch {
-      // In case of unexpected interruption, guarantee handoff to targetUrl
+      // Preserve the official-site handoff if interest tracking is interrupted.
       if (popup && !popup.closed) {
         popup.location.href = targetUrl;
         popup.focus();
@@ -121,14 +121,14 @@ export function HackathonCard({ hackathon, context = 'web', compact = false, onG
         <div className="hackathon-card__footer">
           <span className={`hackathon-card__price ${hackathon.isFree === true ? 'is-free' : ''}`}>{formatHackathonPrice(hackathon)}</span>
           <div className="hackathon-card__actions" style={{ display: 'inline-flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-            <Link to={`/events/${hackathon.id.replace('live-', '')}`} className="button button--secondary button--small" title="Apply with Squad & Team Invite Portal">
-              Squad Apply
+            <Link to={`/events/${hackathon.id.replace('live-', '')}`} className="button button--secondary button--small" title="View source and participation details">
+              View details
             </Link>
             <button type="button" className="button button--ghost-light button--small" onClick={handleSaveInterestOnly} title="Save to My Interests">
-              Interested
+              Save
             </button>
             <a className="button button--primary button--small" href={hackathon.officialUrl} target="_blank" rel="noopener noreferrer" onClick={handleInterested} aria-busy={busy}>
-              {busy ? 'Connecting…' : 'Register on official site'}<ArrowUpRight size={15} />
+              {busy ? 'Connecting…' : 'Interested — official site'}<ArrowUpRight size={15} />
             </a>
           </div>
         </div>

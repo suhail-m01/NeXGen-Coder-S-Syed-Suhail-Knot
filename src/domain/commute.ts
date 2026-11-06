@@ -34,7 +34,8 @@ export const COMMUTE_MODE_CONFIG: Record<CommuteMode, { label: string; icon: str
   },
 };
 
-const STORAGE_KEY = 'knot_commute_squads_v1';
+const STORAGE_KEY = 'knot_commute_squads_v2';
+const LEGACY_STORAGE_KEY = 'knot_commute_squads_v1';
 const inMemoryFallback: Record<string, CommuteSquad[]> = {};
 
 function isLocalStorageAvailable(): boolean {
@@ -42,6 +43,12 @@ function isLocalStorageAvailable(): boolean {
 }
 
 function seedDefaultSquads(eventId: string): CommuteSquad[] {
+  const sampleMember = (id: string, name: string, pickupHub: string): CommuteSquadMember => ({
+    userId: id,
+    name,
+    pickupHub,
+    joinedAt: '2026-11-06T00:00:00.000Z',
+  });
   return [
     {
       id: `squad-${eventId}-metro-1`,
@@ -50,15 +57,15 @@ function seedDefaultSquads(eventId: string): CommuteSquad[] {
       mode: 'metro_squad',
       departureTime: '8:30 AM',
       targetArrival: '9:15 AM',
-      organizerName: 'Rohit K.',
-      organizerContact: '+91 98450 12345',
+      organizerName: 'Sample host',
+      organizerContact: '',
       capacity: 10,
       members: [
-        { userId: 'u-commute-1', name: 'Rohit K.', pickupHub: 'Indiranagar Metro (Purple Line) · Gate B', joinedAt: '2026-11-05T10:00:00.000Z' },
-        { userId: 'u-commute-2', name: 'Ananya S.', pickupHub: 'Indiranagar Metro (Purple Line) · Gate B', joinedAt: '2026-11-05T11:20:00.000Z' },
-        { userId: 'u-commute-3', name: 'Syed M.', pickupHub: 'Indiranagar Metro (Purple Line) · Gate B', joinedAt: '2026-11-05T14:15:00.000Z' },
+        sampleMember('sample-commute-1', 'Sample host', 'Indiranagar Metro (Purple Line) · Gate B'),
+        sampleMember('sample-commute-2', 'Sample member 1', 'Indiranagar Metro (Purple Line) · Gate B'),
       ],
-      notes: 'Meeting near the automated AFC gates. We take train towards Whitefield/Kengeri together!',
+      notes: 'Fictional local planning example; no live group or booking exists.',
+      isSample: true,
     },
     {
       id: `squad-${eventId}-cab-1`,
@@ -67,14 +74,12 @@ function seedDefaultSquads(eventId: string): CommuteSquad[] {
       mode: 'cab_pool',
       departureTime: '8:45 AM',
       targetArrival: '9:20 AM',
-      organizerName: 'Priya Verma',
-      organizerContact: '+91 97412 88990',
+      organizerName: 'Sample host',
+      organizerContact: '',
       capacity: 4,
-      members: [
-        { userId: 'u-commute-4', name: 'Priya Verma', pickupHub: 'Silk Board Junction · Bus Bay Hub', joinedAt: '2026-11-05T09:30:00.000Z' },
-        { userId: 'u-commute-5', name: 'Aditya Rao', pickupHub: 'Silk Board Junction · Bus Bay Hub', joinedAt: '2026-11-05T12:00:00.000Z' },
-      ],
-      notes: 'Uber XL booked. Splitting 4 ways (~₹85 each). 2 seats remaining!',
+      members: [sampleMember('sample-commute-3', 'Sample host', 'Silk Board Junction · Bus Bay Hub')],
+      notes: 'Fictional cab-pool example; no fare, booking, or seat reservation exists.',
+      isSample: true,
     },
     {
       id: `squad-${eventId}-bike-1`,
@@ -83,15 +88,33 @@ function seedDefaultSquads(eventId: string): CommuteSquad[] {
       mode: 'bike_convoy',
       departureTime: '8:40 AM',
       targetArrival: '9:10 AM',
-      organizerName: 'Vikram Joshi',
-      organizerContact: '+91 99001 54321',
+      organizerName: 'Sample host',
+      organizerContact: '',
       capacity: 6,
-      members: [
-        { userId: 'u-commute-6', name: 'Vikram Joshi', pickupHub: 'HSR Layout BDA Complex · Main Entrance', joinedAt: '2026-11-05T08:15:00.000Z' },
-      ],
-      notes: 'Morning convoy through ORR. Have an extra helmet if someone needs a pillion ride!',
+      members: [sampleMember('sample-commute-4', 'Sample host', 'HSR Layout BDA Complex · Main Entrance')],
+      notes: 'Fictional planning example. Arrange helmets and lawful transport independently.',
+      isSample: true,
     },
   ];
+}
+
+function readStoredSquads(): Record<string, CommuteSquad[]> {
+  if (!isLocalStorageAvailable()) return inMemoryFallback;
+  try {
+    const current = window.localStorage.getItem(STORAGE_KEY);
+    if (current) return JSON.parse(current) as Record<string, CommuteSquad[]>;
+    const legacy = window.localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (!legacy) return {};
+    const parsed = JSON.parse(legacy) as Record<string, CommuteSquad[]>;
+    // Drop the old fictional named/contact-bearing seed squads. Custom local
+    // plans used different member IDs and are retained during the v2 upgrade.
+    return Object.fromEntries(Object.entries(parsed).map(([eventId, squads]) => [
+      eventId,
+      squads.filter((squad) => !squad.members.some((member) => member.userId.startsWith('u-commute-'))),
+    ]));
+  } catch {
+    return {};
+  }
 }
 
 export function getCommuteSquadsForEvent(eventId: string): CommuteSquad[] {
@@ -103,8 +126,7 @@ export function getCommuteSquadsForEvent(eventId: string): CommuteSquad[] {
   }
 
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    const all: Record<string, CommuteSquad[]> = raw ? JSON.parse(raw) : {};
+    const all = readStoredSquads();
     if (!all[eventId] || all[eventId].length === 0) {
       all[eventId] = seedDefaultSquads(eventId);
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
@@ -122,8 +144,7 @@ export function saveCommuteSquadsForEvent(eventId: string, squads: CommuteSquad[
   }
 
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    const all: Record<string, CommuteSquad[]> = raw ? JSON.parse(raw) : {};
+    const all = readStoredSquads();
     all[eventId] = squads;
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
   } catch {

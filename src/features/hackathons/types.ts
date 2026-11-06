@@ -54,7 +54,15 @@ export interface HackathonFilters {
 
 export interface HackathonListResponse {
   data: Hackathon[];
-  meta: { page: number; limit: number; total: number; totalPages: number; lastUpdated: string | null };
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    lastUpdated: string | null;
+    dataMode?: 'database' | 'curated_fallback';
+    notice?: string;
+  };
   facets: { locations: { city: string | null; area: string | null }[] };
 }
 

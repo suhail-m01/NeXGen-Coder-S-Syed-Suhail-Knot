@@ -3,7 +3,7 @@ import { ageRuleLabel } from '../domain/age';
 import type { AgeRule, FitLabel } from '../domain/types';
 
 export function SampleBadge() {
-  return null;
+  return <span className="badge badge--warning"><AlertCircle size={12} />Sample data</span>;
 }
 
 export function AgeBadge({ rule }: { rule: AgeRule }) {

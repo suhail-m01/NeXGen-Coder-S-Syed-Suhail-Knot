@@ -304,6 +304,28 @@ test('My Interests requires an account and uses the authenticated user selected 
   assert.equal(authenticated.headers['Cache-Control'], 'no-store');
 });
 
+test('agent run fails closed when no selected source is runnable', async () => {
+  const config = agentConfig();
+  config.sources = [{ ...DEFAULT_SOURCES.find((source) => source.id === 'devpost')! }];
+  let finished: AgentRunResult | null = null;
+  let saveCalls = 0;
+  const result = await runHackathonAgent({
+    config,
+    http: fakeHttp(() => { throw new Error('No HTTP request should be made'); }),
+    store: {
+      createRun: async () => 'not-ready-run',
+      consumeCities: async () => [],
+      save: async () => { saveCalls += 1; return { saved: 0, items: [], errors: [] }; },
+      finishRun: async (_id, value) => { finished = value; },
+    },
+  });
+  assert.equal(result.status, 'failed');
+  assert.equal(saveCalls, 0);
+  assert.match(result.errors.join(' '), /No runnable authorized sources/);
+  assert.equal(result.sources[0]?.skipped, true);
+  assert.equal((finished as AgentRunResult | null)?.status, 'failed');
+});
+
 test('sharding partitions sources and sourceIds filters to specified platforms', async () => {
   const config = agentConfig();
   config.caps.maxSources = 10;
@@ -311,9 +333,9 @@ test('sharding partitions sources and sourceIds filters to specified platforms',
   const unstop = DEFAULT_SOURCES.find((s) => s.id === 'unstop')!;
   const mlh = DEFAULT_SOURCES.find((s) => s.id === 'mlh')!;
   config.sources = [
-    { ...devfolio, enabled: true, permissionEvidence: 'https://devfolio.co/terms', approvedMethods: ['api'], discoveryUrls: [] },
-    { ...unstop, enabled: true, permissionEvidence: 'https://unstop.com/terms-of-use', approvedMethods: ['api'], discoveryUrls: [] },
-    { ...mlh, enabled: true, permissionEvidence: 'https://mlh.io/robots.txt', approvedMethods: ['html'], discoveryUrls: [] },
+    { ...devfolio, enabled: true, permissionEvidence: 'https://devfolio.co/terms', approvedMethods: ['api'], discoveryUrls: ['https://devfolio.co/api/hackathons'] },
+    { ...unstop, enabled: true, permissionEvidence: 'https://unstop.com/terms-of-use', approvedMethods: ['api'], discoveryUrls: ['https://unstop.com/api/hackathons'] },
+    { ...mlh, enabled: true, permissionEvidence: 'https://mlh.io/robots.txt', approvedMethods: ['html'], discoveryUrls: ['https://mlh.io/events'] },
   ];
 
   const http = fakeHttp((url) => response(url, '[]', 'application/json'));

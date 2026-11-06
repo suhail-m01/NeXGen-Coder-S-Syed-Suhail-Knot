@@ -1,6 +1,5 @@
 import postgres from 'postgres';
-import { loadAgentConfig } from '../agents/hackathon/config';
-import type { SourceConfig } from '../agents/hackathon/types';
+import { loadAgentConfig, sourceReadinessError } from '../agents/hackathon/config';
 
 interface EnvCheck {
   key: string;
@@ -78,25 +77,6 @@ async function checkDatabase(url: string | undefined) {
   }
 }
 
-function evaluateSourceSkipReason(source: SourceConfig, env: NodeJS.ProcessEnv): { isReady: boolean; reason: string } {
-  if (!source.enabled) {
-    return { isReady: false, reason: "Skipped: 'enabled' is false in source configuration." };
-  }
-  if (!source.permissionEvidence || !/^https:\/\//.test(source.permissionEvidence)) {
-    return { isReady: false, reason: 'Skipped: Missing or invalid HTTPS permissionEvidence URL.' };
-  }
-  if (!source.approvedMethods || source.approvedMethods.length === 0) {
-    return { isReady: false, reason: 'Skipped: No approvedMethods configured.' };
-  }
-  if (source.apiKeyEnv) {
-    const key = env[source.apiKeyEnv]?.trim();
-    if (!key) {
-      return { isReady: false, reason: `Skipped: Required API key in ${source.apiKeyEnv} is not set.` };
-    }
-  }
-  return { isReady: true, reason: 'Ready (authorized, permission evidence configured, method approved).' };
-}
-
 async function runDoctor() {
   console.log('====================================================');
   console.log('         KNOT HACKATHON AGENT HEALTH DOCTOR         ');
@@ -158,12 +138,13 @@ async function runDoctor() {
   console.log();
 
   // 3. Source Status & Skipping Diagnostics
-  console.log('--- 3. SOURCE CONFIGURATION & PERMISSION STATUS (15 Sources) ---');
   const agentConfig = loadAgentConfig(env);
+  console.log(`--- 3. SOURCE CONFIGURATION & PERMISSION STATUS (${agentConfig.sources.length} Sources) ---`);
   let readyCount = 0;
 
   for (const source of agentConfig.sources) {
-    const { isReady, reason } = evaluateSourceSkipReason(source, env);
+    const readinessError = sourceReadinessError(source, agentConfig, env);
+    const isReady = readinessError === null;
     if (isReady) readyCount += 1;
     const icon = isReady ? '✔' : '✖';
     console.log(`  [${icon}] ${source.platform} (id: ${source.id})`);
@@ -171,15 +152,15 @@ async function runDoctor() {
     console.log(`      Approved Methods   : ${source.approvedMethods.join(', ') || 'none'}`);
     console.log(`      Permission Evidence: ${source.permissionEvidence || 'none'}`);
     console.log(`      API Key Env Var    : ${source.apiKeyEnv || 'none'}${source.apiKeyEnv ? (env[source.apiKeyEnv] ? ' (SET)' : ' (MISSING)') : ''}`);
-    console.log(`      Status / Reason    : ${reason}\n`);
+    console.log(`      Status / Reason    : ${readinessError ?? 'Configuration ready; execution and source responses are not yet evidenced.'}\n`);
   }
 
   console.log('--- 4. SUMMARY & DIAGNOSIS ---');
   console.log(`  Sources Ready: ${readyCount} / ${agentConfig.sources.length}`);
   if (readyCount === 0) {
     console.log('  CRITICAL REASON NO LIVE DATA APPEARS:');
-    console.log('  1. All sources in DEFAULT_SOURCES default to enabled: false and permissionEvidence: null');
-    console.log('     until approved evidence and sources are committed or configured via HACKATHON_SOURCE_CONFIG.');
+    console.log('  1. No source has both explicit HACKATHON_ENABLED_SOURCES opt-in and complete reviewed configuration.');
+    console.log('     Configure permission evidence, approved methods, discovery URLs and any required provider key.');
     if (!env.DATABASE_URL?.trim()) {
       console.log('  2. DATABASE_URL is not set, so persistent writes and runs cannot be saved to Supabase.');
     }
@@ -187,8 +168,13 @@ async function runDoctor() {
       console.log('  3. Web Search API key (TAVILY/BRAVE/SERPAPI) is not set for search-driven discovery.');
     }
   } else {
-    console.log(`  ${readyCount} source(s) are ready for execution.`);
+    console.log(`  ${readyCount} source(s) have complete runtime configuration. This does not prove a successful deployed run.`);
   }
+  const schemaReady = dbResult.reachable && Object.values(dbResult.tables).every(Boolean);
+  const configurationReady = schemaReady && Boolean(env.CRON_SECRET?.trim()) && readyCount > 0;
+  console.log(`  Production configuration: ${configurationReady ? 'READY FOR A CONTROLLED RUN' : 'NOT READY'}`);
+  console.log('  Deployed activation: NOT VERIFIED by this local doctor. Verify the deployed API, cron authentication and a persisted agent_runs record separately.');
+  if (!configurationReady) process.exitCode = 1;
   console.log('====================================================\n');
 }
 

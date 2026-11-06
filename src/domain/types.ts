@@ -435,6 +435,8 @@ export interface ExtractionDraft {
   mode: ExtractedField<EventMode | null>;
   venueName: ExtractedField<string | null>;
   addressOrLocality: ExtractedField<string | null>;
+  /** Optional submitter-confirmed locality suggestion for human review. */
+  localityId?: ExtractedField<string | null>;
   city: ExtractedField<string | null>;
   registrationUrl: ExtractedField<string | null>;
   price: ExtractedField<Price>;
@@ -787,6 +789,8 @@ export interface CommuteSquad {
   capacity: number;
   members: CommuteSquadMember[];
   notes?: string;
+  /** Fictional browser-local planning entry, not a live person or travel group. */
+  isSample?: boolean;
 }
 
 // Team Synergy Matrix Types

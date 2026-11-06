@@ -85,14 +85,18 @@ export function parseInstantText(rawText: string, now = new Date()): ExtractionD
   const deadline = deadlineLine ? parseDate(deadlineLine, now) : null;
   const venueLine = lines.find((line) => /^(venue|location)\s*[:\-]/i.test(line));
   const venueValue = venueLine?.replace(/^(venue|location)\s*[:\-]\s*/i, '') ?? null;
-  const registrationLine = lines.find((line) => /^(register|registration|event url)\s*[:\-]/i.test(line));
+  const registrationLine = lines.find((line) => /^(register|registration|rsvp|event url|join)\s*[:\-]/i.test(line));
   const labelledUrl = registrationLine?.match(/https?:\/\/[^\s)\]]+/i)?.[0] ?? null;
   const url = labelledUrl ?? lines.filter((line) => !/^source url\s*:/i.test(line)).join('\n').match(/https?:\/\/[^\s)\]]+/i)?.[0] ?? null;
-  const mode: EventMode = /hybrid/i.test(text) ? 'hybrid' : /online|zoom|google meet|virtual|webinar/i.test(text) ? 'online' : venueValue ? 'in_person' : 'in_person';
+  const mode: EventMode | null = /hybrid/i.test(text) ? 'hybrid' : /online|zoom|google meet|virtual|webinar/i.test(text) ? 'online' : venueValue ? 'in_person' : null;
   const freeForSome = /free\s+for\s+(members|students|women|college|early)/i.test(text);
+  const priceLine = lines.find((line) => /^(price|ticket(?:\s+price)?|entry(?:\s+fee)?|registration\s+fee|fee|cost)\b/i.test(line)) ?? '';
+  const explicitFree = /\bfree\s+(?:entry|admission|participation|registration|for everyone)\b/i.test(text) || /^\s*free\s*$/i.test(priceLine);
+  const explicitPaid = /[₹]\s*\d[\d,]*/.test(priceLine) || /(?:price|ticket|entry fee|registration fee|cost)\s*(?:is|of|:|-)?\s*[₹]\s*\d[\d,]*/i.test(text);
+  const paidMatch = (priceLine || text).match(/[₹]\s*([\d,]+)/);
   const price: Price = freeForSome ? { kind: 'unknown', amountInr: null, note: text.match(/free\s+for\s+[^.\n]+/i)?.[0] ?? 'Conditional price wording' } :
-    /\bfree\b/i.test(text) ? { kind: 'free', amountInr: 0, note: 'Stated free in source' } :
-    /[₹]\s*\d+/.test(text) ? { kind: 'paid', amountInr: Number(text.match(/[₹]\s*(\d+)/)?.[1] ?? 0) || null, note: 'Price extracted from source' } :
+    explicitFree ? { kind: 'free', amountInr: 0, note: 'Stated free in source' } :
+    explicitPaid ? { kind: 'paid', amountInr: Number(paidMatch?.[1]?.replace(/,/g, '') ?? 0) || null, note: 'Price extracted from explicit fee evidence' } :
     { kind: 'unknown', amountInr: null, note: '' };
   const eligibility = lines.find((line) => /eligib|open to|students only|who can join/i.test(line)) ?? null;
   const skills = skillList.filter((skill) => text.toLowerCase().includes(skill.toLowerCase()));
@@ -107,7 +111,7 @@ export function parseInstantText(rawText: string, now = new Date()): ExtractionD
     startDatetime: field(date?.value ?? null, date?.confidence ?? 'missing', date?.evidence ?? ''),
     endDatetime: field(endDate?.value ?? null, endDate?.confidence ?? 'missing', endDate?.evidence ?? ''),
     registrationDeadline: field(deadline?.value ?? null, deadline?.confidence ?? 'missing', deadline?.evidence ?? ''),
-    mode: field(mode, venueValue || /online|hybrid|virtual|webinar/i.test(text) ? 'high' : 'low'),
+    mode: field(mode, mode ? 'high' : 'missing'),
     venueName: field(venueValue, venueValue ? 'high' : 'missing', venueLine ?? ''),
     addressOrLocality: field(venueValue, venueValue ? 'medium' : 'missing', venueLine ?? ''),
     city: field(/bengaluru|bangalore/i.test(text) ? 'Bengaluru' : null, /bengaluru|bangalore/i.test(text) ? 'high' : 'missing'),

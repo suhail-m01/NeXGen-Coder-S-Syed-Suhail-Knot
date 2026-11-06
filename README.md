@@ -6,7 +6,7 @@
 
 It is an India-first, TypeScript/React and Supabase application with Bengaluru neighbourhood depth, approximate Indian city anchors, external-registration handoffs, native registration, transactional waitlists, accessible maps and consent-based personalization.
 
-> **Project status:** Active full-stack implementation. Core local workflows and core Supabase participation/discovery/Realtime paths are implemented and tested. Production activation is not finished: some secondary workflows remain local-only, live provider credentials and approved sources are pending, and public Nominatim access requires an authorized production endpoint.
+> **Project status:** Active full-stack implementation. Core local workflows and core Supabase participation/discovery/Realtime paths are implemented and tested. Production activation is not finished: some secondary workflows remain local-only, live provider credentials and runtime source opt-ins are pending, and public Nominatim access requires an authorized production endpoint.
 
 ![Knot cloud discovery with typo-tolerant search and labelled sample events](docs/images/knot-discovery-preview.png)
 
@@ -306,7 +306,7 @@ The additive migration `supabase/migrations/20261105120000_knot_hackathon_discov
 
 There is one connector module per requested source in `agents/hackathon/sources/`: Devpost, MLH, Devfolio, Unstop, HackerEarth, Hack2Skill, DoraHacks, Eventbrite, Luma, Meetup, Townscript, Insider, Tavily, Brave, and SerpAPI. Official APIs, RSS, and sitemaps are preferred. Search providers are used only for configured discovery queries across Indian cities, Online, and queued city requests.
 
-**Every source is disabled until its approved methods and permission evidence are explicitly configured.** Collection uses an honest `KnotBot` user agent, robots.txt checks, bounded retries, per-domain spacing, response caps, and source failure isolation. It never bypasses a login, CAPTCHA, paywall, robots rule, or rate limit. Source coverage is therefore not claimed as live until an operator configures and verifies each source.
+**Every source requires explicit runtime opt-in plus approved methods, permission evidence, discovery URLs, and any required provider credentials.** Committed review records do not activate ingestion by themselves. Collection uses an honest `KnotBot` user agent, robots.txt checks, bounded retries, per-domain spacing, response caps, and source failure isolation. It never bypasses a login, CAPTCHA, paywall, robots rule, or rate limit. Source coverage is therefore not claimed as live until an operator configures and verifies each source.
 
 Extraction follows JSON-LD, OpenGraph, then configured CSS selectors, with an optional capped Anthropic fallback. Values are strictly validated; missing or conflicting prices, dates, eligibility, location, and other fields remain unknown rather than becoming favourable assumptions. URLs are cleaned, checked, and labelled as organizer-domain or aggregator-source links. A click is an outbound handoff, not a registration or attendance claim.
 
@@ -316,11 +316,13 @@ The complete annotated template is in `.env.example`. Server-only values must ne
 
 | Variable | Purpose |
 |---|---|
-| `NEXT_PUBLIC_ENABLE_HACKATHONS` | Public UI feature flag; omit or set `false` for instant shutoff. |
+| `NEXT_PUBLIC_ENABLE_HACKATHONS` | Preferred public UI feature flag; omit or set `false` for instant shutoff. |
+| `VITE_ENABLE_HACKATHONS` | Legacy public shutoff alias; `false` also disables the UI. |
 | `DATABASE_URL` | Server-only pooled Postgres connection used by the agent and API. |
 | `CRON_SECRET` | At least 16 characters; required as a Bearer token for manual runs and Vercel Cron. |
 | `SUPABASE_URL`, `SUPABASE_ANON_KEY` or `SUPABASE_PUBLISHABLE_KEY` | Server-side optional Supabase JWT verification for logged-in interests; never a service-role key in the browser. |
 | `KNOT_PUBLIC_URL` | Canonical public origin used in agent identity/documentation. |
+| `HACKATHON_USER_AGENT` | Optional honest bot identity; defaults to KnotBot with the canonical `/bot` URL. |
 | `HACKATHON_ENABLED_SOURCES` | Comma-separated source IDs to activate after review. |
 | `HACKATHON_SOURCE_CONFIG` | JSON array of per-source overrides, including HTTPS `baseUrl`, `discoveryUrls`, `approvedMethods`, and `permissionEvidence`. |
 | `SEARCH_API_PROVIDER`, `SEARCH_API_KEY` | Optional configured `tavily`, `brave`, or `serpapi` discovery provider and its server-only key. |
@@ -351,7 +353,7 @@ Public API endpoints:
 - `GET /api/hackathons?city=&area=&mode=&from=&to=&price=&q=&sort=&page=&limit=`
 - `POST /api/hackathons/[id]/interest` with `{ "context": "web" | "home" | "my_interests" }`
 
-List responses are paginated and filtered with parameterized SQL. `price=free` and `price=paid` never include unknown prices. Interest records the click, saves a logged-in user's interest when configured, and returns the server-selected official URL. Anonymous users can still continue outbound; the UI may suggest sign-in without blocking the handoff.
+List responses are paginated and filtered with parameterized SQL. `price=free` and `price=paid` never include unknown prices. Interest records the click, saves a logged-in user's interest when configured, and returns the server-selected official URL. The specifically labelled Hackathon **Interested** handoff permits guest outbound continuation and may suggest sign-in without blocking; it remains a click, not registration or attendance. Other external-registration authentication boundaries are unchanged.
 
 ### Add a source
 
@@ -472,7 +474,8 @@ npm run build
 
 Current source verification includes:
 
-- **68/68 domain and cloud-mapping tests passing**
+- **114/114 domain, cloud-mapping, agent and trust-regression tests passing**
+- **60/60 static Hackathon deployment checks passing** (`npm run check:hackathon-deployment`)
 - Successful TypeScript and Vite production build
 - Lazy-loaded Leaflet bundle and separate React/Supabase vendor chunks
 
@@ -495,13 +498,20 @@ npm run test:e2e
 npm run test:e2e:expansion
 npm run test:e2e:adapters
 npm run test:e2e:final
+
+# Focused Hackathon and trust regressions:
+npm run test:e2e:hackathons
+npm run test:e2e:trust
+npm run test:e2e:importer
 ```
 
-Or run all four:
+Or run the original four core/expansion suites:
 
 ```bash
 npm run test:e2e:all
 ```
+
+For the independent kill-switch smoke, start a second server with `NEXT_PUBLIC_ENABLE_HACKATHONS=false npx vite --host 0.0.0.0 --port 5176`, then run `npm run test:e2e:flag-off`.
 
 Set `E2E_BASE_URL` to target another running deployment. Browser suites use fresh application state and should not be pointed casually at production user data.
 
@@ -617,6 +627,8 @@ The authenticated harness creates disposable users/events and has specific Auth 
 - [Master Product Blueprint v4](docs/KNOT_MASTER_PRODUCT_BLUEPRINT_v4.md)
 - [Production Implementation Brief](docs/PRODUCTION_IMPLEMENTATION_BRIEF.md)
 - [Deployment Guide](docs/DEPLOYMENT.md)
+- [Hackathon Setup and Deployment Verification](docs/HACKATHON_DEPLOYMENT.md)
+- [Fixed ZIP Implementation and Verification Record](docs/FIXED_ZIP_VERIFICATION.md)
 - [Production Verification](docs/PRODUCTION_VERIFICATION.md)
 - [Product Status](docs/PRODUCT_STATUS.md)
 - [Verification Record](docs/VERIFICATION.md)
@@ -636,7 +648,7 @@ Demo and sample data are for product evaluation. They are not evidence of live e
 
 ## Contributors
 
-- **Alam Nawaz Sha** ([@AlamNawazSha](https://github.com/AlamNawazSha)) — Core contributor: Hyperlocal discovery, Unstop-style solo & team registration engine, WhatsApp & Poster AI Smart Importer, and Builder Passport verified credentials.
+- **Alam Nawaz Sha** ([@AlamNawazSha](https://github.com/AlamNawazSha)) — Core contributor: Hyperlocal discovery, solo & team registration workflows, a conservative rule-based WhatsApp/poster draft importer, and Builder Passport participation summaries.
 
 ---
 

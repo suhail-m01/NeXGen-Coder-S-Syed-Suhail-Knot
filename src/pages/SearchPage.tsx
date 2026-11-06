@@ -143,7 +143,7 @@ export function SearchPage() {
                `${filters.eventType} Events`}
             </h3>
             <p>
-              Showing verified events in this format happening across Bengaluru and online.
+              Showing catalog events in this format across Bengaluru and online. Sample records are labelled.
             </p>
           </div>
           <button
@@ -161,9 +161,9 @@ export function SearchPage() {
       <div className="importer-callout-banner">
         <div className="importer-callout-inner">
           <div className="importer-callout-text">
-            <span className="importer-pill"><Sparkles size={13} /> Hyperlocal AI Importer</span>
+            <span className="importer-pill"><Sparkles size={13} /> Rule-based draft importer</span>
             <strong>Found an event scattered across WhatsApp groups or Instagram flyers?</strong>
-            <p>Don’t let it get lost in chat threads. Paste forwarded text or upload a poster to instantly extract and discover it on Knot.</p>
+            <p>Don’t let it get lost in chat threads. Paste forwarded text or upload a poster, review the extraction, and submit a private draft for human review.</p>
           </div>
           <button className="button button--accent button--small" onClick={() => setWhatsappModalOpen(true)}>
             <MessageSquare size={15} /> Open WhatsApp &amp; Poster Importer

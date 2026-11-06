@@ -186,7 +186,7 @@ export function EventPage() {
             </div>
             <h1>{event.title}</h1>
             <p>{event.tagline}</p>
-            <Link to={`/communities/${event.communityId}`} className="organizer-line"><span className="organizer-line__avatar">{event.organizerName.slice(0, 1)}</span><span>Hosted by <strong>{event.organizerName}</strong></span><ArrowUpRight size={15} /></Link>
+            <Link to={`/communities/${event.communityId}`} className="organizer-line"><span className="organizer-line__avatar">{event.organizerName.slice(0, 1)}</span><span>{event.isSample ? 'Sample organizer' : 'Hosted by'} <strong>{event.organizerName}</strong></span><ArrowUpRight size={15} /></Link>
           </div>
           <div className="event-hero__date"><span>{new Intl.DateTimeFormat('en-IN', { weekday: 'long', timeZone: 'Asia/Kolkata' }).format(new Date(event.startAt))}</span><strong>{new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' }).format(new Date(event.startAt))}</strong><span>{new Intl.DateTimeFormat('en-IN', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' }).format(new Date(event.startAt))} IST</span></div>
         </div>
@@ -195,24 +195,11 @@ export function EventPage() {
       <div className="page-container event-layout">
         <div className="event-main">
           {event.isSample && (
-            <div
-              className="sample-callout"
-              style={{
-                position: 'absolute',
-                width: '1px',
-                height: '1px',
-                opacity: 0.001,
-                overflow: 'hidden',
-                pointerEvents: 'none',
-                clip: 'rect(0,0,0,0)',
-                margin: 0,
-                padding: 0,
-              }}
-            >
-              <Info size={1} />
+            <div className="sample-callout" role="note">
+              <Info size={18} />
               <div>
-                <strong>This is sample event data</strong>
-                <p>Catalog reference details for test environments.</p>
+                <strong>Sample event — not a verified live listing</strong>
+                <p>Dates, venue, organizer and availability are illustrative catalog data. Confirm details before relying on them.</p>
               </div>
             </div>
           )}
@@ -271,9 +258,9 @@ export function EventPage() {
           )}
 
           <section className="event-section source-section">
-            <div className="section-title-row"><h2>Source & freshness</h2><span className="freshness"><span className="live-dot" /> Checked {lastCheckedHours < 1 ? 'within the last hour' : `${lastCheckedHours}h ago`}</span></div>
+            <div className="section-title-row"><h2>Source & freshness</h2><span className="freshness">{!event.isSample && <span className="live-dot" />} {event.isSample ? `Sample snapshot: ${new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(event.lastCheckedAt))}` : `Checked ${lastCheckedHours < 1 ? 'within the last hour' : `${lastCheckedHours}h ago`}`}</span></div>
             <p>Knot keeps canonical event details connected to their original listings. Source-linked does not mean safety-verified.</p>
-            <div className="listing-list">{event.listings.map((listing) => <div className="listing-row" key={listing.id}><div><Link2 size={17} /><span><strong>{listing.source}{listing.isPrimary ? ' · Primary' : ''}</strong><small>First seen {new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short' }).format(new Date(listing.firstDiscoveredAt))} · {listing.confidence} confidence</small></span></div>{listing.originalUrl.startsWith('http') ? <a href={listing.originalUrl} target="_blank" rel="noreferrer">Original listing <ExternalLink size={14} /></a> : <span className="native-source">Knot native</span>}</div>)}</div>
+            <div className="listing-list">{event.listings.map((listing) => <div className="listing-row" key={listing.id}><div><Link2 size={17} /><span><strong>{listing.source}{listing.isPrimary ? ' · Primary' : ''}</strong><small>First seen {new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short' }).format(new Date(listing.firstDiscoveredAt))} · {listing.confidence} confidence</small></span></div>{listing.originalUrl.startsWith('http') ? <a href={listing.originalUrl} target="_blank" rel="noreferrer">Original listing <ExternalLink size={14} /></a> : <span className="native-source">{event.isSample ? 'Sample catalog record' : 'Knot native'}</span>}</div>)}</div>
             {event.revisions.length > 0 && <div className="revision-list"><h3>Change history</h3>{event.revisions.map((revision) => <div key={revision.id}><Clock3 size={15} /><span><strong>{revision.summary}</strong><small>{formatEventDate(revision.at, true)}</small></span></div>)}</div>}
           </section>
         </div>
@@ -286,9 +273,9 @@ export function EventPage() {
           {event.status === 'cancelled' && <div className="eligibility-notice"><AlertTriangle size={18} /><span>This event was cancelled by its organizer. Existing records are preserved for reference.</span></div>}
           {decision === 'check_rule' && currentUser && <label className="check-rule"><input type="checkbox" checked={selfDeclared} onChange={(input) => setSelfDeclared(input.target.checked)} /><span>I confirm that I meet the age rule: <strong>{ageRuleLabel(event.ageRule)}</strong>. This is self-declared.</span></label>}
           {!registration && event.registration.kind === 'native' && (event.registration.questions?.length ?? 0) > 0 && <div className="registration-questions"><h3>Registration questions</h3><p>Your answers are private operational data for this event’s organizer, not public profile or behavioural analytics.</p>{event.registration.questions!.map((question) => <label key={question.id}>{question.label}{question.required && <em>Required</em>}{question.kind === 'long_text' ? <textarea rows={3} value={answers[question.id] ?? ''} onChange={(input) => setAnswers({ ...answers, [question.id]: input.target.value })} /> : question.kind === 'single_choice' ? <select value={answers[question.id] ?? ''} onChange={(input) => setAnswers({ ...answers, [question.id]: input.target.value })}><option value="">Choose an answer</option>{question.options.map((option) => <option key={option} value={option}>{option}</option>)}</select> : <input value={answers[question.id] ?? ''} onChange={(input) => setAnswers({ ...answers, [question.id]: input.target.value })} />}{answerErrors[question.id] && <small className="field-error">{answerErrors[question.id]}</small>}</label>)}</div>}
-          {registration ? <div className="registration-state">{['pending', 'waitlisted'].includes(registration.status) ? <Clock3 /> : <CheckCircle2 />}<div><strong>{registration.status === 'opened_externally' ? 'Registration page opened' : registration.status === 'self_confirmed_registered' ? 'Registration self-confirmed' : registration.status === 'registered' ? 'You’re registered' : nativeCopy?.title ?? registration.status}</strong><p>{registration.kind === 'external' ? 'External registration is completed on the original platform.' : nativeCopy?.body ?? 'Your native participation record is in My Plan.'}</p>{registration.teamName && <p style={{ marginTop: 6, fontWeight: 700, color: 'var(--primary-dark)', fontSize: '0.78rem' }}>Team: {registration.teamName} · Code: {registration.teamCode}</p>}<button type="button" className="button button--secondary button--full button--small" style={{ marginTop: 10 }} onClick={() => setUnstopModalOpen(true)}><Sparkles size={14} /> View Ticket & Team Dashboard</button></div></div> : <>
+          {registration ? <div className="registration-state">{['pending', 'waitlisted'].includes(registration.status) ? <Clock3 /> : <CheckCircle2 />}<div><strong>{registration.status === 'opened_externally' ? 'Registration page opened' : registration.status === 'self_confirmed_registered' ? 'Registration self-confirmed' : registration.status === 'registered' ? 'You’re registered' : nativeCopy?.title ?? registration.status}</strong><p>{registration.kind === 'external' ? 'External registration is completed on the original platform.' : nativeCopy?.body ?? 'Your native participation record is in My Plan.'}</p>{registration.teamName && <p style={{ marginTop: 6, fontWeight: 700, color: 'var(--primary-dark)', fontSize: '0.78rem' }}>Team: {registration.teamName} · Code: {registration.teamCode}</p>}{registration.kind === 'native' && <button type="button" className="button button--secondary button--full button--small" style={{ marginTop: 10 }} onClick={() => setUnstopModalOpen(true)}><Sparkles size={14} /> View Ticket & Team Dashboard</button>}</div></div> : <>
             {decision === 'cannot_join' || decision === 'needs_consent' || decision === 'not_open_yet' || decision === 'closed' ? <div className="eligibility-notice"><AlertTriangle size={18} /><span>{decision === 'cannot_join' ? 'This event’s age rule does not include your age band. You can still read its public details.' : decision === 'needs_consent' ? 'Guardian consent is required before participation.' : decision === 'not_open_yet' ? (event.registrationOpensAt && new Date(event.registrationOpensAt).getTime() > Date.now() ? `Registration opens ${formatEventDate(event.registrationOpensAt, true)}.` : 'Native minor participation is not open yet.') : 'Registration is currently closed.'}</span></div> : <>
-              <button
+              {event.registration.kind === 'native' && <button
                 type="button"
                 className="button button--accent button--full button--large unstop-register-btn"
                 style={{ marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
@@ -301,7 +288,7 @@ export function EventPage() {
                 }}
               >
                 <Sparkles size={18} /> Register Now (Solo / Team)
-              </button>
+              </button>}
               <button className="button button--primary button--full button--large" onClick={() => void register()} disabled={participationPending} aria-busy={participationPending}>{decision === 'auth_required' ? 'Sign in to register' : event.registration.kind === 'external' ? `Register on ${externalHost}` : decision === 'check_rule' ? 'Confirm & register' : 'Register on Knot'}<ArrowUpRight size={18} /></button>
             </>}
           </>}
@@ -314,7 +301,7 @@ export function EventPage() {
               <Award size={22} color="#10b981" />
               <div>
                 <strong>Verified In-Person Attendance</strong>
-                <p>Your physical check-in was verified by the organizer! A verified credential stamp has been permanently added to your Builder Passport.</p>
+                <p>Your physical check-in was verified by the organizer! {isCloudProvider ? 'An organizer-recorded check-in has been added to your Builder Passport.' : 'An organizer-recorded check-in has been added to this browser’s local Builder Passport.'}</p>
                 <Link to="/profile" className="button button--secondary button--small" style={{ marginTop: 6, display: 'inline-flex' }}>
                   View Builder Passport
                 </Link>
@@ -339,7 +326,7 @@ export function EventPage() {
 
       <UnstopRegistrationModal
         event={event}
-        open={unstopModalOpen}
+        open={event.registration.kind === 'native' && unstopModalOpen}
         onClose={() => setUnstopModalOpen(false)}
         initialTeamCode={searchParams.get('teamCode') || ''}
       />

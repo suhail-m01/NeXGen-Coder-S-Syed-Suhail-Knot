@@ -24,7 +24,9 @@ export function HomePage() {
   const { data, filters, setFilters, currentUser } = useApp();
   const [heroQuery, setHeroQuery] = useState('');
   const [liveHackathons, setLiveHackathons] = useState<Hackathon[]>(hackathonsEnabled ? LIVE_VERIFIED_HACKATHONS.slice(0, 6) : []);
+  const [hackathonDataMode, setHackathonDataMode] = useState<'database' | 'curated_fallback'>('curated_fallback');
   const [heroTab, setHeroTab] = useState<'live' | 'local'>('live');
+  const showingCuratedHackathons = hackathonDataMode === 'curated_fallback';
   const navigate = useNavigate();
   const locality = localityById(filters.localityId);
 
@@ -35,13 +37,16 @@ export function HomePage() {
       .then((res) => {
         if (res.data && res.data.length > 0) {
           setLiveHackathons(res.data);
+          setHackathonDataMode(res.meta.dataMode ?? 'database');
         } else {
+          setHackathonDataMode('curated_fallback');
           import('../features/hackathons/liveSeed').then(({ LIVE_VERIFIED_HACKATHONS }) => {
             if (!controller.signal.aborted) setLiveHackathons(LIVE_VERIFIED_HACKATHONS.slice(0, 6));
           });
         }
       })
       .catch(() => {
+        setHackathonDataMode('curated_fallback');
         import('../features/hackathons/liveSeed').then(({ LIVE_VERIFIED_HACKATHONS }) => {
           if (!controller.signal.aborted) setLiveHackathons(LIVE_VERIFIED_HACKATHONS.slice(0, 6));
         });
@@ -113,7 +118,7 @@ export function HomePage() {
             <div className="hero-panel__header">
               <div>
                 <span className="live-dot" />
-                {heroTab === 'live' && liveHackathons.length > 0 ? 'Live Discovered Events' : 'Happening near you'}
+                {heroTab === 'live' && liveHackathons.length > 0 ? (showingCuratedHackathons ? 'Curated Hackathon Snapshot' : 'Source-linked Hackathons') : 'Happening near you'}
               </div>
               {hackathonsEnabled && liveHackathons.length > 0 ? (
                 <div className="hero-panel__tabs">
@@ -122,7 +127,7 @@ export function HomePage() {
                     className={`hero-tab-btn ${heroTab === 'live' ? 'active' : ''}`}
                     onClick={() => setHeroTab('live')}
                   >
-                    Live Agent ({liveHackathons.length})
+                    Hackathons ({liveHackathons.length})
                   </button>
                   <button
                     type="button"
@@ -145,7 +150,7 @@ export function HomePage() {
                     rel="noopener noreferrer"
                     className={`hero-mini-event hero-mini-event--${index + 1}`}
                     key={hackathon.id}
-                    title={`Register on official site: ${hackathon.officialUrl}`}
+                    title={`Open official listing: ${hackathon.officialUrl}`}
                   >
                     <div className="hero-mini-event__date">
                       <strong>{new Intl.DateTimeFormat('en-IN', { day: '2-digit' }).format(new Date(hackathon.startDate))}</strong>
@@ -154,7 +159,7 @@ export function HomePage() {
                     <div>
                       <strong>{hackathon.title}</strong>
                       <span>
-                        <span style={{ color: '#4ade80', fontWeight: 700 }}>● Live</span> · {hackathon.sourcePlatform} · {hackathon.city || (hackathon.mode === 'online' ? 'Online' : 'Nationwide')} · {hackathon.isFree ? 'FREE' : hackathon.priceAmount ? `₹${hackathon.priceAmount}` : 'Free/Open'}
+                        <span style={{ color: '#4ade80', fontWeight: 700 }}>● {showingCuratedHackathons ? 'Curated' : 'Database'}</span> · {hackathon.sourcePlatform} · {hackathon.city || (hackathon.mode === 'online' ? 'Online' : 'Nationwide')} · {hackathon.isFree === true ? 'FREE' : hackathon.isFree === false ? (hackathon.priceAmount ? `₹${hackathon.priceAmount}` : 'PAID') : 'PRICE NOT STATED'}
                       </span>
                     </div>
                     <ArrowRight size={17} />
@@ -181,7 +186,7 @@ export function HomePage() {
             </div>
             {heroTab === 'live' && liveHackathons.length > 0 ? (
               <Link to="/hackathons" className="hero-panel__footer">
-                Explore all {liveHackathons.length} live hackathons <Compass size={17} />
+                Explore all {liveHackathons.length} hackathons <Compass size={17} />
               </Link>
             ) : (
               <Link to="/search" className="hero-panel__footer">
@@ -191,8 +196,8 @@ export function HomePage() {
             <div className="hero-panel__floating">
               <Users size={17} />
               <span>
-                <strong>{heroTab === 'live' && liveHackathons.length > 0 ? 'Verified Real-Time Registrations' : 'Participation, not just listings'}</strong>
-                {heroTab === 'live' && liveHackathons.length > 0 ? 'Autonomous agent · direct organizer links' : 'Eligibility · skills · teams · age'}
+                <strong>{heroTab === 'live' && liveHackathons.length > 0 ? 'Official-site handoffs, not registrations' : 'Participation, not just listings'}</strong>
+                {heroTab === 'live' && liveHackathons.length > 0 ? (showingCuratedHackathons ? 'Fixed curated snapshot · confirm details externally' : 'Database results · confirm details externally') : 'Eligibility · skills · teams · age'}
               </span>
             </div>
           </div>
@@ -207,7 +212,7 @@ export function HomePage() {
       </section>
 
       <div className="home-content">
-        <AutonomousHarvesterBar />
+        {hackathonsEnabled && <AutonomousHarvesterBar />}
         <CategoryRibbon className="home-category-ribbon" />
         <FilterBar />
         {hackathonsEnabled && <Suspense fallback={null}><HomeHackathons /></Suspense>}

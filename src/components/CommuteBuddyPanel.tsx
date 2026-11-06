@@ -70,7 +70,7 @@ export function CommuteBuddyPanel({ event, className = '', style }: CommuteBuddy
       joinedAt: new Date().toISOString(),
     });
     setSquads(updated);
-    setNotification('You joined the travel squad! Coordinate with your fellow attendees below.');
+    setNotification('You joined this travel plan in this browser only. No server record or live group membership was created.');
     setTimeout(() => setNotification(null), 5000);
   };
 
@@ -114,7 +114,7 @@ export function CommuteBuddyPanel({ event, className = '', style }: CommuteBuddy
     setSquads(updated);
     setShowCreateForm(false);
     setNewNotes('');
-    setNotification('Your commute squad is live! Other attendees can now join you.');
+    setNotification('Your travel squad was saved in this browser only. Other attendees cannot see it on their devices.');
     setTimeout(() => setNotification(null), 5000);
   };
 
@@ -129,12 +129,12 @@ export function CommuteBuddyPanel({ event, className = '', style }: CommuteBuddy
         <div className="commute-buddy-panel__title-box">
           <div className="commute-buddy-panel__badge">
             <Sparkles size={13} />
-            <span>Bengaluru Hyperlocal Commute Pool</span>
+            <span>Browser-local commute planning</span>
           </div>
-          <h3>Commute &amp; Metro Buddy Matchmaker</h3>
+          <h3>Local Commute &amp; Metro Planner</h3>
           <p>
-            Don&apos;t travel alone or let Bangalore traffic cause a no-show. Team up with fellow attendees 
-            traveling from your transit hub.
+            Draft a travel plan from a transit hub. Entries stay in this browser; sample squads are fictional,
+            not live attendees or verified travel groups.
           </p>
         </div>
         <button
@@ -144,6 +144,11 @@ export function CommuteBuddyPanel({ event, className = '', style }: CommuteBuddy
         >
           <Plus size={15} /> {showCreateForm ? 'Cancel' : 'Host a Travel Squad'}
         </button>
+      </div>
+
+      <div className="commute-anchor-callout" role="note">
+        <ShieldCheck size={17} className="commute-anchor-icon" />
+        <div><strong>Browser-only storage:</strong><span> Changes are not synced to Knot or other attendees. WhatsApp opens a share composer; it does not create or join a group.</span></div>
       </div>
 
       {metroAnchor && (
@@ -244,7 +249,7 @@ export function CommuteBuddyPanel({ event, className = '', style }: CommuteBuddy
 
           <div className="button-row" style={{ marginTop: '1rem' }}>
             <button type="submit" className="button button--primary button--small">
-              Publish Commute Squad
+              Save local travel squad
             </button>
             <button
               type="button"
@@ -354,6 +359,7 @@ export function CommuteBuddyPanel({ event, className = '', style }: CommuteBuddy
                       {COMMUTE_MODE_CONFIG[squad.mode].icon}
                     </span>
                     <strong>{COMMUTE_MODE_CONFIG[squad.mode].label}</strong>
+                    {squad.isSample && <span className="commute-spots-pill">Sample</span>}
                   </div>
                   <span className={`commute-spots-pill ${isFull ? 'commute-spots-pill--full' : ''}`}>
                     {isFull ? 'Squad Full' : `${remainingSpots} spot${remainingSpots > 1 ? 's' : ''} left`}
@@ -407,7 +413,7 @@ export function CommuteBuddyPanel({ event, className = '', style }: CommuteBuddy
                           className="button button--accent button--small"
                           onClick={() => openWhatsAppCoordination(squad)}
                         >
-                          <MessageCircle size={14} /> WhatsApp Travel Chat
+                          <MessageCircle size={14} /> Share travel plan
                         </button>
                         <button
                           type="button"
@@ -438,8 +444,8 @@ export function CommuteBuddyPanel({ event, className = '', style }: CommuteBuddy
       <div className="commute-safety-footer">
         <ShieldCheck size={16} />
         <span>
-          <strong>Hyperlocal Safety:</strong> All squads assemble at verified station AFC gates or well-lit bus bays. 
-          Travel with fellow verified builders and never share passwords or banking credentials.
+          <strong>Local planning &amp; safety:</strong> Sample profiles are fictional and no participant is verified by this tool.
+          Choose public meeting points, arrange transport independently, and never share passwords or banking credentials.
         </span>
       </div>
     </div>
