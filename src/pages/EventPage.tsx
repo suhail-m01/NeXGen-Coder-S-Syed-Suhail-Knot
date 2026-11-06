@@ -16,6 +16,8 @@ import { isCloudProvider } from '../data/supabase/client';
 import { cloudGetEvent } from '../data/supabase/repository';
 
 import { UnstopRegistrationModal } from '../components/UnstopRegistrationModal';
+import { CommuteBuddyPanel } from '../components/CommuteBuddyPanel';
+import { TeamSynergyMatrix } from '../components/TeamSynergyMatrix';
 
 const EventEngagement = lazy(() => import('../components/EventEngagement').then((module) => ({ default: module.EventEngagement })));
 
@@ -216,6 +218,13 @@ export function EventPage() {
             </div>
           </section>
 
+          {(event.team.mode !== 'solo' || event.eventType === 'hackathon') && (
+            <section className="event-section">
+              <h2>Team Formation Arena &amp; Skill Synergy</h2>
+              <TeamSynergyMatrix event={event} />
+            </section>
+          )}
+
           <section className="event-section">
             <h2>Timeline</h2>
             <div className="timeline">
@@ -228,7 +237,25 @@ export function EventPage() {
 
           {event.prizes.length > 0 && <section className="event-section"><h2>Prizes & rewards</h2><ul className="prize-list">{event.prizes.map((prize) => <li key={prize}><Check size={17} />{prize}</li>)}</ul></section>}
 
-          {event.mode !== 'online' && <section className="event-section"><h2>Location &amp; Commute</h2><div className="venue-card"><MapPin /><div><strong>{event.venue?.name ?? 'Location pending'}</strong><p>{event.venue?.address}</p>{metro && <span className="venue-metro-note"><Navigation size={13} /> {metro}</span>}<span>{event.venue?.locationPrecision === 'locality' ? 'Area marker — exact venue pin not confirmed' : `${event.venue?.locationPrecision} location`}{distance !== null ? ` · about ${distance.toFixed(1)} km from ${origin?.name}` : ''}</span></div></div><LocalityMap events={[event]} origin={origin} /></section>}
+          {event.mode !== 'online' && (
+            <section className="event-section">
+              <h2>Location &amp; Commute</h2>
+              <div className="venue-card">
+                <MapPin />
+                <div>
+                  <strong>{event.venue?.name ?? 'Location pending'}</strong>
+                  <p>{event.venue?.address}</p>
+                  {metro && <span className="venue-metro-note"><Navigation size={13} /> {metro}</span>}
+                  <span>
+                    {event.venue?.locationPrecision === 'locality' ? 'Area marker — exact venue pin not confirmed' : `${event.venue?.locationPrecision} location`}
+                    {distance !== null ? ` · about ${distance.toFixed(1)} km from ${origin?.name}` : ''}
+                  </span>
+                </div>
+              </div>
+              <LocalityMap events={[event]} origin={origin} />
+              <CommuteBuddyPanel event={event} style={{ marginTop: '1.5rem' }} />
+            </section>
+          )}
 
           <section className="event-section source-section">
             <div className="section-title-row"><h2>Source & freshness</h2><span className="freshness"><span className="live-dot" /> Checked {lastCheckedHours < 1 ? 'within the last hour' : `${lastCheckedHours}h ago`}</span></div>

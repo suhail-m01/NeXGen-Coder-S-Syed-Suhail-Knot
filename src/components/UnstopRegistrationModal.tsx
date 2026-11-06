@@ -9,6 +9,7 @@ import {
   Download,
   Mail,
   MapPin,
+  Navigation,
   Plus,
   QrCode,
   Trash2,
@@ -934,6 +935,32 @@ export function UnstopRegistrationModal({
                     </button>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Commute & Metro Buddy travel pool suggestion */}
+            {event.mode !== 'online' && (
+              <div className="unstop-commute-callout">
+                <div className="unstop-commute-callout__content">
+                  <Navigation size={18} className="unstop-commute-icon" />
+                  <div>
+                    <strong>Heading there in person? Join a Commute &amp; Metro Squad!</strong>
+                    <p>Coordinate travel from Indiranagar Metro, Silk Board, or HSR BDA with fellow attendees to eliminate travel friction.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="button button--secondary button--small"
+                  onClick={() => {
+                    onClose();
+                    setTimeout(() => {
+                      const el = document.querySelector('.commute-buddy-panel');
+                      el?.scrollIntoView({ behavior: 'smooth' });
+                    }, 100);
+                  }}
+                >
+                  Find Commute Squad
+                </button>
               </div>
             )}
 

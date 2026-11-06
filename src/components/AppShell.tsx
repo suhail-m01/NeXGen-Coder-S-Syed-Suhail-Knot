@@ -6,6 +6,7 @@ import { Logo } from './Logo';
 import { canReviewSubmissions } from '../domain/permissions';
 import { hackathonsEnabled } from '../features/hackathons/flag';
 import { SmartWhatsAppImporterModal } from './SmartWhatsAppImporterModal';
+import { AIEventConcierge } from './AIEventConcierge';
 
 export function AppShell() {
   const { currentUser, data, markNotificationsRead, signOut, cloudStatus, cloudError, cloudMutationError } = useApp();
@@ -90,6 +91,7 @@ export function AppShell() {
       <main id="main-content" tabIndex={-1}><Outlet /></main>
 
       <SmartWhatsAppImporterModal open={whatsappModalOpen} onClose={() => setWhatsappModalOpen(false)} />
+      <AIEventConcierge />
 
       <footer className="site-footer">
         <div className="site-footer__top">

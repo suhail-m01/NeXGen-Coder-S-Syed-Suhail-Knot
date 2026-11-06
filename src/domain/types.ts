@@ -764,3 +764,50 @@ export interface FitResult {
 }
 
 export type ParticipationDecision = 'auth_required' | 'can_join' | 'cannot_join' | 'check_rule' | 'needs_consent' | 'not_open_yet' | 'closed';
+
+// Commute & Metro Buddy Types
+export type CommuteMode = 'metro_squad' | 'cab_pool' | 'bike_convoy';
+
+export interface CommuteSquadMember {
+  userId: string;
+  name: string;
+  pickupHub: string;
+  joinedAt: string;
+}
+
+export interface CommuteSquad {
+  id: string;
+  eventId: string;
+  pickupHub: string;
+  mode: CommuteMode;
+  departureTime: string;
+  targetArrival: string;
+  organizerName: string;
+  organizerContact: string;
+  capacity: number;
+  members: CommuteSquadMember[];
+  notes?: string;
+}
+
+// Team Synergy Matrix Types
+export type BuilderRoleKey = 'frontend' | 'backend' | 'ai_ml' | 'ui_ux' | 'product_pitch';
+
+export interface TeamRoleSlot {
+  role: BuilderRoleKey;
+  label: string;
+  description: string;
+  filled: boolean;
+  memberId?: string;
+  memberName?: string;
+  skills: string[];
+}
+
+export interface TeamSynergyProfile {
+  teamName: string;
+  synergyScore: number;
+  slots: TeamRoleSlot[];
+  missingRoles: BuilderRoleKey[];
+  strengths: string[];
+  recommendations: string[];
+}
+
