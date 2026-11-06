@@ -88,7 +88,15 @@ export function SearchPage() {
 
   const localEvents = useMemo(() => sortEvents(filterEvents(searchableEvents, filters), filters, currentUser), [searchableEvents, filters, currentUser]);
   const resultPage = useMemo(() => paginateDiscovery(localEvents, page), [localEvents, page]);
-  const events = isCloudProvider ? cloud.events : localEvents;
+
+  const mapEvents = useMemo(() => {
+    // For Map view, display all events with venue locations matching active type/mode/query/time filters,
+    // so all extracted events across Bengaluru and other cities are visible as pins on the map!
+    const mapFilters: EventFilters = { ...filters, radiusKm: 999999, localityId: null };
+    return sortEvents(filterEvents(searchableEvents, mapFilters), mapFilters, currentUser);
+  }, [searchableEvents, filters, currentUser]);
+
+  const events = isCloudProvider ? cloud.events : (view === 'map' ? mapEvents : localEvents);
   const visibleEvents = isCloudProvider ? cloud.events : resultPage.items;
   const total = isCloudProvider ? cloud.total : localEvents.length;
   const hasMore = isCloudProvider ? cloud.hasMore : resultPage.hasMore;

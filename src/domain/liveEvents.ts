@@ -35,6 +35,7 @@ interface RealCommunityEventDef {
   prizes?: string[];
   capacity?: number;
   officialUrl?: string;
+  sourcePlatform?: string;
 }
 
 const VERIFIED_COMMUNITY_EVENTS: RealCommunityEventDef[] = [
@@ -814,17 +815,27 @@ export function buildLiveEvents(now = new Date()): KnotEvent[] {
 
   const dayOffsets = [1, 2, 3, 2, 4, 5, 5, 6, 3, 6];
 
-  // 1. Build Live Hackathons
+  // 1. Build Live Hackathons with real extracted coordinates & portal venues
   const hackathons: KnotEvent[] = LIVE_VERIFIED_HACKATHONS.map((h, i) => {
     const loc = localityMap[i % localityMap.length];
-    const isOnline = h.mode === 'online' || loc === null;
-    const locality = loc ?? koramangala;
+    const isOnline = h.mode === 'online';
     const createdAt = new Date(now.getTime() - 2 * 86_400_000).toISOString();
     const eventId = h.id.replace('live-', '');
     const days = dayOffsets[i % dayOffsets.length] ?? ((i % 7) + 1);
     const startAt = future(now, days, 10);
     const endAt = future(now, days + 2, 18);
     const registrationDeadline = future(now, Math.max(days - 1, 0), 23);
+
+    // Resolve accurate geographic locality anchor
+    const cityNorm = (h.city ?? '').toLowerCase();
+    const areaNorm = (h.area ?? '').toLowerCase();
+    const matchedLocality = localities.find((l) =>
+      (h.area && (l.id === areaNorm || l.name.toLowerCase().includes(areaNorm))) ||
+      (h.city && (l.city.toLowerCase() === cityNorm || l.name.toLowerCase() === cityNorm))
+    ) ?? loc ?? koramangala;
+
+    const lat = typeof h.latitude === 'number' && !Number.isNaN(h.latitude) ? h.latitude : matchedLocality.latitude;
+    const lon = typeof h.longitude === 'number' && !Number.isNaN(h.longitude) ? h.longitude : matchedLocality.longitude;
 
     return {
       id: eventId,
@@ -849,12 +860,12 @@ export function buildLiveEvents(now = new Date()): KnotEvent[] {
         ? null
         : {
             id: `venue-${eventId}`,
-            name: `${h.venue || 'Tech Innovation Centre'} · ${locality.name}`,
-            address: `${h.venue || h.city || locality.name}, Bengaluru, Karnataka, India`,
-            localityId: locality.id,
-            city: 'Bengaluru',
-            latitude: locality.latitude,
-            longitude: locality.longitude,
+            name: h.venue || `${h.title} Venue · ${h.city || matchedLocality.name}`,
+            address: `${h.venue || h.area || matchedLocality.name}, ${h.city || matchedLocality.city || 'India'}`,
+            localityId: matchedLocality.id,
+            city: h.city || matchedLocality.city || 'Bengaluru',
+            latitude: lat,
+            longitude: lon,
             locationPrecision: 'exact',
             confirmedBy: 'organizer',
           },
@@ -975,7 +986,7 @@ export function buildLiveEvents(now = new Date()): KnotEvent[] {
       listings: [
         {
           id: `listing-${item.id}`,
-          source: 'Knot Verified Community Network',
+          source: item.sourcePlatform ?? 'Knot Community Network',
           externalId: item.id,
           originalUrl: item.officialUrl ?? `https://knot.community/events/${item.id}`,
           registrationUrl: item.officialUrl ?? `https://knot.community/events/${item.id}`,

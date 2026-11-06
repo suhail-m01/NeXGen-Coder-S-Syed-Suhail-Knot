@@ -1,4 +1,5 @@
 import type { KnotEvent, Locality } from './types';
+import { localities, localityById } from './localities';
 
 export function haversineKm(aLat: number, aLon: number, bLat: number, bLon: number) {
   const radians = (degrees: number) => degrees * Math.PI / 180;
@@ -11,19 +12,35 @@ export function haversineKm(aLat: number, aLon: number, bLat: number, bLon: numb
   return earthRadiusKm * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 }
 
-export function eventCoordinates(event: KnotEvent, locality: Locality | null) {
-  if (event.venue?.latitude !== null && event.venue?.longitude !== null && event.venue) {
+export function eventCoordinates(event: KnotEvent, locality: Locality | null): { latitude: number; longitude: number } | null {
+  if (
+    event.venue &&
+    typeof event.venue.latitude === 'number' &&
+    typeof event.venue.longitude === 'number' &&
+    !Number.isNaN(event.venue.latitude) &&
+    !Number.isNaN(event.venue.longitude)
+  ) {
     return { latitude: event.venue.latitude, longitude: event.venue.longitude };
   }
-  if (locality && event.venue?.locationPrecision === 'locality') {
-    return { latitude: locality.latitude, longitude: locality.longitude };
+  const loc = locality ?? localityById(event.venue?.localityId);
+  if (loc && typeof loc.latitude === 'number' && typeof loc.longitude === 'number') {
+    return { latitude: loc.latitude, longitude: loc.longitude };
+  }
+  if (event.venue?.city) {
+    const cityNorm = event.venue.city.toLowerCase().trim();
+    const cityMatch = localities.find(
+      (l) => l.city.toLowerCase() === cityNorm || l.name.toLowerCase() === cityNorm
+    );
+    if (cityMatch && typeof cityMatch.latitude === 'number' && typeof cityMatch.longitude === 'number') {
+      return { latitude: cityMatch.latitude, longitude: cityMatch.longitude };
+    }
   }
   return null;
 }
 
 export function distanceForEvent(event: KnotEvent, origin: Locality | null, eventLocality: Locality | null) {
   if (!origin || event.mode === 'online') return null;
-  if (!event.venue || ['city', 'none'].includes(event.venue.locationPrecision)) return null;
+  if (!event.venue || event.venue.locationPrecision === 'none') return null;
   const coordinates = eventCoordinates(event, eventLocality);
   if (!coordinates) return null;
   return haversineKm(origin.latitude, origin.longitude, coordinates.latitude, coordinates.longitude);

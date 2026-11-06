@@ -118,8 +118,21 @@ export function LocalityMap({ events, origin }: { events: KnotEvent[]; origin: L
       {!groups.length && <div className="map-empty"><MapPin size={25} /><strong>No loaded events in this viewport</strong><span>Pan, zoom out or clear a filter.</span></div>}
       <div className="map-legend"><span><i className="legend-dot legend-dot--event" /> Event cluster</span><span><i className="legend-dot legend-dot--origin" /> Your area</span></div>
     </div>
-    {selected && <div className="map-preview"><button className="map-preview__close" onClick={() => setSelectedId(null)} aria-label="Close event preview">×</button><span className="eyebrow">{eventTypeLabel(selected.eventType)} · {selected.venue?.locationPrecision} location</span><Link to={`/events/${selected.id}`}><strong>{selected.title}</strong></Link><span>{formatEventDate(selected.startAt)}</span><span>{selected.venue?.name}{origin ? ` · ${eventDistance(selected, origin)?.toFixed(1) ?? '—'} km` : ''}</span></div>}
-    </div><section className="map-area-results" aria-label="Accessible map event list"><div><List /><span><strong>{areaResults ? `${areaResults.length} events in the searched viewport` : 'Accessible map list'}</strong><small>{areaResults ? 'Viewport filter applied to currently loaded events.' : 'Use Search this area after panning or zooming.'}</small></span></div>{areaResults && <div>{areaResults.length ? areaResults.map((event) => <Link key={event.id} to={`/events/${event.id}`}>{event.title}<span>{event.venue?.city ?? 'Online'} · {formatEventDate(event.startAt)}</span></Link>) : <p>No loaded events match this viewport.</p>}</div>}</section>
+    {selected && <div className="map-preview">
+      <button className="map-preview__close" onClick={() => setSelectedId(null)} aria-label="Close event preview">×</button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' }}>
+        <span className="eyebrow">{eventTypeLabel(selected.eventType)} · {selected.venue?.locationPrecision ?? 'venue'} location</span>
+        {selected.listings[0]?.source && (
+          <span className="source-pill" style={{ fontSize: '0.68rem', padding: '2px 7px', borderRadius: 4, background: 'var(--primary-soft)', color: 'var(--primary-dark)', fontWeight: 700 }}>
+            via {selected.listings[0].source}
+          </span>
+        )}
+      </div>
+      <Link to={`/events/${selected.id}`}><strong>{selected.title}</strong></Link>
+      <span>{formatEventDate(selected.startAt)}</span>
+      <span>{selected.venue?.name || selected.venue?.address || selected.venue?.city}{origin ? ` · ${eventDistance(selected, origin)?.toFixed(1) ?? '—'} km` : ''}</span>
+    </div>}
+    </div><section className="map-area-results" aria-label="Accessible map event list"><div><List /><span><strong>{areaResults ? `${areaResults.length} events in the searched viewport` : 'Accessible map list'}</strong><small>{areaResults ? 'Viewport filter applied to currently loaded events.' : 'Use Search this area after panning or zooming.'}</small></span></div>{areaResults && <div>{areaResults.length ? areaResults.map((event) => <Link key={event.id} to={`/events/${event.id}`}>{event.title}<span>{event.venue?.name || event.venue?.city || 'In-Person'} · {formatEventDate(event.startAt)}{event.listings[0]?.source && ` · via ${event.listings[0].source}`}</span></Link>) : <p>No loaded events match this viewport.</p>}</div>}</section>
     <p className="map-note">Basemap tiles and attribution are provided through the configured tile URL. Only the approximate map viewport is requested; Knot does not send account details or precise GPS coordinates.</p>
     {unmapped > 0 && <p className="map-note">{unmapped} event{unmapped > 1 ? 's have' : ' has'} no precise map location. See {unmapped > 1 ? 'them' : 'it'} in the list.</p>}
   </div>;
