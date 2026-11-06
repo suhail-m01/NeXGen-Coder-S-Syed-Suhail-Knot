@@ -12,6 +12,7 @@ export function AppShell() {
   const { currentUser, data, markNotificationsRead, signOut, cloudStatus, cloudError, cloudMutationError } = useApp();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
   const [now, setNow] = useState(Date.now());
   const location = useLocation();
@@ -27,14 +28,33 @@ export function AppShell() {
     window.scrollTo({ top: 0, behavior: 'instant' });
     document.getElementById('main-content')?.focus({ preventScroll: true });
     setMenuOpen(false);
-  }, [location.pathname]);
+    setCategoriesOpen(false);
+  }, [location.pathname, location.search]);
 
   useEffect(() => {
-    if (!notificationsOpen && !menuOpen) return;
-    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') { setNotificationsOpen(false); setMenuOpen(false); } };
+    if (!categoriesOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.nav-dropdown')) {
+        setCategoriesOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', handleClickOutside);
+    return () => document.removeEventListener('pointerdown', handleClickOutside);
+  }, [categoriesOpen]);
+
+  useEffect(() => {
+    if (!notificationsOpen && !menuOpen && !categoriesOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setNotificationsOpen(false);
+        setMenuOpen(false);
+        setCategoriesOpen(false);
+      }
+    };
     document.addEventListener('keydown', closeOnEscape);
     return () => document.removeEventListener('keydown', closeOnEscape);
-  }, [notificationsOpen, menuOpen]);
+  }, [notificationsOpen, menuOpen, categoriesOpen]);
 
   return (
     <div className="app-shell">
@@ -68,9 +88,31 @@ export function AppShell() {
           <nav className="desktop-nav" aria-label="Main navigation">
             <NavLink to="/search" end>Discover</NavLink>
             {hackathonsEnabled && <NavLink to="/hackathons">Hackathons</NavLink>}
-            <NavLink to="/search?type=workshop">Workshops</NavLink>
-            <NavLink to="/search?type=meetup">Meetups</NavLink>
-            <NavLink to="/search?type=summit">Summits</NavLink>
+            <div className="nav-dropdown">
+              <button
+                type="button"
+                className={`nav-dropdown__trigger ${location.pathname === '/search' && location.search.includes('type=') ? 'active' : ''}`}
+                onClick={() => setCategoriesOpen(!categoriesOpen)}
+                aria-expanded={categoriesOpen}
+                aria-haspopup="true"
+              >
+                <span>Categories</span>
+                <ChevronDown size={14} className={categoriesOpen ? 'rotate-180' : ''} />
+              </button>
+              {categoriesOpen && (
+                <div className="nav-dropdown__menu" role="menu">
+                  <NavLink to="/search?type=workshop" role="menuitem" onClick={() => setCategoriesOpen(false)}>
+                    <Wrench size={15} /> Workshops
+                  </NavLink>
+                  <NavLink to="/search?type=meetup" role="menuitem" onClick={() => setCategoriesOpen(false)}>
+                    <Coffee size={15} /> Meetups
+                  </NavLink>
+                  <NavLink to="/search?type=summit" role="menuitem" onClick={() => setCategoriesOpen(false)}>
+                    <Globe2 size={15} /> Summits &amp; Confs
+                  </NavLink>
+                </div>
+              )}
+            </div>
             <NavLink to="/communities">Communities</NavLink>
             <NavLink to="/search?view=map">Map</NavLink>
             <NavLink to="/add">Instant Add</NavLink>
